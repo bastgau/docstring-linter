@@ -1,4 +1,4 @@
-name: GitHub CI
+name: Code & Quality
 
 on:
   push:
@@ -15,6 +15,7 @@ jobs:
     needs: lint
     uses: ./.github/workflows/tests.yml
     name: Tests
+    secrets: inherit
 
   action:
     needs: tests
