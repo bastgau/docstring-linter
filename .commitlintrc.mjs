@@ -1,5 +1,4 @@
-// commitlint.config.js
-module.exports = {
+export default {
   extends: ['@commitlint/config-conventional'],
   rules: {
     'type-case': [2, 'always', 'lowercase'],
@@ -11,7 +10,7 @@ module.exports = {
     'type-empty': [2, 'never'],
     'subject-case': [2, 'always', 'lowercase'],
     'subject-empty': [2, 'never'],
-    'subject-min-length': [2, 'always', 25],
+    'subject-min-length': [2, 'always', 15],
     'subject-max-length': [2, 'always', 100],
     'subject-full-stop': [2, 'never', '.'],
     'body-empty': [2, 'always'],
