@@ -1,0 +1,22 @@
+name: GitHub CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+    name: Lint
+
+  tests:
+    needs: lint
+    uses: ./.github/workflows/tests.yml
+    name: Tests
+
+  action:
+    needs: tests
+    uses: ./.github/workflows/action.yml
+    name: Action

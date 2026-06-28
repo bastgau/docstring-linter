@@ -1,0 +1,23 @@
+{
+  "pythonVersion": "3.14",
+  "venvPath": ".",
+  "venv": "/workspaces/docstring-linter/.venv",
+  "include": [
+    "src/linter"
+  ],
+  "typeCheckingMode": "strict",
+  "strictListInference": true,
+  "strictDictionaryInference": true,
+  "strictSetInference": true,
+  "reportMissingImports": "error",
+  "reportMissingTypeStubs": "warning",
+  "reportUnknownVariableType": "error",
+  "reportUnknownMemberType": "error",
+  "reportUnknownArgumentType": "error",
+  "reportUnknownParameterType": "error",
+  "reportUntypedFunctionDecorator": "error",
+  "reportUntypedClassDecorator": "error",
+  "reportPrivateUsage": "error",
+  "reportUnnecessaryTypeIgnoreComment": "warning",
+  "reportUnusedImport": "warning"
+}

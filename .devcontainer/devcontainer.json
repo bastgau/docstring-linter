@@ -1,0 +1,77 @@
+{
+    "name": "Docstring Linter",
+    "image": "mcr.microsoft.com/devcontainers/python:3.14",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/docstring-linter,type=bind",
+    "workspaceFolder": "/workspaces/docstring-linter",
+    "mounts": [
+        "type=bind,source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,readonly",
+        "type=volume,source=claude-config-docstring-linter,target=/home/vscode/.claude"
+    ],
+    "runArgs": [
+        "--env-file",
+        ".devcontainer/.env"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.pylint",
+                "mohsen1.prettify-json",
+                "vscode-icons-team.vscode-icons",
+                "Anthropic.claude-code",
+                "charliermarsh.ruff",
+                "timonwong.shellcheck",
+                "Tyriar.sort-lines"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "python.terminal.activateEnvironment": false,
+                "python.defaultInterpreterPath": "/workspaces/docstring-linter/.venv/bin/python",
+                "python.createEnvironment.contentButton": "hide",
+                "python.analysis.typeCheckingMode": "strict",
+                "python.analysis.importFormat": "absolute",
+                "python.analysis.logLevel": "Trace",
+                "python.languageServer": "Pylance",
+                "files.trimTrailingWhitespace": true,
+                "files.trimFinalNewlines": true,
+                "files.insertFinalNewline": true,
+                "files.eol": "\n",
+                "files.exclude": {
+                    "**/__pycache__": true,
+                    "**/.mypy_cache": true,
+                    "**/.venv": true,
+                    "**/.pytest_cache": true,
+                    "**/.python_packages": true
+                },
+                "editor.formatOnSaveMode": "modifications",
+                "editor.formatOnSave": true,
+                "editor.formatOnType": false,
+                "[python]": {
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.codeActionsOnSave": {
+                        "source.fixAll.ruff": "explicit",
+                        "source.organizeImports.ruff": "explicit"
+                    }
+                },
+                "mypy-type-checker.args": [],
+                "python.dependencyManager": "pip",
+                "python.pip.extraIndexUrl": null,
+                "python.testing.coverageEnabled": true,
+                "python.testing.pytestArgs": [
+                    "tests",
+                    " --cov-report=term-missing"
+                ],
+                "python.testing.unittestEnabled": false,
+                "python.testing.pytestEnabled": true,
+                "git.preCommitEnabled": true,
+                "[markdown]": {
+                    "files.trimTrailingWhitespace": false
+                }
+            }
+        }
+    },
+    "postCreateCommand": "chmod +x /workspaces/docstring-linter/scripts/install.sh; bash /workspaces/docstring-linter/scripts/install.sh",
+    "postStartCommand": "",
+    "remoteUser": "vscode"
+}
