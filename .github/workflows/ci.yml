@@ -1,4 +1,4 @@
-name: Code & Quality
+name: Code, Quality & Build
 
 on:
   push:
@@ -16,6 +16,11 @@ jobs:
     uses: ./.github/workflows/tests.yml
     name: Tests
     secrets: inherit
+
+  build:
+    needs: tests
+    uses: ./.github/workflows/build.yml
+    name: Build
 
   action:
     needs: tests
