@@ -1,0 +1,158 @@
+repos:
+  # ── Hooks génériques ─────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: no-commit-to-branch
+        args: ['--branch', 'main']
+        groups: [local]
+      - id: trailing-whitespace
+        exclude: \.md$
+        groups: [local]
+      - id: end-of-file-fixer
+        groups: [local]
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+        groups: [locals]
+      - id: check-json
+        groups: [local,github-src]
+      - id: check-yaml
+        groups: [local,github-src]
+      - id: check-merge-conflict
+        groups: [local,github-src]
+      - id: check-added-large-files
+        groups: [local,github-src]
+      - id: check-symlinks
+        groups: [local,github-src]
+      - id: check-toml
+        groups: [local,github-src]
+      - id: detect-private-key
+        groups: [local,github-src]
+
+  # ── commitlint ────────────────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: commitlint
+        name: commitlint
+        entry: commitlint --edit
+        language: system
+        stages: [commit-msg]
+        groups: [local,github-src]
+
+  # ── dotenv-linter ────────────────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: dotenv-linter
+        name: dotenv-linter
+        entry: dotenv-linter check
+        language: system
+        files: \.env(-example)?$
+        groups: [local,github-src]
+
+  # ── Fichiers interdits ───────────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: forbid-files
+        name: forbid-files
+        entry: "bash -c 'echo \"Forbidden file staged: $@\" >&2; exit 1' --"
+        language: system
+        files: (^|/)\.env$|\.local$|\.pem$|\.key$|(^|/)\.vscode/settings\.json$|(^|/)\.orcommit\.json$|(^|/)\.opencommit$|(^|/)local\.settings\.json$|(^|/)local\.config/
+        groups: [local,github-src]
+
+  # ── ShellCheck ───────────────────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: shellcheck
+        name: shellcheck
+        entry: uv run shellcheck -x
+        language: system
+        types: [shell]
+        groups: [local,github-src]
+
+  # ── Python linters (src/) ────────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: ruff-lint-src
+        name: ruff-lint-src
+        entry: uv run ruff check
+        language: system
+        types: [python]
+        files: ^src/
+        groups: [local,github-src]
+
+      - id: ruff-format-src
+        name: ruff-format-src
+        entry: uv run ruff format --check
+        language: system
+        types: [python]
+        files: ^src/
+        groups: [local,github-src]
+
+      - id: pylint-src
+        name: pylint-src
+        entry: uv run pylint
+        language: system
+        types: [python]
+        files: ^src/
+        groups: [local,github-src]
+
+      - id: pyright-src
+        name: pyright-src
+        entry: uv run pyright
+        language: system
+        types: [python]
+        groups: [local,github-src]
+
+      - id: docstring-linter-src
+        name: docstring-linter-src
+        entry: uv run docstring-linter
+        language: system
+        types: [python]
+        files: ^src/
+        groups: [local,github-src]
+
+  # ── Python linters (tests/) ──────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: ruff-lint-tests
+        name: ruff-lint-tests
+        entry: uv run ruff check
+        language: system
+        types: [python]
+        files: ^tests/
+        groups: [local,github-tests]
+
+      - id: ruff-format-tests
+        name: ruff-format-tests
+        entry: uv run ruff format --check
+        language: system
+        types: [python]
+        files: ^tests/
+        groups: [local,github-tests]
+
+      - id: pylint-tests
+        name: pylint-tests
+        entry: uv run pylint
+        language: system
+        types: [python]
+        files: ^tests/
+        groups: [local,github-tests]
+
+  # ── Tests & qualite ──────────────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: pytest-coverage-all-files
+        name: pytest-coverage-all-files
+        entry: uv run pytest --cov --cov-branch --cov-report=term-missing -q --no-header
+        language: system
+        pass_filenames: false
+        always_run: true
+        groups: [local,github-tests]
+
+      - id: vulture-all-files
+        name: vulture-all-files
+        entry: uv run vulture tests/ src/ .vulture
+        language: system
+        pass_filenames: false
+        always_run: true
+        groups: [local,github-tests]

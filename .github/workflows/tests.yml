@@ -1,0 +1,40 @@
+name: Tests
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.14"
+  GROUP: "github-tests"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    name: Tests
+    steps:
+      - uses: actions/checkout@v7
+        name: Git Checkout
+
+      - uses: actions/setup-python@v6
+        name: Install Python ${{ env.PYTHON_VERSION }}
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --no-dev --group ${{ env.GROUP }}
+
+      - uses: j178/prek-action@v2
+        name: Execute Prek on push
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        with:
+          extra-args: --group ${{ env.GROUP }} --all-files
+
+      - uses: j178/prek-action@v2
+        name: Execute Prek on pull_request
+        if: github.event_name == 'pull_request'
+        with:
+          extra-args: --group ${{ env.GROUP }} --files origin/${{ github.base_ref }}..HEAD

@@ -1,0 +1,116 @@
+[project]
+name = "docstring-linter"
+version = "0.1.0"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+]
+
+[tool.docstring-linter]
+select = ["ALL"]
+ignore = [
+    "returns_none_init",     ## opt-in
+    "returns_none_oneliner", ## opt-in
+]
+exclude = ["test_*", "*_test.py", "tests/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--cov --cov-branch --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+omit = ["tests/*", "example/*"]
+fail_under = 85
+
+[tool.ruff]
+target-version = "py314"
+line-length = 200
+src = ["src/linter", "tests"]
+exclude = [".vulture"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203",   # en conflit avec D211 (on garde D211 : blank-line-before-class)
+    "D213",   # en conflit avec D212 (on garde D212 : multi-line-summary-first-line)
+    "COM812", # missing-trailing-comma
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "D104", "PLR2004"] # assert authorized in unit tests
+"src/linter/cli.py" = ["T201"] # `print` found
+"src/linter/reporter.py" = ["T201"] # `print` found
+"src/linter/models.py" = ["PIE807"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pylint.main]
+ignore-paths = []
+
+[tool.pylint.format]
+max-line-length = 200
+max-module-lines = 1100
+
+[tool.pylint.messages_control]
+disable = [
+"R0903" # too-few-public-methods
+]
+
+[tool.pylint.similarities]
+min-similarity-lines = 6 # Default: 4. Minimum lines to trigger duplication.
+ignore-comments = true
+ignore-docstrings = true
+ignore-imports = true
+ignore-signatures = true
+
+[tool.uv]
+package = true
+required-version = ">=0.11.24"
+
+[project.scripts]
+docstring-linter = "linter.cli:main"
+
+[dependency-groups]
+dev = [
+    "prek>=0.4.5",
+    "pylint>=4.0.6",
+    "pyright>=1.1.411",
+    "pytest-cov>=7.1.0",
+    "pytest>=9.1.1",
+    "ruff>=0.15.20",
+    "shellcheck-py>=0.10.0",
+    "vulture>=2.16",
+]
+
+github-src = [
+    "prek>=0.4.5",
+    "pylint>=4.0.6",
+    "pyright>=1.1.411",
+    "ruff>=0.15.20",
+    "shellcheck-py>=0.10.0",
+]
+
+github-tests = [
+    "prek>=0.4.5",
+    "pylint>=4.0.6",
+    "pytest-cov>=7.1.0",
+    "pytest>=9.1.1",
+    "ruff>=0.15.20",
+    "vulture>=2.16",
+]
+
+[tool.sqlfluff.core]
+dialect = "mariadb"
+templater = "jinja"
+sql_file_exts = ".sql,.sql.j2,.dml,.ddl"
+max_line_length = 200
+
+[tool.sqlfluff.indentation]
+indented_joins = false
+indented_using_on = true
+template_blocks_indent = false
