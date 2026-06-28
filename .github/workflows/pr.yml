@@ -6,6 +6,7 @@ on:
 
 jobs:
   lint-pr-title:
+    if: github.base_ref != 'main'
     runs-on: ubuntu-latest
     name: Lint PR title
     steps:
