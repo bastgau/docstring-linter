@@ -18,5 +18,6 @@ jobs:
 
   action:
     needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/action.yml
     name: Action
