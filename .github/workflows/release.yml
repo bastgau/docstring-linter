@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-beta.*"
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+    name: Lint
+
+  tests:
+    needs: lint
+    uses: ./.github/workflows/tests.yml
+    name: Tests
+    secrets: inherit
+
+  release:
+    needs: tests
+    runs-on: ubuntu-latest
+    name: Release
+    steps:
+      - uses: actions/checkout@v7
+        name: Git Checkout
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Check branch for stable release
+        if: ${{ !contains(github.ref_name, '-') }}
+        run: |
+          BRANCH=$(git branch -r --contains HEAD | grep 'origin/main' | tr -d ' ')
+          if [ -z "$BRANCH" ]; then
+            echo "Stable releases must be tagged from main."
+            exit 1
+          fi
+
+      - name: Set version from tag
+        run: uv version ${{ github.ref_name }}
+
+      - name: Build package
+        run: uv build
+
+      - name: Get last stable tag
+        id: last_stable
+        if: ${{ !contains(github.ref_name, '-') }}
+        run: |
+          LAST=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p')
+          echo "tag=$LAST" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          previous_tag: ${{ steps.last_stable.outputs.tag }}
+          skip_existing: true
