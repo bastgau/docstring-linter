@@ -16,7 +16,7 @@ exclude = ["test_*", "*_test.py", "tests/*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "--cov --cov-branch --cov-report=term-missing"
+addopts = "--cov --cov-branch --cov-report=term-missing --cov-report=xml"
 
 [tool.coverage.run]
 source = ["src"]
