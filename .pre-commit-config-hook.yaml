@@ -1,0 +1,6 @@
+repos:
+  - repo: https://github.com/bastgau/docstring-linter
+    rev: main
+    hooks:
+      - id: docstring-linter
+        files: ^src/

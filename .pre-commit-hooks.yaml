@@ -1,0 +1,6 @@
+- id: docstring-linter
+  name: docstring-linter
+  description: Validate Python docstrings against style conventions.
+  entry: docstring-linter
+  language: python
+  types: [python]

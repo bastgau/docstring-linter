@@ -1,0 +1,8 @@
+# pylint: skip-file
+
+"""A Python file parsed by vulture to suppress false positives by declaring symbols that are legitimately defined."""
+
+SPHINX  # type: ignore[name-defined]  # unused variable (src/linter/config.py:27)
+PEP257  # type: ignore[name-defined]  # unused variable (src/linter/config.py:28)
+YELLOW  # type: ignore[name-defined]  # unused variable (src/linter/reporter.py:30)
+GREEN   # type: ignore[name-defined]  # unused variable (src/linter/reporter.py:31)
