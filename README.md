@@ -31,7 +31,6 @@ docstring-linter src/ && echo "OK" || echo "FAIL"
 
 | Option | Description |
 |--------|-------------|
-| `--style` | Style to enforce (`google`). Overrides config file. |
 | `--exclude` | Glob patterns to exclude. Overrides config file. |
 | `--workers` | Number of parallel workers (0 = auto, 1 = sequential). |
 | `--format` | Output format: `text` (default), `json`, or `github-annotations`. |
