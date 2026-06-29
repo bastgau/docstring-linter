@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 232 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 236 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -62,6 +62,10 @@ This file lists the 232 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_extract_args_skips_self_and_cls` | Both self and cls are always excluded from the result, regardless of position. |
 | `test_ast_parser.py` | `test_extract_args_skips_cls_in_kwonly` | Keyword-only arg named cls is excluded, just like in positional position. |
 | `test_ast_parser.py` | `test_extract_args_mixed_positional_and_keyword_only` | Mix of positional and keyword-only args: both are returned in declaration order. |
+| `test_ast_parser.py` | `test_extract_args_positional_only` | Positional-only args (before /): extracted with name and type. |
+| `test_ast_parser.py` | `test_extract_args_positional_only_skips_self` | self in positional-only position: excluded like elsewhere. |
+| `test_ast_parser.py` | `test_extract_args_positional_only_default_alignment` | Defaults align by the end of posonlyargs + args combined. |
+| `test_ast_parser.py` | `test_extract_args_positional_only_with_default` | Positional-only arg with a default: default is correctly extracted. |
 
 ### _extract_raises
 
