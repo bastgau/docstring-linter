@@ -127,6 +127,16 @@ have_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+print_rule() {
+  local label="$1"
+  local width=44
+  local label_len=$(( ${#label} + 4 ))
+  local dashes=$(( width - label_len ))
+  printf '\n%s── %s%s %s' "${BLUE}" "${NC}" "$label" "${BLUE}"
+  printf '%0.s─' $(seq 1 "$dashes")
+  printf '%s\n\n' "${NC}"
+}
+
 # ── Aliases ────────────────────────────────────────────────────────────────────
 
 title() {
@@ -181,15 +191,16 @@ failure() {
 }
 
 skip() {
+  local before=false after=false
   local message=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -n) shift ;;
-      -a) shift ;;
+      -n) after=true;  shift ;;
+      -a) before=true; shift ;;
       *)  message="$1"; shift ;;
     esac
   done
-  print_info "skip" "$message"
+  print_info "skip" "$message" "$before" "$after"
 }
 
 require_command() {
