@@ -60,7 +60,7 @@
                 "python.testing.coverageEnabled": true,
                 "python.testing.pytestArgs": [
                     "tests",
-                    " --cov-report=term-missing"
+                    "--cov-report=term-missing"
                 ],
                 "python.testing.unittestEnabled": false,
                 "python.testing.pytestEnabled": true,
