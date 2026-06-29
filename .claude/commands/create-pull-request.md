@@ -4,7 +4,7 @@ Prepare and create a pull request for the current branch.
 
 ## Steps
 
-1. Detect the current branch name and infer the base branch (default: `develop`, use `main` if the branch is `develop`)
+1. The base branch is always `develop`
 2. Run `git log <base>..HEAD --oneline` to list commits
 3. Run `git diff <base>...HEAD --stat` to list changed files
 4. Pick the most appropriate label from this list:
