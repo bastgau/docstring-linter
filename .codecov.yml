@@ -1,0 +1,11 @@
+# https://docs.codecov.com/docs/pull-request-comments
+
+comment: false
+
+# comment:                         # Top-level key to configure PR comments
+#   layout: "diff, flags, files"   # What to display: diff coverage, flags, and affected files
+#   behavior: default              # How Codecov updates comments (default = post new, update existing)
+#   require_changes: false         # Only post comment if coverage changes (true/false)
+#   require_base: false            # Require a base report to post comment (true/false)
+#   require_head: true             # Require a head report to post comment (true/false)
+#   hide_project_coverage: false   # Show only git diff coverage, hide overall project coverage (true/false)

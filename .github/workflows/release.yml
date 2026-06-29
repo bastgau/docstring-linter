@@ -1,4 +1,5 @@
 name: Release
+run-name: Release ${{ github.ref_name }}
 
 on:
   push:
@@ -63,19 +64,32 @@ jobs:
           PREVIOUS=${{ steps.last_stable.outputs.tag }}
           if [ -z "$PREVIOUS" ]; then
             LOG=$(git log --pretty=format:"- %s" HEAD)
+            COMPARE="https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}"
           else
             LOG=$(git log --pretty=format:"- %s" ${PREVIOUS}..HEAD)
+            COMPARE="https://github.com/${{ github.repository }}/compare/${PREVIOUS}...${{ github.ref_name }}"
           fi
           echo "body<<EOF" >> $GITHUB_OUTPUT
           echo "$LOG" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "**Full Changelog**: ${COMPARE}" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Check if release exists
+        id: check_release
+        run: |
+          STATUS=$(gh api repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} -o /dev/null -w "%{http_code}" 2>/dev/null || echo "404")
+          echo "exists=$( [ "$STATUS" = "200" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        if: steps.check_release.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v3
         with:
+          name: Release ${{ github.ref_name }}
           files: |
             dist/*.whl
             dist/*.tar.gz
           body: ${{ steps.changelog.outputs.body }}
           prerelease: ${{ contains(github.ref_name, '-') }}
-          skip_existing: true
