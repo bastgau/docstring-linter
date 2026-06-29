@@ -147,7 +147,7 @@ def _extract_args(arguments: ast.arguments) -> list[ArgInfo]:
     skip = {"self", "cls"}
     result: list[ArgInfo] = []
 
-    all_args = arguments.args
+    all_args = arguments.posonlyargs + arguments.args
     defaults = arguments.defaults
     num_no_default = len(all_args) - len(defaults)
 
