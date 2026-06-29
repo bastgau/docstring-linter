@@ -80,6 +80,15 @@ def my_function(data: list[object], limit: int = 10) -> list[object]:
         ValueError: When this exception is raised.
 
     """
+
+    def new_limit(x: int) -> int:
+        if x > 100:  # noqa: PLR2004
+            msg = "stop"
+            raise RuntimeError(msg)
+        return x
+
+    limit = new_limit(limit)
+
     if not data:
         msg_cannot_be_empty = "Data cannot be empty"
         raise ValueError(msg_cannot_be_empty)

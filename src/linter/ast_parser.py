@@ -203,20 +203,23 @@ def _extract_raises(
     """
     raises: list[RaiseInfo] = []
     seen: set[str] = set()
+    queue: list[ast.AST] = list(ast.iter_child_nodes(node))
 
-    for child in ast.walk(node):
-        if not isinstance(child, ast.Raise) or child.exc is None:
+    while queue:
+        child = queue.pop()
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
             continue
-
-        exc_name = None
-        if isinstance(child.exc, ast.Call) and isinstance(child.exc.func, ast.Name):
-            exc_name = child.exc.func.id
-        elif isinstance(child.exc, ast.Name):  # pragma: no branch
-            exc_name = child.exc.id
-
-        if exc_name and exc_name not in seen:
-            seen.add(exc_name)
-            raises.append(RaiseInfo(exception_type=exc_name, line=child.lineno))
+        if isinstance(child, ast.Raise) and child.exc is not None:
+            exc_name = None
+            if isinstance(child.exc, ast.Call) and isinstance(child.exc.func, ast.Name):
+                exc_name = child.exc.func.id
+            elif isinstance(child.exc, ast.Name):
+                exc_name = child.exc.id
+            if exc_name and exc_name not in seen:
+                seen.add(exc_name)
+                raises.append(RaiseInfo(exception_type=exc_name, line=child.lineno))
+        else:
+            queue.extend(ast.iter_child_nodes(child))
 
     return raises
 
