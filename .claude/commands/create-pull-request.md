@@ -1,4 +1,4 @@
-# Create Pull Request
+# Create pull request
 
 Prepare and create a pull request for the current branch.
 
