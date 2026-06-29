@@ -65,6 +65,34 @@ class MyClass:
         """Short one-liner for simple methods."""
         self.count = 0
 
+def divide_new(numerator: int, *, denominator: int) -> float:
+    """Divide two numbers.
+
+    Args:
+        numerator (int): The dividend.
+        denominator (int): The divisor.
+
+    Returns:
+        float: The quotient.
+
+    """
+    return numerator / denominator
+
+
+def divide(numerator: int, denominator: int, /) -> float:
+    """Divide two numbers.
+
+    Args:
+        numerator (int): The dividend.
+        denominator (int): The divisor.
+
+    Returns:
+        float: The quotient.
+
+    """
+    divide_new(4, denominator=7)
+
+    return numerator / denominator
 
 def my_function(data: list[object], limit: int = 10) -> list[object]:
     """Short function description on the first line.
