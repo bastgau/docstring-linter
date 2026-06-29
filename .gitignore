@@ -137,8 +137,6 @@ __queuestorage__
 .DS_Store
 
 # User configuration
-.opencommit
-.orcommit.json
 .vscode/settings.json
 local.config/
 local.settings.json

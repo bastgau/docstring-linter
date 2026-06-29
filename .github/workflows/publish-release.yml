@@ -1,5 +1,5 @@
-name: Release
-run-name: Release ${{ github.ref_name }}
+name: Main - Publish Release
+run-name: Publish Release ${{ github.ref_name }}
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-beta.*"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   lint:
@@ -21,23 +21,18 @@ jobs:
     name: Tests
     secrets: inherit
 
-  release:
+  guard:
     needs: tests
+    if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-latest
-    name: Release
+    name: Guard
     steps:
       - uses: actions/checkout@v7
         name: Git Checkout
         with:
           fetch-depth: 0
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-
       - name: Check branch for stable release
-        if: ${{ !contains(github.ref_name, '-') }}
         run: |
           BRANCH=$(git branch -r --contains HEAD | grep 'origin/main' | tr -d ' ')
           if [ -z "$BRANCH" ]; then
@@ -45,11 +40,50 @@ jobs:
             exit 1
           fi
 
+  build:
+    needs: [tests, guard]
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+      - uses: actions/checkout@v7
+        name: Git Checkout
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: true
+
       - name: Set version from tag
         run: uv version ${{ github.ref_name }}
 
       - name: Build package
         run: uv build
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  github-publish:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Publish to GitHub
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        name: Git Checkout
+        with:
+          fetch-depth: 0
+
+      - name: Download distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
 
       - name: Get last stable tag
         id: last_stable
@@ -93,3 +127,24 @@ jobs:
             dist/*.tar.gz
           body: ${{ steps.changelog.outputs.body }}
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  pypi-publish:
+    needs: build
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    name: Publish to PyPI
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8
+
+      - name: Publish to PyPI
+        run: uv publish --trusted-publishing always
