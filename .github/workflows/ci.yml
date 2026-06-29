@@ -1,4 +1,4 @@
-name: Code, Quality & Build
+name: Main - Code, Quality & Build
 
 on:
   push:
