@@ -63,22 +63,12 @@ print_header() {
   fi
 }
 
-print_rule() {
-  local label="$1"
-  local width=44
-  local label_len=$(( ${#label} + 4 ))
-  local dashes=$(( width - label_len ))
-  printf '\n%s── %s%s %s' "${BLUE}" "${NC}" "$label" "${BLUE}"
-  printf '%0.s─' $(seq 1 "$dashes")
-  printf '%s\n' "${NC}"
-}
 
 run_check() {
   local tool="$1"
   local label_cmd="$2"
   shift 2
   print_rule "$tool"
-  printf '\n'
   printf '%sCommand : $ %s%s\n' "${GRAY}" "$label_cmd" "${NC}"
   case "$tool" in
     vulture|pytest|coverage)
@@ -113,7 +103,7 @@ run_check() {
 _no_files_skip() {
   local tool="$1"
   print_rule "$tool"
-  printf '\nNo changed files to check.\n\n'
+  printf 'No changed files to check.\n\n'
   success "$tool passed"
 }
 
