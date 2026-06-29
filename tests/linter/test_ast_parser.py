@@ -116,6 +116,59 @@ def test_extract_args_mixed_positional_and_keyword_only() -> None:
     assert args[1].name == "b"
 
 
+def test_extract_args_positional_only() -> None:
+    """Positional-only args (before /) are extracted with name and type.
+
+    def f(a: int, b: str, /) -> [a, b]
+    """
+    node = _parse_func("def f(a: int, b: str, /): pass")
+    args = _extract_args(node.args)
+
+    assert len(args) == 2
+    assert args[0].name == "a"
+    assert args[0].type_annotation == "int"
+    assert args[1].name == "b"
+    assert args[1].type_annotation == "str"
+
+
+def test_extract_args_positional_only_skips_self() -> None:
+    """Exclude self when it appears in positional-only position.
+
+    def f(self, x: int, /) -> [x]
+    """
+    node = _parse_func("def f(self, x: int, /): pass")
+    args = _extract_args(node.args)
+
+    assert len(args) == 1
+    assert args[0].name == "x"
+
+
+def test_extract_args_positional_only_default_alignment() -> None:
+    """Defaults align by the end of posonlyargs + args combined.
+
+    def f(a, b, /, c, d=5, *, e=10) -> only d and e have defaults
+    """
+    node = _parse_func("def f(a, b, /, c, d=5, *, e=10): pass")
+    args = _extract_args(node.args)
+
+    by_name = {a.name: a.default for a in args}
+    assert by_name == {"a": None, "b": None, "c": None, "d": "5", "e": "10"}
+
+
+def test_extract_args_positional_only_with_default() -> None:
+    """Positional-only arg with a default has its default extracted.
+
+    def f(a, b=2, /) -> b.default="2"
+    """
+    node = _parse_func("def f(a, b=2, /): pass")
+    args = _extract_args(node.args)
+
+    assert args[0].name == "a"
+    assert args[0].default is None
+    assert args[1].name == "b"
+    assert args[1].default == "2"
+
+
 # ---------------------------------------------------------------------------
 # _extract_raises
 # ---------------------------------------------------------------------------
