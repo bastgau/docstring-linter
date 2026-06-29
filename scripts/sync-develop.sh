@@ -33,19 +33,21 @@ fi
 
 LOCAL_ONLY="$(git log origin/develop..develop --oneline 2>/dev/null)"
 if [[ -n "$LOCAL_ONLY" ]]; then
-  failure "local develop has commits not on origin/develop -- aborting to avoid data loss"
+  printf "\n"
   while IFS= read -r line; do
     print_detail "$line"
   done <<< "$LOCAL_ONLY"
+  failure -n -a "local develop has commits not on origin/develop -- aborting to avoid data loss"
   exit 1
 fi
 
 REMOTE_ONLY="$(git log origin/main..origin/develop --oneline 2>/dev/null)"
 if [[ -n "$REMOTE_ONLY" ]]; then
-  failure "origin/develop has commits not on origin/main -- aborting to avoid data loss"
+  printf "\n"
   while IFS= read -r line; do
     print_detail "$line"
   done <<< "$REMOTE_ONLY"
+  failure -n -a "origin/develop has commits not on origin/main -- aborting to avoid data loss"
   exit 1
 fi
 
