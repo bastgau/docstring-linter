@@ -100,7 +100,7 @@ def check_returns_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None
                 errors.append(make_error(entity, "without_returns_none_init", "'Returns: None' is not allowed on __init__ methods."))
             return errors
 
-        if is_one_liner and config.is_rule_enabled("without_returns_none_oneliner"):
+        if is_one_liner and config.is_rule_enabled("allow_oneliner"):
             return errors
 
     if entity.return_type and parsed_doc.returns is None:
