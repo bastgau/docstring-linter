@@ -69,16 +69,31 @@ def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> 
     return errors
 
 
-def check_returns_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig) -> list[LintError]:  # noqa: C901
-    """Check that Returns section exists and has correct type.
+def _is_init(entity: CodeEntity) -> bool:
+    """Check whether an entity is an __init__ method.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+
+    Returns:
+        bool: True if the entity is an __init__ method.
+
+    """
+    return entity.name.endswith(".__init__") or entity.name == "__init__"
+
+
+def check_returns_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> list[LintError]:
+    """Check that a Returns section is present when the signature requires one.
+
+    Handles non-None return types and multi-line non-init -> None functions.
+    The __init__ and one-liner -> None cases are owned by the dedicated rules.
 
     Args:
         entity (CodeEntity): Entity to check.
         parsed_doc (ParsedDocstring | None): Parsed docstring.
-        config (LinterConfig): Linter configuration.
 
     Returns:
-        list[LintError]: Errors if Returns section is missing or wrong.
+        list[LintError]: Errors if the Returns section is missing.
 
     """
     errors: list[LintError] = []
@@ -92,26 +107,84 @@ def check_returns_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None
         return errors
 
     if entity.return_type == "None":
-        is_init = entity.name.endswith(".__init__") or entity.name == "__init__"
         is_one_liner = entity.docstring is not None and "\n" not in entity.docstring
-
-        if is_init and config.is_rule_enabled("without_returns_none_init"):
-            if parsed_doc.returns is not None:
-                errors.append(make_error(entity, "without_returns_none_init", "'Returns: None' is not allowed on __init__ methods."))
-            return errors
-
-        if is_one_liner and config.is_rule_enabled("allow_oneliner"):
+        if _is_init(entity) or is_one_liner:
             return errors
 
     if entity.return_type and parsed_doc.returns is None:
         errors.append(make_error(entity, "returns_section", f"Missing 'Returns:' section. Signature declares -> {entity.return_type}."))
+
+    return errors
+
+
+def check_forbid_init_returns_none(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig) -> list[LintError]:
+    """Check the 'Returns: None' policy on __init__ methods.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+        config (LinterConfig): Linter configuration.
+
+    Returns:
+        list[LintError]: Errors if the __init__ Returns: None policy is violated.
+
+    """
+    if parsed_doc is None or entity.return_type != "None" or entity.is_generator or not _is_init(entity):
+        return []
+
+    if config.is_rule_enabled("forbid_init_returns_none"):
+        if parsed_doc.returns is not None:
+            return [make_error(entity, "forbid_init_returns_none", "'Returns: None' is not allowed on __init__ methods.")]
+        return []
+
+    if parsed_doc.returns is None:
+        return [make_error(entity, "forbid_init_returns_none", "Missing 'Returns: None' section on __init__ method.")]
+    return []
+
+
+def check_allow_oneliner(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig) -> list[LintError]:
+    """Check whether a one-liner is allowed on a -> None function.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+        config (LinterConfig): Linter configuration.
+
+    Returns:
+        list[LintError]: Errors if a one-liner is used while disallowed.
+
+    """
+    if parsed_doc is None or entity.return_type != "None" or entity.is_generator or _is_init(entity):
+        return []
+
+    is_one_liner = entity.docstring is not None and "\n" not in entity.docstring
+    if not is_one_liner or config.is_rule_enabled("allow_oneliner"):
+        return []
+
+    return [make_error(entity, "allow_oneliner", "One-liner docstring not allowed on -> None function; add a 'Returns: None' section.")]
+
+
+def check_returns_type_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> list[LintError]:
+    """Check that an existing Returns section matches the signature type.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+
+    Returns:
+        list[LintError]: Errors if the Returns type is wrong or missing.
+
+    """
+    errors: list[LintError] = []
+
+    if parsed_doc is None or parsed_doc.returns is None or not entity.return_type or entity.is_generator:
         return errors
 
-    if entity.return_type and parsed_doc.returns and parsed_doc.returns.type_annotation and parsed_doc.returns.type_annotation != entity.return_type:
-        errors.append(make_error(entity, "returns_section", f"Return type mismatch: signature='{entity.return_type}', docstring='{parsed_doc.returns.type_annotation}'."))
+    if parsed_doc.returns.type_annotation and parsed_doc.returns.type_annotation != entity.return_type:
+        errors.append(make_error(entity, "returns_type_match", f"Return type mismatch: signature='{entity.return_type}', docstring='{parsed_doc.returns.type_annotation}'."))
 
-    if entity.return_type and parsed_doc.returns and not parsed_doc.returns.type_annotation:
-        errors.append(make_error(entity, "returns_section", f"Missing type in 'Returns:'. Expected '{entity.return_type}'."))
+    if not parsed_doc.returns.type_annotation:
+        errors.append(make_error(entity, "returns_type_match", f"Missing type in 'Returns:'. Expected '{entity.return_type}'."))
 
     return errors
 

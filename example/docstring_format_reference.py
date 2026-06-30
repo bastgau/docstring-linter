@@ -142,3 +142,10 @@ def read_lines(path: str) -> Iterator[str]:
     with open(path, encoding="utf8") as f:  # noqa: PTH123
         for line in f:
             yield line.strip()
+
+
+class NewTest:
+    """Display class description on the first line."""
+
+    def __init__(self) -> None:
+        """Short method description on the first line."""
