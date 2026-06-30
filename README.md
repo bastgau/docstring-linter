@@ -53,7 +53,6 @@ Configuration is loaded in this order (first match wins):
 style = "google"
 select = ["ALL"]
 ignore = [
-    "returns_none_init",     # opt-in
     "returns_none_oneliner", # opt-in
 ]
 exclude_empty_init = true
@@ -77,7 +76,6 @@ Standalone config file -- same keys, without the `[tool.docstring-linter]` wrapp
 style = "google"
 select = ["ALL"]
 ignore = [
-    "returns_none_init",     # opt-in
     "returns_none_oneliner", # opt-in
 ]
 exclude_empty_init = true

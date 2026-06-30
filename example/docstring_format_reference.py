@@ -27,9 +27,6 @@ class MyClass:
             name (str): Description of the parameter.
             count (int): Description of the parameter. Defaults to 0.
 
-        Returns:
-            None: This method returns nothing.
-
         """
         self.name = name
         self.count = count
