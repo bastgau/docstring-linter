@@ -182,12 +182,12 @@ This file lists the 238 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_without_returns_none_init_forbidden_when_enabled` | __init__ -> None with rule enabled: documenting Returns: None is an error. |
 | `rules/test_rules_args.py` | `test_without_returns_none_init_required_when_disabled` | __init__ -> None with rule disabled: missing Returns section is an error. |
 
-### without_returns_none_oneliner
+### allow_oneliner
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_args.py` | `test_without_returns_none_oneliner_no_returns_ok_when_enabled` | One-liner -> None without Returns section: no error (rule enabled, default). |
-| `rules/test_rules_args.py` | `test_without_returns_none_oneliner_required_when_disabled` | One-liner -> None with rule disabled: missing Returns section is an error. |
+| `rules/test_rules_args.py` | `test_allow_oneliner_no_returns_ok_when_enabled` | One-liner -> None without Returns section: no error (rule enabled, default). |
+| `rules/test_rules_args.py` | `test_allow_oneliner_required_when_disabled` | One-liner -> None with rule disabled: missing Returns section is an error. |
 
 ### raises_match
 

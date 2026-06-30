@@ -857,7 +857,7 @@ def __init__(self, name: str) -> None:
 
 ---
 
-### without_returns_none_oneliner *(enabled by default)*
+### allow_oneliner *(enabled by default)*
 
 Controls whether a `Returns: None` section is required on `-> None` functions whose docstring is a one-liner.
 
@@ -870,7 +870,7 @@ Does not apply to `__init__` methods (handled by `without_returns_none_init`).
 [tool.docstring-linter]
 # Default: one-liner -> None needs no Returns section (no config needed).
 # To require Returns: None instead, disable the rule:
-ignore = ["without_returns_none_oneliner"]
+ignore = ["allow_oneliner"]
 ```
 
 ```python
