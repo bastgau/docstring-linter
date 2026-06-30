@@ -138,12 +138,29 @@ def test_returns_section_missing_type_in_docstring() -> None:
     assert any("Missing type" in e.message for e in errors)
 
 
-def test_returns_section_none_init_exempt_by_default() -> None:
-    """__init__ -> None: exempt from returns_section by default (returns_none_init off)."""
+def test_without_returns_none_init_no_returns_ok_when_enabled() -> None:
+    """__init__ -> None without Returns section: no error (rule enabled, default)."""
     entity = _func(name="MyClass.__init__", return_type="None", node_type=NodeType.METHOD)
-    cfg = _cfg(enabled_rules=["returns_section"])
+    cfg = _cfg(enabled_rules=["returns_section", "without_returns_none_init"])
     errors = validate_entity(entity, ParsedDocstring(summary="Init."), cfg)
     assert not errors
+
+
+def test_without_returns_none_init_forbidden_when_enabled() -> None:
+    """__init__ -> None with rule enabled: documenting Returns: None is an error."""
+    entity = _func(name="MyClass.__init__", return_type="None", node_type=NodeType.METHOD)
+    cfg = _cfg(enabled_rules=["returns_section", "without_returns_none_init"])
+    doc = ParsedDocstring(summary="Init.", returns=DocstringReturn(type_annotation="None"))
+    errors = validate_entity(entity, doc, cfg)
+    assert any(e.rule == "without_returns_none_init" and "not allowed" in e.message for e in errors)
+
+
+def test_without_returns_none_init_required_when_disabled() -> None:
+    """__init__ -> None with rule disabled: missing Returns section is an error."""
+    entity = _func(name="MyClass.__init__", return_type="None", node_type=NodeType.METHOD, docstring="Init.\n\nArgs:\n    x (int): X.\n", raw_docstring="Init.\n\nArgs:\n    x (int): X.\n")
+    cfg = _cfg(enabled_rules=["returns_section"])
+    errors = validate_entity(entity, ParsedDocstring(summary="Init."), cfg)
+    assert any(e.rule == "returns_section" for e in errors)
 
 
 def test_returns_section_none_oneliner_exempt_by_default() -> None:

@@ -795,19 +795,35 @@ def read_lines(path: str) -> Iterator[str]:
 
 ---
 
-### returns_none_init *(opt-in, disabled by default)*
+### without_returns_none_init *(enabled by default)*
 
-Requires `Returns: None` on `__init__` methods, even multi-line ones.
+Controls `Returns: None` on `__init__` methods. The rule is always active; the toggle inverts its meaning:
+
+- **Enabled (default)**: `Returns: None` is forbidden.
+- **Disabled**: `Returns: None` is required, even on multi-line docstrings.
 
 ```toml
 [tool.docstring-linter]
-select = ["ALL"]
-# or explicitly:
-ignore = []  # remove "returns_none_init" from ignore
+# Default: Returns: None forbidden on __init__ (no config needed).
+# To require it instead, disable the rule:
+ignore = ["without_returns_none_init"]
 ```
 
 ```python
-# Bad (if enabled)
+# Enabled (default): Returns: None forbidden
+# Bad
+def __init__(self, name: str) -> None:
+    """Initialize the object.
+
+    Args:
+        name (str): The name.
+
+    Returns:
+        None: This method returns nothing.
+
+    """
+
+# Good
 def __init__(self, name: str) -> None:
     """Initialize the object.
 
@@ -816,7 +832,17 @@ def __init__(self, name: str) -> None:
 
     """
 
-# Good (if enabled)
+# Disabled: Returns: None required
+# Bad
+def __init__(self, name: str) -> None:
+    """Initialize the object.
+
+    Args:
+        name (str): The name.
+
+    """
+
+# Good
 def __init__(self, name: str) -> None:
     """Initialize the object.
 

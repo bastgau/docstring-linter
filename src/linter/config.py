@@ -59,7 +59,7 @@ RULES_CATEGORIES: dict[str, list[str]] = {
         "returns_section",
         "yields_section",
         "raises_match",
-        "returns_none_init",
+        "without_returns_none_init",
         "returns_none_oneliner",
     ],
 }
@@ -89,12 +89,12 @@ RULES_REGISTRY = {
     "summary_first_line": "Summary must start on the same line as opening triple quotes",
     "closing_quotes_blank_line": "Multi-line docstring must have exactly one blank line before closing triple quotes",
     "no_blank_line_in_section": "No blank lines allowed between entries in Args, Attributes, or Raises sections",
-    "returns_none_init": "Require 'Returns: None' on __init__ methods",
+    "without_returns_none_init": "Forbid 'Returns: None' on __init__ methods (when disabled, require it)",
     "returns_none_oneliner": "Require 'Returns: None' on one-liner docstrings returning None",
 }
 
 # Rules disabled by default; users opt in via pyproject.toml or --select
-OFF_BY_DEFAULT = frozenset({"returns_none_init", "returns_none_oneliner"})
+OFF_BY_DEFAULT = frozenset({"returns_none_oneliner"})
 
 
 @dataclass

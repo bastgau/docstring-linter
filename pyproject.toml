@@ -29,7 +29,6 @@ Issues = "https://github.com/bastgau/docstring-linter/issues"
 [tool.docstring-linter]
 select = ["ALL"]
 ignore = [
-    "returns_none_init",     ## opt-in
     "returns_none_oneliner", ## opt-in
 ]
 exclude = ["test_*", "*_test.py", "tests/*"]

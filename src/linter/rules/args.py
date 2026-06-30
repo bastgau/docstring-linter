@@ -69,7 +69,7 @@ def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> 
     return errors
 
 
-def check_returns_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig) -> list[LintError]:
+def check_returns_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig) -> list[LintError]:  # noqa: C901
     """Check that Returns section exists and has correct type.
 
     Args:
@@ -95,7 +95,9 @@ def check_returns_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None
         is_init = entity.name.endswith(".__init__") or entity.name == "__init__"
         is_one_liner = entity.docstring is not None and "\n" not in entity.docstring
 
-        if is_init and not config.is_rule_enabled("returns_none_init"):
+        if is_init and config.is_rule_enabled("without_returns_none_init"):
+            if parsed_doc.returns is not None:
+                errors.append(make_error(entity, "without_returns_none_init", "'Returns: None' is not allowed on __init__ methods."))
             return errors
 
         if is_one_liner and not config.is_rule_enabled("returns_none_oneliner"):
