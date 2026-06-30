@@ -53,7 +53,7 @@ Configuration is loaded in this order (first match wins):
 style = "google"
 select = ["ALL"]
 ignore = [
-    "without_returns_none_init", # require Returns: None on __init__ instead of forbidding it
+    "forbid_init_returns_none", # require Returns: None on __init__ instead of forbidding it
 ]
 exclude_empty_init = true
 ignore_placeholder_docstrings = false
@@ -76,7 +76,7 @@ Standalone config file -- same keys, without the `[tool.docstring-linter]` wrapp
 style = "google"
 select = ["ALL"]
 ignore = [
-    "without_returns_none_init", # require Returns: None on __init__ instead of forbidding it
+    "forbid_init_returns_none", # require Returns: None on __init__ instead of forbidding it
 ]
 exclude_empty_init = true
 ignore_placeholder_docstrings = false

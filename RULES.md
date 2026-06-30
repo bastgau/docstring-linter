@@ -4,7 +4,7 @@ Python linter that checks docstring conformance to Google style.
 
 ## Rule Reference
 
-25 rules in total, all configurable in `pyproject.toml` file or `.docstring-linter.toml` file.
+26 rules in total, all configurable in `pyproject.toml` file or `.docstring-linter.toml` file.
 
 ---
 
@@ -313,22 +313,12 @@ def process(x: int, y: str) -> None:
 
 ### returns_section
 
-The `Returns:` section must be present with a type matching the signature.
+The `Returns:` section must be **present** when the signature declares a return type. This rule only checks presence; type correctness is handled by `returns_type_match`. Disable `returns_section` (keeping `returns_type_match` on) to make the section optional while still validating its type when present.
 
 ```python
 # Bad: no Returns section
 def get_name() -> str:
     """Get the user name."""
-    return "Alice"
-
-# Bad: type mismatch
-def get_name() -> str:
-    """Get the user name.
-
-    Returns:
-        int: The name.
-
-    """
     return "Alice"
 
 # Good
@@ -356,6 +346,44 @@ def reset(deep: bool) -> None:
         None: This method resets in place.
 
     """
+```
+
+---
+
+### returns_type_match
+
+When a `Returns:` section exists, its type must match the signature, and the type must not be missing. This rule never reports a missing section (that is `returns_section`).
+
+```python
+# Bad: type mismatch
+def get_name() -> str:
+    """Get the user name.
+
+    Returns:
+        int: The name.
+
+    """
+    return "Alice"
+
+# Bad: type missing in Returns
+def get_name() -> str:
+    """Get the user name.
+
+    Returns:
+        The name.
+
+    """
+    return "Alice"
+
+# Good
+def get_name() -> str:
+    """Get the user name.
+
+    Returns:
+        str: The user name.
+
+    """
+    return "Alice"
 ```
 
 ---
@@ -795,18 +823,20 @@ def read_lines(path: str) -> Iterator[str]:
 
 ---
 
-### without_returns_none_init *(enabled by default)*
+### forbid_init_returns_none *(enabled by default)*
 
 Controls `Returns: None` on `__init__` methods. The rule is always active; the toggle inverts its meaning:
 
 - **Enabled (default)**: `Returns: None` is forbidden.
 - **Disabled**: `Returns: None` is required, even on multi-line docstrings.
 
+This rule is independent of `returns_section`: it is evaluated for `__init__ -> None` methods regardless of whether `returns_section` is enabled, and its errors are reported under `[forbid_init_returns_none]`.
+
 ```toml
 [tool.docstring-linter]
 # Default: Returns: None forbidden on __init__ (no config needed).
 # To require it instead, disable the rule:
-ignore = ["without_returns_none_init"]
+ignore = ["forbid_init_returns_none"]
 ```
 
 ```python
@@ -864,7 +894,7 @@ Controls whether a `Returns: None` section is required on `-> None` functions wh
 - **Enabled (default)**: a one-liner docstring is accepted as-is. No `Returns:` section is required (a one-liner cannot contain one anyway).
 - **Disabled**: one-liner docstrings are not allowed on `-> None` functions; a `Returns: None` section is required, which forces a multi-line docstring.
 
-Does not apply to `__init__` methods (handled by `without_returns_none_init`).
+Does not apply to `__init__` methods (handled by `forbid_init_returns_none`). Independent of `returns_section`: evaluated regardless of whether `returns_section` is enabled, and its errors are reported under `[allow_oneliner]`.
 
 ```toml
 [tool.docstring-linter]

@@ -8,7 +8,18 @@ from typing import TYPE_CHECKING
 
 from linter.models import CodeEntity, LintError, NodeType, ParsedDocstring
 from linter.rules._base import GOOGLE_SECTION_ORDER, GOOGLE_SECTIONS, is_placeholder, make_error
-from linter.rules.args import check_args_match, check_duplicate_arg, check_param_order, check_raises_match, check_return_type_annotation, check_returns_section, check_yields_section
+from linter.rules.args import (
+    check_allow_oneliner,
+    check_args_match,
+    check_duplicate_arg,
+    check_forbid_init_returns_none,
+    check_param_order,
+    check_raises_match,
+    check_return_type_annotation,
+    check_returns_section,
+    check_returns_type_match,
+    check_yields_section,
+)
 from linter.rules.attributes import check_attributes_section
 from linter.rules.docstring import (
     check_docstring_exists,
@@ -95,7 +106,13 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
             errors.extend(check_param_order(entity, parsed_doc))
 
         if config.is_rule_enabled("returns_section"):
-            errors.extend(check_returns_section(entity, parsed_doc, config))
+            errors.extend(check_returns_section(entity, parsed_doc))
+
+        if config.is_rule_enabled("returns_type_match"):
+            errors.extend(check_returns_type_match(entity, parsed_doc))
+
+        errors.extend(check_forbid_init_returns_none(entity, parsed_doc, config))
+        errors.extend(check_allow_oneliner(entity, parsed_doc, config))
 
         if config.is_rule_enabled("raises_match"):
             errors.extend(check_raises_match(entity, parsed_doc))

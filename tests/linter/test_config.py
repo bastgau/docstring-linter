@@ -226,7 +226,7 @@ def test_load_config_toml_with_section(tmp_path: Path) -> None:
     f.write_text('[tool.docstring-linter]\nselect = ["ALL"]\nworkers = 4\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 4
-    assert "without_returns_none_init" in config.enabled_rules
+    assert "forbid_init_returns_none" in config.enabled_rules
     assert config_file == f
 
 
@@ -236,7 +236,7 @@ def test_load_config_standalone_toml(tmp_path: Path) -> None:
     f.write_text('workers = 3\nselect = ["ALL"]\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 3
-    assert "without_returns_none_init" in config.enabled_rules
+    assert "forbid_init_returns_none" in config.enabled_rules
     assert config_file == f
 
 
