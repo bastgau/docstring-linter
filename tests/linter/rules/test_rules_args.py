@@ -163,10 +163,10 @@ def test_without_returns_none_init_required_when_disabled() -> None:
     assert any(e.rule == "returns_section" for e in errors)
 
 
-def test_returns_section_none_oneliner_exempt_by_default() -> None:
-    """One-liner docstring -> None: exempt by default (returns_none_oneliner off)."""
+def test_without_returns_none_oneliner_no_returns_ok_when_enabled() -> None:
+    """One-liner -> None without Returns section: no error (rule enabled, default)."""
     entity = _func(return_type="None", docstring="Do something.", raw_docstring="Do something.")
-    cfg = _cfg(enabled_rules=["returns_section"])
+    cfg = _cfg(enabled_rules=["returns_section", "without_returns_none_oneliner"])
     errors = validate_entity(entity, ParsedDocstring(summary="Do something."), cfg)
     assert not errors
 
@@ -179,10 +179,10 @@ def test_returns_section_correct() -> None:
     assert not errors
 
 
-def test_returns_none_oneliner_required_when_rule_enabled() -> None:
-    """One-liner -> None with returns_none_oneliner enabled: returns section required."""
+def test_without_returns_none_oneliner_required_when_disabled() -> None:
+    """One-liner -> None with rule disabled: missing Returns section is an error."""
     entity = _func(return_type="None", docstring="Do something.", raw_docstring="Do something.")
-    cfg = _cfg(enabled_rules=["returns_section", "returns_none_oneliner"])
+    cfg = _cfg(enabled_rules=["returns_section"])
     errors = validate_entity(entity, ParsedDocstring(summary="Do something."), cfg)
     assert any(e.rule == "returns_section" for e in errors)
 

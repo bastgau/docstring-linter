@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 236 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 238 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -173,9 +173,21 @@ This file lists the 236 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_returns_section_missing` | Function with return type but no Returns section: returns returns_section error. |
 | `rules/test_rules_args.py` | `test_returns_section_type_mismatch` | Returns section type differs from signature: returns returns_section error. |
 | `rules/test_rules_args.py` | `test_returns_section_missing_type_in_docstring` | Returns section present but no type declared: returns returns_section error. |
-| `rules/test_rules_args.py` | `test_returns_section_none_oneliner_exempt_by_default` | One-liner docstring -> None: exempt by default (returns_none_oneliner off). |
-| `rules/test_rules_args.py` | `test_returns_section_none_init_exempt_by_default` | __init__ -> None: exempt from returns_section by default (returns_none_init off). |
-| `rules/test_rules_args.py` | `test_returns_none_oneliner_required_when_rule_enabled` | One-liner -> None with returns_none_oneliner enabled: returns section required. |
+
+### without_returns_none_init
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_args.py` | `test_without_returns_none_init_no_returns_ok_when_enabled` | __init__ -> None without Returns section: no error (rule enabled, default). |
+| `rules/test_rules_args.py` | `test_without_returns_none_init_forbidden_when_enabled` | __init__ -> None with rule enabled: documenting Returns: None is an error. |
+| `rules/test_rules_args.py` | `test_without_returns_none_init_required_when_disabled` | __init__ -> None with rule disabled: missing Returns section is an error. |
+
+### without_returns_none_oneliner
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_args.py` | `test_without_returns_none_oneliner_no_returns_ok_when_enabled` | One-liner -> None without Returns section: no error (rule enabled, default). |
+| `rules/test_rules_args.py` | `test_without_returns_none_oneliner_required_when_disabled` | One-liner -> None with rule disabled: missing Returns section is an error. |
 
 ### raises_match
 

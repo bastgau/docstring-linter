@@ -53,8 +53,8 @@ def test_is_rule_enabled_true() -> None:
 
 def test_is_rule_enabled_false() -> None:
     """is_rule_enabled returns False for a rule not in enabled_rules."""
-    config = LinterConfig()
-    assert config.is_rule_enabled("returns_none_oneliner") is False
+    config = LinterConfig(enabled_rules=["args_match"])
+    assert config.is_rule_enabled("returns_section") is False
 
 
 # ---------------------------------------------------------------------------

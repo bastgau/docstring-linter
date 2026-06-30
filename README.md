@@ -53,7 +53,7 @@ Configuration is loaded in this order (first match wins):
 style = "google"
 select = ["ALL"]
 ignore = [
-    "returns_none_oneliner", # opt-in
+    "without_returns_none_init", # require Returns: None on __init__ instead of forbidding it
 ]
 exclude_empty_init = true
 ignore_placeholder_docstrings = false
@@ -76,7 +76,7 @@ Standalone config file -- same keys, without the `[tool.docstring-linter]` wrapp
 style = "google"
 select = ["ALL"]
 ignore = [
-    "returns_none_oneliner", # opt-in
+    "without_returns_none_init", # require Returns: None on __init__ instead of forbidding it
 ]
 exclude_empty_init = true
 ignore_placeholder_docstrings = false
@@ -96,7 +96,7 @@ methods = true
 | Key | Default | Description |
 |-----|---------|-------------|
 | `style` | `"google"` | Docstring style to enforce. |
-| `select` | all rules minus opt-in | Rules to enable. `["ALL"]` enables everything. |
+| `select` | all rules | Rules to enable. `["ALL"]` enables everything. |
 | `ignore` | `[]` | Rules to disable (applied after `select`). |
 | `exclude_empty_init` | `true` | Skip `__init__` methods with no parameters and no body. |
 | `ignore_placeholder_docstrings` | `false` | Skip docstrings containing only `...`. |
