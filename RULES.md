@@ -857,23 +857,34 @@ def __init__(self, name: str) -> None:
 
 ---
 
-### returns_none_oneliner *(opt-in, disabled by default)*
+### without_returns_none_oneliner *(enabled by default)*
 
-Requires `Returns: None` even on one-liner docstrings for `-> None` functions.
+Controls whether a `Returns: None` section is required on `-> None` functions whose docstring is a one-liner.
+
+- **Enabled (default)**: a one-liner docstring is accepted as-is. No `Returns:` section is required (a one-liner cannot contain one anyway).
+- **Disabled**: one-liner docstrings are not allowed on `-> None` functions; a `Returns: None` section is required, which forces a multi-line docstring.
+
+Does not apply to `__init__` methods (handled by `without_returns_none_init`).
 
 ```toml
 [tool.docstring-linter]
-select = ["ALL"]
-# or explicitly:
-ignore = []  # remove "returns_none_oneliner" from ignore
+# Default: one-liner -> None needs no Returns section (no config needed).
+# To require Returns: None instead, disable the rule:
+ignore = ["without_returns_none_oneliner"]
 ```
 
 ```python
-# Bad (if enabled)
+# Enabled (default): one-liner accepted
+# Good
 def reset() -> None:
     """Reset all values."""
 
-# Good (if enabled)
+# Disabled: Returns: None required
+# Bad
+def reset() -> None:
+    """Reset all values."""
+
+# Good
 def reset() -> None:
     """Reset all values.
 

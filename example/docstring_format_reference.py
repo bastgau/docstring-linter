@@ -121,7 +121,12 @@ def my_function(data: list[object], limit: int = 10) -> list[object]:
 
 
 def simple_function() -> None:
-    """Short one-liner for simple functions."""
+    """Short one-liner for simple functions.
+
+    Returns:
+        None
+
+    """
 
 
 def read_lines(path: str) -> Iterator[str]:
