@@ -449,12 +449,49 @@ Note: bare `raise` (re-raise), dynamic raises, or raises from internal calls are
 
 ### attributes_section
 
-Every class must have an `Attributes:` section in its docstring, with type and description for each attribute.
+Strict bijection between a class's actual attributes and the `Attributes:` section, with a type and a description for each. A class with no attributes needs no section.
+
+Attributes are extracted from class-level annotations (`x: int`) and `self.x` assignments in `__init__`. Dunder names (`__slots__`) and all-uppercase constants (`MAX_SIZE`) are ignored, both as required attributes and in the phantom check. Properties (`@property`) are not attributes: documenting one in `Attributes:` is reported as an extra entry.
 
 ```python
+# Good: class with no attributes needs no Attributes section
+class Empty:
+    """Represent nothing."""
+
 # Bad: no Attributes section
 class User:
-    """Represent a user."""
+    """Represent a user.
+
+    Attributes:
+        (missing)
+
+    """
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+# Bad: attribute not documented
+class User:
+    """Represent a user.
+
+    Attributes:
+        name (str): The user name.
+
+    """
+    def __init__(self, name: str, age: int) -> None:
+        self.name = name
+        self.age = age
+
+# Bad: documented but not a class attribute (phantom)
+class User:
+    """Represent a user.
+
+    Attributes:
+        name (str): The user name.
+        email (str): Not a real attribute.
+
+    """
+    def __init__(self, name: str) -> None:
+        self.name = name
 
 # Bad: type missing
 class User:
@@ -464,6 +501,8 @@ class User:
         name: The user name.
 
     """
+    def __init__(self, name: str) -> None:
+        self.name = name
 
 # Good
 class User:
@@ -474,6 +513,9 @@ class User:
         age (int): The user age.
 
     """
+    def __init__(self, name: str, age: int) -> None:
+        self.name = name
+        self.age = age
 ```
 
 ---

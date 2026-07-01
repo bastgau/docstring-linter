@@ -22,11 +22,20 @@ def check_attributes_section(entity: CodeEntity, parsed_doc: ParsedDocstring | N
     if parsed_doc is None:
         return []
 
+    if not entity.class_attributes and not parsed_doc.attributes:
+        return []
+
     if not parsed_doc.attributes:
         return [make_error(entity, "attributes_section", "Missing 'Attributes:' section in class docstring.")]
 
-    errors: list[LintError] = []
+    documented = {attr.name for attr in parsed_doc.attributes}
+    actual = set(entity.class_attributes)
+
+    errors: list[LintError] = [make_error(entity, "attributes_section", f"Attribute '{name}' not documented in 'Attributes:' section.") for name in entity.class_attributes if name not in documented]
+
     for attr in parsed_doc.attributes:
+        if attr.name not in actual and not attr.name.startswith("__") and not attr.name.isupper():
+            errors.append(make_error(entity, "attributes_section", f"Attribute '{attr.name}' documented but not a class attribute."))
         if not attr.type_annotation:
             errors.append(make_error(entity, "attributes_section", f"Attribute '{attr.name}' missing type in docstring."))
         if not attr.description:

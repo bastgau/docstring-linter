@@ -6,6 +6,7 @@ source files using the standard library ast module.
 
 import ast
 from pathlib import Path
+from typing import TypeGuard
 
 from linter.models import ArgInfo, CodeEntity, NodeType, RaiseInfo
 
@@ -86,7 +87,76 @@ def _parse_class(node: ast.ClassDef, filepath: str) -> CodeEntity:
         filepath=filepath,
         docstring=ast.get_docstring(node),
         raw_docstring=ast.get_docstring(node, clean=False),
+        class_attributes=_extract_class_attributes(node),
     )
+
+
+def _extract_class_attributes(node: ast.ClassDef) -> list[str]:  # noqa: C901
+    """Extract attribute names from class annotations and __init__ assignments.
+
+    Args:
+        node (ast.ClassDef): AST class definition node.
+
+    Returns:
+        list[str]: Attribute names in first-seen order, without duplicates.
+
+    """
+    names: list[str] = []
+    seen: set[str] = set()
+
+    def add(name: str) -> None:
+        if name.startswith("__") or name.isupper():
+            return
+        if name not in seen:
+            seen.add(name)
+            names.append(name)
+
+    for stmt in node.body:
+        if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+            add(stmt.target.id)
+        elif isinstance(stmt, ast.Assign):
+            for target in stmt.targets:
+                if isinstance(target, ast.Name):
+                    add(target.id)
+
+    for stmt in node.body:
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and stmt.name == "__init__":
+            for name in _self_attr_names(stmt):
+                add(name)
+
+    return names
+
+
+def _self_attr_names(func: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
+    """Collect self.<name> assignment targets inside a function body.
+
+    Args:
+        func (ast.FunctionDef | ast.AsyncFunctionDef): Function node to scan.
+
+    Returns:
+        list[str]: Attribute names assigned on self.
+
+    """
+    names: list[str] = []
+    for child in ast.walk(func):
+        if isinstance(child, ast.AnnAssign) and _is_self_attr(child.target):
+            names.append(child.target.attr)
+        elif isinstance(child, ast.Assign):
+            names.extend(t.attr for t in child.targets if _is_self_attr(t))
+    return names
+
+
+def _is_self_attr(target: ast.expr) -> TypeGuard[ast.Attribute]:
+    """Check whether an assignment target is self.<name>.
+
+    Args:
+        target (ast.expr): Assignment target node.
+
+    Returns:
+        TypeGuard[ast.Attribute]: True if the target is an attribute access on self.
+
+    """
+    return isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name) and target.value.id == "self"
 
 
 def _parse_function(
