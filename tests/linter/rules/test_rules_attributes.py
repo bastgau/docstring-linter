@@ -37,3 +37,30 @@ def test_attributes_section_correct() -> None:
     doc.attributes = [DocstringAttribute(name="x", type_annotation="int", description="A value.")]
     errors = validate_entity(entity, doc, _rule_only("attributes_section"))
     assert not errors
+
+
+def test_attributes_section_no_attributes_no_error() -> None:
+    """Class with no attributes and no Attributes section: no error."""
+    entity, doc = _class(class_attributes=[])
+    doc.attributes = []
+    errors = validate_entity(entity, doc, _rule_only("attributes_section"))
+    assert not errors
+
+
+def test_attributes_section_attribute_not_documented() -> None:
+    """Class attribute missing from the Attributes section: returns attributes_section error."""
+    entity, doc = _class(class_attributes=["x", "y"])
+    doc.attributes = [DocstringAttribute(name="x", type_annotation="int", description="A value.")]
+    errors = validate_entity(entity, doc, _rule_only("attributes_section"))
+    assert any(e.rule == "attributes_section" and "y" in e.message and "not documented" in e.message for e in errors)
+
+
+def test_attributes_section_phantom_documented() -> None:
+    """Attribute documented but not a class attribute: returns attributes_section error."""
+    entity, doc = _class(class_attributes=["x"])
+    doc.attributes = [
+        DocstringAttribute(name="x", type_annotation="int", description="A value."),
+        DocstringAttribute(name="ghost", type_annotation="str", description="Not real."),
+    ]
+    errors = validate_entity(entity, doc, _rule_only("attributes_section"))
+    assert any(e.rule == "attributes_section" and "ghost" in e.message and "not a class attribute" in e.message for e in errors)

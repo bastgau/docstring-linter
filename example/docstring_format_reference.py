@@ -27,9 +27,6 @@ class MyClass:
             name (str): Description of the parameter.
             count (int): Description of the parameter. Defaults to 0.
 
-        Returns:
-            None: This method returns nothing.
-
         """
         self.name = name
         self.count = count
@@ -124,7 +121,12 @@ def my_function(data: list[object], limit: int = 10) -> list[object]:
 
 
 def simple_function() -> None:
-    """Short one-liner for simple functions."""
+    """Short one-liner for simple functions.
+
+    Returns:
+        None
+
+    """
 
 
 def read_lines(path: str) -> Iterator[str]:
@@ -140,3 +142,10 @@ def read_lines(path: str) -> Iterator[str]:
     with open(path, encoding="utf8") as f:  # noqa: PTH123
         for line in f:
             yield line.strip()
+
+
+class NewTest:
+    """Display class description on the first line."""
+
+    def __init__(self) -> None:
+        """Short method description on the first line."""

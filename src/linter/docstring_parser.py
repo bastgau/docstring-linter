@@ -18,12 +18,7 @@ from linter.models import (
 
 
 class BaseDocstringParser(ABC):
-    """Define abstract interface for docstring parsers.
-
-    Attributes:
-        style (DocstringStyle): Style this parser handles.
-
-    """
+    """Define abstract interface for docstring parsers."""
 
     @abstractmethod
     def parse(self, docstring: str) -> ParsedDocstring:

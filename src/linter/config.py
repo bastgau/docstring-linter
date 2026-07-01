@@ -57,10 +57,11 @@ RULES_CATEGORIES: dict[str, list[str]] = {
         "duplicate_arg",
         "param_order",
         "returns_section",
+        "returns_type_match",
         "yields_section",
         "raises_match",
-        "returns_none_init",
-        "returns_none_oneliner",
+        "forbid_init_returns_none",
+        "allow_oneliner",
     ],
 }
 
@@ -72,7 +73,8 @@ RULES_REGISTRY = {
     "args_match": "Args must match between signature and docstring",
     "duplicate_arg": "Argument must not be documented more than once in Args section",
     "param_order": "Args section must follow the same order as the function signature",
-    "returns_section": "Returns section must exist with type",
+    "returns_section": "Returns section must exist when the signature declares a return type",
+    "returns_type_match": "When a Returns section exists, its type must match the signature",
     "yields_section": "Yields section must exist for generator functions",
     "raises_match": "Raises must match between code and docstring",
     "attributes_section": "Attributes section must exist in class docstring",
@@ -89,12 +91,12 @@ RULES_REGISTRY = {
     "summary_first_line": "Summary must start on the same line as opening triple quotes",
     "closing_quotes_blank_line": "Multi-line docstring must have exactly one blank line before closing triple quotes",
     "no_blank_line_in_section": "No blank lines allowed between entries in Args, Attributes, or Raises sections",
-    "returns_none_init": "Require 'Returns: None' on __init__ methods",
-    "returns_none_oneliner": "Require 'Returns: None' on one-liner docstrings returning None",
+    "forbid_init_returns_none": "Forbid 'Returns: None' on __init__ methods (when disabled, require it)",
+    "allow_oneliner": "Allow one-liner docstrings for -> None functions without a Returns section (when disabled, one-liner docstrings are not allowed)",
 }
 
 # Rules disabled by default; users opt in via pyproject.toml or --select
-OFF_BY_DEFAULT = frozenset({"returns_none_init", "returns_none_oneliner"})
+OFF_BY_DEFAULT: frozenset[str] = frozenset()
 
 
 @dataclass

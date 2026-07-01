@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 236 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 251 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -88,6 +88,17 @@ This file lists the 236 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_is_empty_init_with_kwonly_arg` | __init__(self, *, name: str): has a keyword-only arg, not empty. |
 | `test_ast_parser.py` | `test_is_empty_init_with_body` | __init__(self) with self.x = 1 in the body: has real statements, not empty. |
 
+### _extract_class_attributes
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_ast_parser.py` | `test_extract_class_attributes_annotations` | Class-level annotations are extracted as attributes. |
+| `test_ast_parser.py` | `test_extract_class_attributes_self_assignments` | self.x assignments in __init__ are extracted as attributes. |
+| `test_ast_parser.py` | `test_extract_class_attributes_dedup_and_order` | Class annotations and __init__ assignments merge without duplicates, in first-seen order. |
+| `test_ast_parser.py` | `test_extract_class_attributes_skips_dunder` | Dunder assignments like __slots__ are not treated as attributes. |
+| `test_ast_parser.py` | `test_extract_class_attributes_skips_constants` | All-uppercase names (constants) are not treated as attributes. |
+| `test_ast_parser.py` | `test_extract_class_attributes_none` | Class with no attributes: returns empty list. |
+
 ### parse_file
 
 | Fichier | Fonction | Description |
@@ -171,11 +182,32 @@ This file lists the 236 tests of the `docstring-linter` project. Each entry show
 |---|---|---|
 | `rules/test_rules_args.py` | `test_returns_section_correct` | Returns section matches signature: no error. |
 | `rules/test_rules_args.py` | `test_returns_section_missing` | Function with return type but no Returns section: returns returns_section error. |
-| `rules/test_rules_args.py` | `test_returns_section_type_mismatch` | Returns section type differs from signature: returns returns_section error. |
-| `rules/test_rules_args.py` | `test_returns_section_missing_type_in_docstring` | Returns section present but no type declared: returns returns_section error. |
-| `rules/test_rules_args.py` | `test_returns_section_none_oneliner_exempt_by_default` | One-liner docstring -> None: exempt by default (returns_none_oneliner off). |
-| `rules/test_rules_args.py` | `test_returns_section_none_init_exempt_by_default` | __init__ -> None: exempt from returns_section by default (returns_none_init off). |
-| `rules/test_rules_args.py` | `test_returns_none_oneliner_required_when_rule_enabled` | One-liner -> None with returns_none_oneliner enabled: returns section required. |
+
+### returns_type_match
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_args.py` | `test_returns_type_match_mismatch` | Returns section type differs from signature: returns returns_type_match error. |
+| `rules/test_rules_args.py` | `test_returns_type_match_missing_type` | Returns section present but no type declared: returns returns_type_match error. |
+| `rules/test_rules_args.py` | `test_returns_type_match_no_section_no_error` | No Returns section: returns_type_match does not flag a missing section. |
+| `rules/test_rules_args.py` | `test_returns_type_match_correct` | Returns section type matches signature: no returns_type_match error. |
+
+### forbid_init_returns_none
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_args.py` | `test_forbid_init_returns_none_no_returns_ok_when_enabled` | __init__ -> None without Returns section: no error (rule enabled, default). |
+| `rules/test_rules_args.py` | `test_forbid_init_returns_none_forbidden_when_enabled` | __init__ -> None with rule enabled: documenting Returns: None is an error. |
+| `rules/test_rules_args.py` | `test_forbid_init_returns_none_required_when_disabled` | __init__ -> None with rule disabled: missing Returns: None is a forbid_init_returns_none error. |
+| `rules/test_rules_args.py` | `test_forbid_init_returns_none_independent_of_returns_section` | __init__ -> None with Returns: None and returns_section off: still forbidden. |
+
+### allow_oneliner
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_args.py` | `test_allow_oneliner_no_returns_ok_when_enabled` | One-liner -> None without Returns section: no error (rule enabled, default). |
+| `rules/test_rules_args.py` | `test_allow_oneliner_required_when_disabled` | One-liner -> None with rule disabled: one-liner not allowed is an allow_oneliner error. |
+| `rules/test_rules_args.py` | `test_allow_oneliner_independent_of_returns_section` | One-liner -> None with allow_oneliner off and returns_section off: still flagged. |
 
 ### raises_match
 
@@ -201,9 +233,12 @@ This file lists the 236 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `rules/test_rules_attributes.py` | `test_attributes_section_correct` | Attribute with type and description: no error. |
-| `rules/test_rules_attributes.py` | `test_attributes_section_missing` | Class with no Attributes section: returns attributes_section error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_missing` | Class with attributes but no Attributes section: returns attributes_section error. |
 | `rules/test_rules_attributes.py` | `test_attributes_section_missing_type` | Attribute without type in docstring: returns attributes_section error. |
 | `rules/test_rules_attributes.py` | `test_attributes_section_missing_description` | Attribute without description in docstring: returns attributes_section error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_no_attributes_no_error` | Class with no attributes and no Attributes section: no error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_attribute_not_documented` | Class attribute missing from the Attributes section: returns attributes_section error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_phantom_documented` | Attribute documented but not a class attribute: returns attributes_section error. |
 
 ### indentation
 

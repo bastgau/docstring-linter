@@ -53,8 +53,8 @@ def test_is_rule_enabled_true() -> None:
 
 def test_is_rule_enabled_false() -> None:
     """is_rule_enabled returns False for a rule not in enabled_rules."""
-    config = LinterConfig()
-    assert config.is_rule_enabled("returns_none_init") is False
+    config = LinterConfig(enabled_rules=["args_match"])
+    assert config.is_rule_enabled("returns_section") is False
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +226,7 @@ def test_load_config_toml_with_section(tmp_path: Path) -> None:
     f.write_text('[tool.docstring-linter]\nselect = ["ALL"]\nworkers = 4\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 4
-    assert "returns_none_init" in config.enabled_rules
+    assert "forbid_init_returns_none" in config.enabled_rules
     assert config_file == f
 
 
@@ -236,7 +236,7 @@ def test_load_config_standalone_toml(tmp_path: Path) -> None:
     f.write_text('workers = 3\nselect = ["ALL"]\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 3
-    assert "returns_none_init" in config.enabled_rules
+    assert "forbid_init_returns_none" in config.enabled_rules
     assert config_file == f
 
 
