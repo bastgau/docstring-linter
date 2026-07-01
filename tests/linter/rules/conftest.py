@@ -40,6 +40,7 @@ def _class(  # pyright: ignore[reportUnusedFunction]
     docstring: str | None = "A class.",
     raw_docstring: str | None = "A class.",
     parsed_doc: ParsedDocstring | None = None,
+    class_attributes: list[str] | None = None,
 ) -> tuple[CodeEntity, ParsedDocstring]:
     entity = CodeEntity(
         name=name,
@@ -48,6 +49,7 @@ def _class(  # pyright: ignore[reportUnusedFunction]
         filepath="test.py",
         docstring=docstring,
         raw_docstring=raw_docstring,
+        class_attributes=class_attributes if class_attributes is not None else ["x"],
     )
     doc = parsed_doc or ParsedDocstring(summary="A class.")
     return entity, doc

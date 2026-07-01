@@ -5,7 +5,7 @@ import textwrap
 from pathlib import Path  # noqa: TC003
 
 import pytest
-from linter.ast_parser import _extract_args, _extract_raises, _is_empty_init, parse_file  # pyright: ignore[reportPrivateUsage]
+from linter.ast_parser import _extract_args, _extract_class_attributes, _extract_raises, _is_empty_init, parse_file  # pyright: ignore[reportPrivateUsage]
 
 
 def _parse_func(source: str) -> ast.FunctionDef:
@@ -16,6 +16,52 @@ def _parse_func(source: str) -> ast.FunctionDef:
             return node
     msg = "No function found in source"
     raise ValueError(msg)
+
+
+def _parse_class(source: str) -> ast.ClassDef:
+    """Parse a source snippet and return the first class node."""
+    tree = ast.parse(textwrap.dedent(source))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            return node
+    msg = "No class found in source"
+    raise ValueError(msg)
+
+
+def test_extract_class_attributes_annotations() -> None:
+    """Class-level annotations are extracted as attributes."""
+    node = _parse_class("class C:\n    x: int\n    y: str = 'a'\n")
+    assert _extract_class_attributes(node) == ["x", "y"]
+
+
+def test_extract_class_attributes_self_assignments() -> None:
+    """self.x assignments in __init__ are extracted as attributes."""
+    node = _parse_class("class C:\n    def __init__(self):\n        self.a = 1\n        self.b: int = 2\n")
+    assert _extract_class_attributes(node) == ["a", "b"]
+
+
+def test_extract_class_attributes_dedup_and_order() -> None:
+    """Class annotations and __init__ assignments merge without duplicates, in first-seen order."""
+    node = _parse_class("class C:\n    x: int\n    def __init__(self):\n        self.x = 1\n        self.y = 2\n")
+    assert _extract_class_attributes(node) == ["x", "y"]
+
+
+def test_extract_class_attributes_skips_dunder() -> None:
+    """Dunder assignments like __slots__ are not treated as attributes."""
+    node = _parse_class("class C:\n    __slots__ = ('x',)\n    value: int\n")
+    assert _extract_class_attributes(node) == ["value"]
+
+
+def test_extract_class_attributes_skips_constants() -> None:
+    """All-uppercase names (constants) are not treated as attributes."""
+    node = _parse_class("class C:\n    MAX_SIZE = 10\n    PATTERN: str = 'x'\n    value: int\n")
+    assert _extract_class_attributes(node) == ["value"]
+
+
+def test_extract_class_attributes_none() -> None:
+    """Class with no attributes: returns empty list."""
+    node = _parse_class("class C:\n    def method(self):\n        return 1\n")
+    assert not _extract_class_attributes(node)
 
 
 # ---------------------------------------------------------------------------

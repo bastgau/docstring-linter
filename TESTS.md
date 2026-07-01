@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 242 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 251 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -87,6 +87,17 @@ This file lists the 242 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_is_empty_init_with_positional_arg` | __init__(self, name: str): has a real positional arg, not empty. |
 | `test_ast_parser.py` | `test_is_empty_init_with_kwonly_arg` | __init__(self, *, name: str): has a keyword-only arg, not empty. |
 | `test_ast_parser.py` | `test_is_empty_init_with_body` | __init__(self) with self.x = 1 in the body: has real statements, not empty. |
+
+### _extract_class_attributes
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_ast_parser.py` | `test_extract_class_attributes_annotations` | Class-level annotations are extracted as attributes. |
+| `test_ast_parser.py` | `test_extract_class_attributes_self_assignments` | self.x assignments in __init__ are extracted as attributes. |
+| `test_ast_parser.py` | `test_extract_class_attributes_dedup_and_order` | Class annotations and __init__ assignments merge without duplicates, in first-seen order. |
+| `test_ast_parser.py` | `test_extract_class_attributes_skips_dunder` | Dunder assignments like __slots__ are not treated as attributes. |
+| `test_ast_parser.py` | `test_extract_class_attributes_skips_constants` | All-uppercase names (constants) are not treated as attributes. |
+| `test_ast_parser.py` | `test_extract_class_attributes_none` | Class with no attributes: returns empty list. |
 
 ### parse_file
 
@@ -222,9 +233,12 @@ This file lists the 242 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `rules/test_rules_attributes.py` | `test_attributes_section_correct` | Attribute with type and description: no error. |
-| `rules/test_rules_attributes.py` | `test_attributes_section_missing` | Class with no Attributes section: returns attributes_section error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_missing` | Class with attributes but no Attributes section: returns attributes_section error. |
 | `rules/test_rules_attributes.py` | `test_attributes_section_missing_type` | Attribute without type in docstring: returns attributes_section error. |
 | `rules/test_rules_attributes.py` | `test_attributes_section_missing_description` | Attribute without description in docstring: returns attributes_section error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_no_attributes_no_error` | Class with no attributes and no Attributes section: no error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_attribute_not_documented` | Class attribute missing from the Attributes section: returns attributes_section error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_phantom_documented` | Attribute documented but not a class attribute: returns attributes_section error. |
 
 ### indentation
 
