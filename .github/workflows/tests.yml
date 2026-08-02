@@ -28,13 +28,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --no-dev --group ${{ env.GROUP }}
 
-      - uses: j178/prek-action@v2.0.6
+      - uses: j178/prek-action@v3.0.0.0.6
         name: Execute Prek on push
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         with:
           extra-args: --group ${{ env.GROUP }} --all-files
 
-      - uses: j178/prek-action@v2.0.6
+      - uses: j178/prek-action@v3.0.0.0.6
         name: Execute Prek on pull_request
         if: github.event_name == 'pull_request'
         with:
