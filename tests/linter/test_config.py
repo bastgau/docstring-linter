@@ -250,6 +250,80 @@ def test_always_on_rule_stays_enabled_when_ignored() -> None:
 
 
 # ---------------------------------------------------------------------------
+# overrides
+# ---------------------------------------------------------------------------
+
+
+def test_parse_override_policy_and_option() -> None:
+    """Override carrying a policy and an option: both are parsed."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "args_section": "optional", "summary_max_length": 120}]})
+    assert len(config.overrides) == 1
+    assert config.overrides[0].paths == ["tests/**"]
+    assert config.overrides[0].values["args_section"] is Policy.OPTIONAL
+    assert config.overrides[0].values["summary_max_length"] == 120
+
+
+def test_parse_override_without_paths() -> None:
+    """Override missing its paths list: raises ValueError."""
+    with pytest.raises(ValueError, match="non-empty 'paths'"):
+        _parse_toml_config({"overrides": [{"args_section": "optional"}]})
+
+
+def test_parse_override_run_level_key() -> None:
+    """Override carrying a run-level key: raises ValueError naming the key."""
+    with pytest.raises(ValueError, match="'exclude' cannot be set per path"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "exclude": ["x"]}]})
+
+
+def test_for_path_without_override_returns_self() -> None:
+    """No override declared: for_path returns the very same config object."""
+    config = LinterConfig()
+    assert config.for_path("src/foo.py") is config
+
+
+def test_for_path_applies_matching_override() -> None:
+    """Matching override: the policy is overridden, the base config is left untouched."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "args_section": "optional"}]})
+    resolved = config.for_path("tests/linter/test_foo.py")
+    assert resolved.args_section is Policy.OPTIONAL
+    assert config.args_section is Policy.REQUIRED
+
+
+def test_for_path_ignores_non_matching_override() -> None:
+    """Override whose patterns do not match: the base config is returned as is."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "args_section": "optional"}]})
+    assert config.for_path("src/foo.py").args_section is Policy.REQUIRED
+
+
+def test_for_path_last_override_wins() -> None:
+    """Two matching overrides: the last declared one wins."""
+    config = _parse_toml_config(
+        {
+            "overrides": [
+                {"paths": ["tests/**"], "args_section": "optional"},
+                {"paths": ["tests/integration/**"], "args_section": "forbidden"},
+            ]
+        }
+    )
+    assert config.for_path("tests/integration/test_x.py").args_section is Policy.FORBIDDEN
+    assert config.for_path("tests/unit/test_y.py").args_section is Policy.OPTIONAL
+
+
+def test_for_path_ignore_removes_from_inherited_rules() -> None:
+    """Ignore key in an override: the rule is removed from the inherited set."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "ignore": ["imperative_mood"]}]})
+    resolved = config.for_path("tests/test_foo.py")
+    assert "imperative_mood" not in resolved.enabled_rules
+    assert "imperative_mood" in config.enabled_rules
+
+
+def test_for_path_select_replaces_inherited_rules() -> None:
+    """Select key in an override: the inherited set is replaced by the listed rules."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "select": ["docstring_exists"]}]})
+    assert config.for_path("tests/test_foo.py").enabled_rules == ["docstring_exists"]
+
+
+# ---------------------------------------------------------------------------
 # load_config
 # ---------------------------------------------------------------------------
 

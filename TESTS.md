@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 349 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 360 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -528,6 +528,13 @@ This file lists the 349 tests of the `docstring-linter` project. Each entry show
 | `test_reporter.py` | `test_report_github_annotations_format` | Single error: annotation followed by summary. |
 | `test_reporter.py` | `test_report_github_annotations_sorted` | Multiple errors: sorted by filepath then line, summary at end. |
 
+### report_overrides
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_reporter.py` | `test_report_overrides_nothing_printed_when_empty` | No override declared: nothing is printed. |
+| `test_reporter.py` | `test_report_overrides_shows_paths_and_delta` | Override declared: paths, changed values and the base value appear. |
+
 ### report_rules
 
 | Fichier | Fonction | Description |
@@ -594,6 +601,20 @@ This file lists the 349 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_parse_policy_forbidden_allowed_on_returns_descriptions` | returns_descriptions = forbidden: accepted, the value is meaningful there. |
 | `test_config.py` | `test_option_values_reflect_config` | option_values: returns every option of OPTIONS_REGISTRY with its current value. |
 | `test_config.py` | `test_always_on_rule_stays_enabled_when_ignored` | A rule listed in ALWAYS_ON: is_rule_enabled returns True even when ignored. |
+
+### overrides
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_config.py` | `test_parse_override_policy_and_option` | Override carrying a policy and an option: both are parsed. |
+| `test_config.py` | `test_parse_override_without_paths` | Override missing its paths list: raises ValueError. |
+| `test_config.py` | `test_parse_override_run_level_key` | Override carrying a run-level key: raises ValueError naming the key. |
+| `test_config.py` | `test_for_path_without_override_returns_self` | No override declared: for_path returns the very same config object. |
+| `test_config.py` | `test_for_path_applies_matching_override` | Matching override: the policy is overridden, the base config is left untouched. |
+| `test_config.py` | `test_for_path_ignores_non_matching_override` | Override whose patterns do not match: the base config is returned as is. |
+| `test_config.py` | `test_for_path_last_override_wins` | Two matching overrides: the last declared one wins. |
+| `test_config.py` | `test_for_path_ignore_removes_from_inherited_rules` | Ignore key in an override: the rule is removed from the inherited set. |
+| `test_config.py` | `test_for_path_select_replaces_inherited_rules` | Select key in an override: the inherited set is replaced by the listed rules. |
 
 ### load_config
 

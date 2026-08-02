@@ -4,10 +4,11 @@ Support loading from pyproject.toml [tool.docstring-linter] section
 with per-rule toggles, style selection, and scope control.
 """
 
+import copy
 import tomllib
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import cast
 
 
@@ -155,6 +156,57 @@ ALWAYS_ON: frozenset[str] = frozenset(
 )
 
 
+# Options an override may carry: those that change what gets checked on a file
+OVERRIDABLE_OPTIONS: frozenset[str] = frozenset(
+    {
+        "summary_max_length",
+        "blank_lines_before_section",
+        "blank_lines_before_closing_quotes",
+        "exclude_empty_init_method",
+        "exclude_empty_init_module",
+        "ignore_placeholder_docstrings",
+    }
+)
+
+
+@dataclass
+class ConfigOverride:
+    """Hold the settings applied to the files matching a set of path patterns.
+
+    Attributes:
+        paths (list[str]): Glob patterns the file path is matched against.
+        select (list[str] | None): Rules replacing the inherited set, or None.
+        ignore (list[str]): Rules removed from the inherited set.
+        values (dict[str, object]): Policies and options overriding the inherited ones.
+
+    """
+
+    paths: list[str] = field(default_factory=lambda: [])  # noqa: PIE807
+    select: list[str] | None = None
+    ignore: list[str] = field(default_factory=lambda: [])  # noqa: PIE807
+    values: dict[str, object] = field(default_factory=lambda: {})  # noqa: PIE807
+
+    def matches(self, filepath: str) -> bool:
+        """Check whether a file path matches one of the patterns.
+
+        The path is matched as given, then relative to the current directory,
+        so that an absolute path on the command line behaves like a relative one.
+
+        Args:
+            filepath (str): Path of the file being linted.
+
+        Returns:
+            bool: True if the override applies to that file.
+
+        """
+        candidates = [PurePath(filepath)]
+        absolute = Path(filepath).resolve()
+        if absolute.is_relative_to(Path.cwd()):
+            candidates.append(PurePath(absolute.relative_to(Path.cwd())))
+
+        return any(candidate.full_match(pattern) for pattern in self.paths for candidate in candidates)
+
+
 @dataclass
 class LinterConfig:  # pylint: disable=too-many-instance-attributes
     """Hold all linter settings.
@@ -193,6 +245,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         todo_section (Policy): Policy for the presence of the Todo section.
         documented_types (Policy): Policy for the type in Args and Attributes entries.
         returns_descriptions (Policy): Policy for the description on the Returns and Yields lines.
+        overrides (list[ConfigOverride]): Per-path settings applied in declaration order.
 
     """
 
@@ -226,6 +279,36 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     todo_section: Policy = Policy.OPTIONAL
     documented_types: Policy = Policy.REQUIRED
     returns_descriptions: Policy = Policy.REQUIRED
+    overrides: list[ConfigOverride] = field(default_factory=lambda: [])  # noqa: PIE807
+
+    def for_path(self, filepath: str) -> LinterConfig:
+        """Return the config applying to a file, overrides included.
+
+        Matching overrides are applied in declaration order, the last one wins.
+
+        Args:
+            filepath (str): Path of the file being linted.
+
+        Returns:
+            LinterConfig: This config when no override matches, a resolved copy otherwise.
+
+        """
+        matching = [override for override in self.overrides if override.matches(filepath)]
+        if not matching:
+            return self
+
+        resolved = copy.copy(self)
+        enabled = set(self.enabled_rules)
+
+        for override in matching:
+            if override.select is not None:
+                enabled = {rule for rule in override.select if rule in RULES_REGISTRY}
+            enabled -= {rule for rule in override.ignore if rule in RULES_REGISTRY}
+            for name, value in override.values.items():
+                setattr(resolved, name, value)
+
+        resolved.enabled_rules = sorted(enabled)
+        return resolved
 
     def policy_values(self) -> dict[str, str]:
         """Return the configured value of every style policy.
@@ -337,6 +420,43 @@ def _find_config(explicit_path: str | None = None) -> Path | None:
     return None
 
 
+def _parse_override(data: dict[str, object]) -> ConfigOverride:
+    """Parse one [[overrides]] block into a ConfigOverride.
+
+    Args:
+        data (dict[str, object]): Parsed TOML table of the override.
+
+    Returns:
+        ConfigOverride: Settings applied to the matching files.
+
+    Raises:
+        ValueError: If paths is missing or a key is not allowed in an override.
+
+    """
+    paths = cast("list[str]", data.get("paths", []))
+    if not paths:
+        msg = "an override must declare a non-empty 'paths' list."
+        raise ValueError(msg)
+
+    override = ConfigOverride(paths=paths, ignore=cast("list[str]", data.get("ignore", [])))
+
+    if "select" in data:
+        override.select = cast("list[str]", data["select"])
+
+    for key, value in data.items():
+        if key in {"paths", "select", "ignore"}:
+            continue
+        if key in POLICIES_REGISTRY:
+            override.values[key] = Policy(cast("str", value))
+        elif key in OVERRIDABLE_OPTIONS:
+            override.values[key] = value
+        else:
+            msg = f"override {paths}: '{key}' cannot be set per path, it applies to the whole run."
+            raise ValueError(msg)
+
+    return override
+
+
 def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, PLR0912  # pylint: disable=too-many-branches
     """Parse TOML config dict into LinterConfig.
 
@@ -381,6 +501,8 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, 
         config.blank_lines_before_section = max(0, cast("int", data["blank_lines_before_section"]))
     if "blank_lines_before_closing_quotes" in data:
         config.blank_lines_before_closing_quotes = max(0, cast("int", data["blank_lines_before_closing_quotes"]))
+
+    config.overrides = [_parse_override(cast("dict[str, object]", block)) for block in cast("list[object]", data.get("overrides", []))]
 
     select = cast("list[str]", data.get("select", []))
     ignore = cast("list[str]", data.get("ignore", []))

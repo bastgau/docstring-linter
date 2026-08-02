@@ -23,8 +23,8 @@ Les priorités sont notées de 1 (faible) à 10 (haute).
 - [x] Format de sortie `traceback` -- en-tête cliquable `File "path", line N, in entity` -- **7**
 - [ ] Rejeter les clés de configuration inconnues -- **9**
   Aujourd'hui une clé inconnue est ignorée en silence. Toutes les clés renommées de la refonte (`param_order`, `exclude_empty_init`, `summary_punctuation`, `summary_first_line`, `closing_quotes_blank_line`, `blank_line_before_section`, `blank_line_after_section`, `allow_oneliner`, `forbid_init_returns_none`) cassent donc sans message.
-- [ ] Configuration par répertoire -- `[[tool.docstring-linter.overrides]]` avec `paths` -- **7**
-  Syntaxe retenue sur le modèle de `[[tool.mypy.overrides]]`. À trancher : précédence premier ou dernier gagnant, `scope.*` autorisé ou non dans un override, présentation dans `--list-rules`.
+- [x] Configuration par répertoire -- `[[tool.docstring-linter.overrides]]` avec `paths` -- **7**
+  Globs `full_match`, dernier bloc correspondant gagnant, `ignore` retire et `select` remplace, `scope.*` et les réglages d'exécution refusés dans un override.
 - [ ] `--quiet` -- n'afficher que les erreurs, supprimer le résumé et la config -- **5**
 - [ ] `--watch` -- relancer automatiquement sur les fichiers modifiés -- **3**
 
