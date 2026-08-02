@@ -14,7 +14,7 @@ from linter.ast_parser import parse_file
 from linter.config import ALWAYS_ON, OFF_BY_DEFAULT, OPTIONS_REGISTRY, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig, load_config
 from linter.docstring_parser import get_parser
 from linter.models import LintError, NodeType
-from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_policies, report_rules, report_traceback
+from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_traceback
 from linter.rules import validate_entity
 
 
@@ -67,12 +67,13 @@ def lint_file(filepath: str, config: LinterConfig) -> list[LintError]:
 
     Args:
         filepath (str): Path to the Python file to lint.
-        config (LinterConfig): Linter configuration.
+        config (LinterConfig): Linter configuration, before per-path overrides.
 
     Returns:
         list[LintError]: List of lint errors found.
 
     """
+    config = config.for_path(filepath)
     parser = get_parser(config.style)
     entities = parse_file(filepath)
     errors: list[LintError] = []
@@ -234,13 +235,18 @@ def main() -> None:
     parser = _build_arg_parser()
     args = parser.parse_args()
 
-    config, config_file = load_config(args.config)
-    config = merge_cli_into_config(config, args)
+    try:
+        config, config_file = load_config(args.config)
+        config = merge_cli_into_config(config, args)
+    except ValueError as e:
+        print(f"Configuration error: {e}", file=sys.stderr)
+        sys.exit(2)
 
     if args.list_rules:
         report_rules(RULES_CATEGORIES, RULES_REGISTRY, OFF_BY_DEFAULT, ALWAYS_ON, frozenset(config.enabled_rules))
         report_policies(POLICIES_REGISTRY, config.policy_values())
         report_options(OPTIONS_REGISTRY, config.option_values())
+        report_overrides(config.overrides, config.policy_values() | config.option_values())
         sys.exit(0)
 
     if not args.paths:

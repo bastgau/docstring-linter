@@ -29,7 +29,28 @@ Issues = "https://github.com/bastgau/docstring-linter/issues"
 [tool.docstring-linter]
 select = ["ALL"]
 
-exclude = ["test_*", "*_test.py", "tests/*"]
+[[tool.docstring-linter.overrides]]
+ignore=[
+  "imperative_mood"
+]
+paths = ["tests/**"]
+args_section="forbidden"
+returns_section="forbidden"
+yields_section="forbidden"
+raises_section="forbidden"
+attributes_section="forbidden"
+description_section="optional"
+examples_section="forbidden"
+notes_section="forbidden"
+todo_section="forbidden"
+blank_lines_before_closing_quotes=0
+summary_max_length=120
+
+[[tool.docstring-linter.overrides]]
+paths = [
+    "src/**",
+    "tests/linter/rules/conftest.py"
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

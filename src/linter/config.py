@@ -4,10 +4,11 @@ Support loading from pyproject.toml [tool.docstring-linter] section
 with per-rule toggles, style selection, and scope control.
 """
 
+import copy
 import tomllib
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import cast
 
 
@@ -59,6 +60,7 @@ POLICIES_REGISTRY = {
     "notes_section": "Note section",
     "todo_section": "Todo section",
     "documented_types": "Type between parentheses in Args and Attributes entries",
+    "returns_descriptions": "Description on the Returns and Yields lines",
 }
 
 
@@ -102,7 +104,7 @@ RULES_CATEGORIES: dict[str, list[str]] = {
         "args_match",
         "args_order",
         "duplicate_arg",
-        "returns_type_match",
+        "returns_match",
         "yields_match",
         "raises_match",
         "attributes_match",
@@ -117,7 +119,7 @@ RULES_REGISTRY = {
     "args_match": "Documented args must match the signature (type, description, no phantom)",
     "duplicate_arg": "Argument must not be documented more than once in Args section",
     "args_order": "Args section must follow the same order as the function signature",
-    "returns_type_match": "When a Returns section exists, its type must match the signature",
+    "returns_match": "Returns section must match the signature type and carry a description",
     "yields_match": "Yields section must declare a type and a description",
     "raises_match": "Documented exceptions must be raised in the code and described",
     "attributes_match": "Documented attributes must match the class (type, description, no phantom)",
@@ -147,11 +149,86 @@ ALWAYS_ON: frozenset[str] = frozenset(
         "entry_spacing",
         "no_blank_line_in_section",
         "raises_match",
-        "returns_type_match",
+        "returns_match",
         "summary_exists",
         "yields_match",
     }
 )
+
+
+# Keys accepted in the config file besides the policies
+SETTING_KEYS: frozenset[str] = frozenset(
+    {
+        "style",
+        "scope",
+        "select",
+        "ignore",
+        "exclude",
+        "workers",
+        "overrides",
+        "exclude_empty_init_method",
+        "exclude_empty_init_module",
+        "ignore_placeholder_docstrings",
+        "summary_max_length",
+        "blank_lines_before_section",
+        "blank_lines_before_closing_quotes",
+    }
+)
+
+CONFIG_KEYS: frozenset[str] = SETTING_KEYS | frozenset(POLICIES_REGISTRY)
+
+SCOPE_KEYS: frozenset[str] = frozenset({"modules", "classes", "functions", "methods"})
+
+
+# Options an override may carry: those that change what gets checked on a file
+OVERRIDABLE_OPTIONS: frozenset[str] = frozenset(
+    {
+        "summary_max_length",
+        "blank_lines_before_section",
+        "blank_lines_before_closing_quotes",
+        "exclude_empty_init_method",
+        "exclude_empty_init_module",
+        "ignore_placeholder_docstrings",
+    }
+)
+
+
+@dataclass
+class ConfigOverride:
+    """Hold the settings applied to the files matching a set of path patterns.
+
+    Attributes:
+        paths (list[str]): Glob patterns the file path is matched against.
+        select (list[str] | None): Rules replacing the inherited set, or None.
+        ignore (list[str]): Rules removed from the inherited set.
+        values (dict[str, object]): Policies and options overriding the inherited ones.
+
+    """
+
+    paths: list[str] = field(default_factory=lambda: [])  # noqa: PIE807
+    select: list[str] | None = None
+    ignore: list[str] = field(default_factory=lambda: [])  # noqa: PIE807
+    values: dict[str, object] = field(default_factory=lambda: {})  # noqa: PIE807
+
+    def matches(self, filepath: str) -> bool:
+        """Check whether a file path matches one of the patterns.
+
+        The path is matched as given, then relative to the current directory,
+        so that an absolute path on the command line behaves like a relative one.
+
+        Args:
+            filepath (str): Path of the file being linted.
+
+        Returns:
+            bool: True if the override applies to that file.
+
+        """
+        candidates = [PurePath(filepath)]
+        absolute = Path(filepath).resolve()
+        if absolute.is_relative_to(Path.cwd()):
+            candidates.append(PurePath(absolute.relative_to(Path.cwd())))
+
+        return any(candidate.full_match(pattern) for pattern in self.paths for candidate in candidates)
 
 
 @dataclass
@@ -191,6 +268,8 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         notes_section (Policy): Policy for the presence of the Note section.
         todo_section (Policy): Policy for the presence of the Todo section.
         documented_types (Policy): Policy for the type in Args and Attributes entries.
+        returns_descriptions (Policy): Policy for the description on the Returns and Yields lines.
+        overrides (list[ConfigOverride]): Per-path settings applied in declaration order.
 
     """
 
@@ -202,7 +281,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     exclude_empty_init_method: bool = True
     exclude_empty_init_module: bool = True
     ignore_placeholder_docstrings: bool = False
-    exclude_patterns: list[str] = field(default_factory=lambda: ["test_*", "*_test.py", ".venv", ".git", "__pycache__", ".tox", ".mypy_cache", ".ruff_cache", ".pytest_cache"])
+    exclude_patterns: list[str] = field(default_factory=lambda: [".venv", ".git", "__pycache__", ".tox", ".mypy_cache", ".ruff_cache", ".pytest_cache"])
     enabled_rules: list[str] = field(default_factory=lambda: [r for r in RULES_REGISTRY if r not in OFF_BY_DEFAULT])
     output_format: str = "traceback"
     workers: int = 1
@@ -223,6 +302,36 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     notes_section: Policy = Policy.OPTIONAL
     todo_section: Policy = Policy.OPTIONAL
     documented_types: Policy = Policy.REQUIRED
+    returns_descriptions: Policy = Policy.REQUIRED
+    overrides: list[ConfigOverride] = field(default_factory=lambda: [])  # noqa: PIE807
+
+    def for_path(self, filepath: str) -> LinterConfig:
+        """Return the config applying to a file, overrides included.
+
+        A single override applies, the last one declared among those matching.
+        It is resolved against this config, the other matching ones are ignored.
+
+        Args:
+            filepath (str): Path of the file being linted.
+
+        Returns:
+            LinterConfig: This config when no override matches, a resolved copy otherwise.
+
+        """
+        matching = [override for override in self.overrides if override.matches(filepath)]
+        if not matching:
+            return self
+
+        override = matching[-1]
+        resolved = copy.copy(self)
+        enabled = set(self.enabled_rules) if override.select is None else {rule for rule in override.select if rule in RULES_REGISTRY}
+        enabled -= {rule for rule in override.ignore if rule in RULES_REGISTRY}
+
+        for name, value in override.values.items():
+            setattr(resolved, name, value)
+
+        resolved.enabled_rules = sorted(enabled)
+        return resolved
 
     def policy_values(self) -> dict[str, str]:
         """Return the configured value of every style policy.
@@ -334,6 +443,137 @@ def _find_config(explicit_path: str | None = None) -> Path | None:
     return None
 
 
+def _reject(unknown: list[str], noun: str, location: str = "") -> None:
+    """Raise on names the configuration does not define.
+
+    Args:
+        unknown (list[str]): Offending names, empty when everything is known.
+        noun (str): What the names stand for, in the singular.
+        location (str): Config section carrying them, empty for the top level.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If at least one name is unknown.
+
+    """
+    if not unknown:
+        return
+
+    label = noun if len(unknown) == 1 else f"{noun}s"
+    prefix = f"{location}: " if location else ""
+    msg = f"{prefix}unknown {label} {', '.join(repr(name) for name in unknown)}."
+    raise ValueError(msg)
+
+
+def _parse_policy(key: str, value: object) -> Policy:
+    """Convert a configured value into a Policy.
+
+    Args:
+        key (str): Policy identifier, used in the error message.
+        value (object): Value read from the config file.
+
+    Returns:
+        Policy: Matching policy.
+
+    Raises:
+        ValueError: If the value is not a policy name.
+
+    """
+    try:
+        return Policy(value)
+    except ValueError:
+        msg = f"'{key}': invalid value {value!r}, expected one of {', '.join(policy.value for policy in Policy)}."
+        raise ValueError(msg) from None
+
+
+def _parse_style(value: object) -> DocstringStyle:
+    """Convert a configured value into a DocstringStyle.
+
+    Args:
+        value (object): Value read from the config file.
+
+    Returns:
+        DocstringStyle: Matching style.
+
+    Raises:
+        ValueError: If the value is not a style name.
+
+    """
+    try:
+        return DocstringStyle(value)
+    except ValueError:
+        msg = f"'style': invalid value {value!r}, expected one of {', '.join(style.value for style in DocstringStyle)}."
+        raise ValueError(msg) from None
+
+
+def _validate_rules(select: list[str], ignore: list[str], location: str = "") -> None:
+    """Check the rule names listed in select and ignore.
+
+    Args:
+        select (list[str]): Rule names selected, 'ALL' accepted on its own.
+        ignore (list[str]): Rule names ignored.
+        location (str): Config section carrying them, empty for the top level.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If an always-on rule is ignored.
+
+    """
+    if select != ["ALL"]:
+        _reject(sorted(set(select) - set(RULES_REGISTRY)), "rule", f"{location}select" if location else "select")
+    _reject(sorted(set(ignore) - set(RULES_REGISTRY)), "rule", f"{location}ignore" if location else "ignore")
+
+    always_on = sorted(set(ignore) & ALWAYS_ON)
+    if always_on:
+        msg = f"{location}ignore: {', '.join(repr(rule) for rule in always_on)} cannot be ignored, always-on rules report an outright docstring defect."
+        raise ValueError(msg)
+
+
+def _parse_override(data: dict[str, object]) -> ConfigOverride:
+    """Parse one [[overrides]] block into a ConfigOverride.
+
+    Args:
+        data (dict[str, object]): Parsed TOML table of the override.
+
+    Returns:
+        ConfigOverride: Settings applied to the matching files.
+
+    Raises:
+        ValueError: If paths is missing or a key is not allowed in an override.
+
+    """
+    paths = cast("list[str]", data.get("paths", []))
+    if not paths:
+        msg = "an override must declare a non-empty 'paths' list."
+        raise ValueError(msg)
+
+    override = ConfigOverride(paths=paths, ignore=cast("list[str]", data.get("ignore", [])))
+
+    if "select" in data:
+        override.select = cast("list[str]", data["select"])
+
+    _validate_rules(override.select or [], override.ignore, f"override {paths}: ")
+
+    for key, value in data.items():
+        if key in {"paths", "select", "ignore"}:
+            continue
+        if key in POLICIES_REGISTRY:
+            override.values[key] = _parse_policy(key, value)
+        elif key in OVERRIDABLE_OPTIONS:
+            override.values[key] = value
+        elif key in CONFIG_KEYS:
+            msg = f"override {paths}: '{key}' cannot be set per path, it applies to the whole run."
+            raise ValueError(msg)
+        else:
+            _reject([key], "configuration key", f"override {paths}")
+
+    return override
+
+
 def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, PLR0912  # pylint: disable=too-many-branches
     """Parse TOML config dict into LinterConfig.
 
@@ -346,10 +586,13 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, 
     """
     config = LinterConfig()
 
+    _reject(sorted(set(data) - CONFIG_KEYS), "configuration key")
+
     if "style" in data:
-        config.style = DocstringStyle(data["style"])
+        config.style = _parse_style(data["style"])
 
     scope = cast("dict[str, bool]", data.get("scope", {}))
+    _reject(sorted(set(scope) - SCOPE_KEYS), "configuration key", "scope")
     if "modules" in scope:
         config.check_modules = scope["modules"]
     if "classes" in scope:
@@ -369,7 +612,7 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, 
         config.exclude_patterns = cast("list[str]", data["exclude"])
     for policy in POLICIES_REGISTRY:
         if policy in data:
-            setattr(config, policy, Policy(data[policy]))
+            setattr(config, policy, _parse_policy(policy, data[policy]))
     if "workers" in data:
         config.workers = max(0, cast("int", data["workers"]))
     if "summary_max_length" in data:
@@ -379,8 +622,11 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, 
     if "blank_lines_before_closing_quotes" in data:
         config.blank_lines_before_closing_quotes = max(0, cast("int", data["blank_lines_before_closing_quotes"]))
 
+    config.overrides = [_parse_override(cast("dict[str, object]", block)) for block in cast("list[object]", data.get("overrides", []))]
+
     select = cast("list[str]", data.get("select", []))
     ignore = cast("list[str]", data.get("ignore", []))
+    _validate_rules(select, ignore)
 
     if select or ignore:
         if select == ["ALL"]:

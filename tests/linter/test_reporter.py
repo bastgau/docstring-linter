@@ -4,14 +4,16 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from linter.config import ConfigOverride, Policy
 from linter.models import LintError, NodeType
-from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_policies, report_rules, report_traceback
+from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_traceback
 
 if TYPE_CHECKING:
     import pytest
 
 
 def _error(rule: str = "args_match", line: int = 10, filepath: str = "src/foo.py") -> LintError:
+    """Build a lint error on a dummy function."""
     return LintError(
         filepath=filepath,
         line=line,
@@ -306,3 +308,25 @@ def test_report_options_value_on_matching_line(capsys: pytest.CaptureFixture[str
     matching = [line for line in out.splitlines() if "option_a" in line]
     assert matching
     assert "false" in matching[0]
+
+
+# ---------------------------------------------------------------------------
+# report_overrides
+# ---------------------------------------------------------------------------
+
+
+def test_report_overrides_nothing_printed_when_empty(capsys: pytest.CaptureFixture[str]) -> None:
+    """No override declared: nothing is printed."""
+    report_overrides([], {})
+    assert capsys.readouterr().out == ""
+
+
+def test_report_overrides_shows_paths_and_delta(capsys: pytest.CaptureFixture[str]) -> None:
+    """Override declared: paths, changed values and the base value appear."""
+    override = ConfigOverride(paths=["tests/**"], ignore=["imperative_mood"], values={"args_section": Policy.OPTIONAL})
+    report_overrides([override], {"args_section": "required"})
+    out = capsys.readouterr().out
+    assert "tests/**" in out
+    assert "imperative_mood" in out
+    assert "optional" in out
+    assert "(base: required)" in out

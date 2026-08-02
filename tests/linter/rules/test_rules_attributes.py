@@ -60,7 +60,7 @@ def test_attributes_match_missing_description() -> None:
     """Attribute without description in docstring: returns attributes_match error."""
     entity, doc = _class()
     doc.attributes = [DocstringAttribute(name="x", type_annotation="int", description=None)]
-    errors = validate_entity(entity, doc, _neutral(enabled_rules=["attributes_match"]))
+    errors = validate_entity(entity, doc, _neutral())
     assert any(e.rule == "attributes_match" and "missing description" in e.message for e in errors)
 
 

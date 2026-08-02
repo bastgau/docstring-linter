@@ -201,15 +201,19 @@ def check_init_returns_none(entity: CodeEntity, parsed_doc: ParsedDocstring | No
     return []
 
 
-def check_returns_type_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> list[LintError]:
-    """Check that an existing Returns section matches the signature type.
+def check_returns_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, descriptions: Policy) -> list[LintError]:
+    """Check that an existing Returns section matches the signature and is described.
+
+    A documented type of None is exempt from the description policy: the type
+    is the whole content of the line.
 
     Args:
         entity (CodeEntity): Entity to check.
         parsed_doc (ParsedDocstring | None): Parsed docstring.
+        descriptions (Policy): Policy for the description of an entry.
 
     Returns:
-        list[LintError]: Errors if the Returns type is wrong or missing.
+        list[LintError]: Errors if the Returns type or description is wrong.
 
     """
     errors: list[LintError] = []
@@ -217,11 +221,22 @@ def check_returns_type_match(entity: CodeEntity, parsed_doc: ParsedDocstring | N
     if parsed_doc is None or parsed_doc.returns is None or not entity.return_type or entity.is_generator:
         return errors
 
-    if parsed_doc.returns.type_annotation and parsed_doc.returns.type_annotation != entity.return_type:
-        errors.append(make_error(entity, "returns_type_match", f"Return type mismatch: signature='{entity.return_type}', docstring='{parsed_doc.returns.type_annotation}'."))
+    declared = parsed_doc.returns.type_annotation
 
-    if not parsed_doc.returns.type_annotation:
-        errors.append(make_error(entity, "returns_type_match", f"Missing type in 'Returns:'. Expected '{entity.return_type}'."))
+    if declared and declared != entity.return_type:
+        errors.append(make_error(entity, "returns_match", f"Return type mismatch: signature='{entity.return_type}', docstring='{declared}'."))
+
+    if not declared:
+        errors.append(make_error(entity, "returns_match", f"Missing type in 'Returns:'. Expected '{entity.return_type}'."))
+
+    if declared == "None":
+        return errors
+
+    if descriptions is Policy.REQUIRED and not parsed_doc.returns.description:
+        errors.append(make_error(entity, "returns_match", "Missing description in 'Returns:'."))
+
+    if descriptions is Policy.FORBIDDEN and parsed_doc.returns.description:
+        errors.append(make_error(entity, "returns_match", "'Returns:' must not carry a description."))
 
     return errors
 
@@ -248,12 +263,13 @@ def check_yields_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None,
     return []
 
 
-def check_yields_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> list[LintError]:
+def check_yields_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, descriptions: Policy) -> list[LintError]:
     """Check that an existing Yields section declares a type and a description.
 
     Args:
         entity (CodeEntity): Entity to check.
         parsed_doc (ParsedDocstring | None): Parsed docstring.
+        descriptions (Policy): Policy for the description of an entry.
 
     Returns:
         list[LintError]: Errors if the Yields type or description is missing.
@@ -267,8 +283,11 @@ def check_yields_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -
     if not parsed_doc.yields.type_annotation:
         errors.append(make_error(entity, "yields_match", "Missing type in 'Yields:'."))
 
-    if not parsed_doc.yields.description:
+    if descriptions is Policy.REQUIRED and not parsed_doc.yields.description:
         errors.append(make_error(entity, "yields_match", "Missing description in 'Yields:'."))
+
+    if descriptions is Policy.FORBIDDEN and parsed_doc.yields.description:
+        errors.append(make_error(entity, "yields_match", "'Yields:' must not carry a description."))
 
     return errors
 

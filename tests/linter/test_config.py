@@ -73,9 +73,9 @@ def test_parse_select_all() -> None:
 
 
 def test_parse_select_all_with_ignore() -> None:
-    """Select = ['ALL'] + ignore = ['args_match']: all rules except args_match."""
-    config = _parse_toml_config({"select": ["ALL"], "ignore": ["args_match"]})
-    assert "args_match" not in config.enabled_rules
+    """Select = ['ALL'] + ignore = ['imperative_mood']: all rules except imperative_mood."""
+    config = _parse_toml_config({"select": ["ALL"], "ignore": ["imperative_mood"]})
+    assert "imperative_mood" not in config.enabled_rules
     assert "docstring_exists" in config.enabled_rules
 
 
@@ -87,15 +87,8 @@ def test_parse_select_explicit_list() -> None:
 
 def test_parse_ignore_only() -> None:
     """Ignore only (no select): starts from default set minus ignored rules."""
-    config = _parse_toml_config({"ignore": ["args_match"]})
-    assert "args_match" not in config.enabled_rules
-    assert "docstring_exists" in config.enabled_rules
-
-
-def test_parse_select_unknown_rule_ignored() -> None:
-    """Select with an unknown rule name: unknown rule is silently ignored."""
-    config = _parse_toml_config({"select": ["docstring_exists", "nonexistent_rule"]})
-    assert "nonexistent_rule" not in config.enabled_rules
+    config = _parse_toml_config({"ignore": ["imperative_mood"]})
+    assert "imperative_mood" not in config.enabled_rules
     assert "docstring_exists" in config.enabled_rules
 
 
@@ -117,8 +110,8 @@ def test_parse_style_google() -> None:
 
 
 def test_parse_style_unknown() -> None:
-    """Style = 'unknown': raises ValueError."""
-    with pytest.raises(ValueError, match="is not a valid DocstringStyle"):
+    """Style = 'unknown': raises ValueError listing the accepted styles."""
+    with pytest.raises(ValueError, match="'style': invalid value 'unknown', expected one of google, numpy, sphinx, pep257"):
         _parse_toml_config({"style": "unknown"})
 
 
@@ -218,9 +211,15 @@ def test_parse_policies() -> None:
     assert config.init_returns_none is Policy.REQUIRED
 
 
+def test_parse_policy_forbidden_allowed_on_returns_descriptions() -> None:
+    """returns_descriptions = forbidden: accepted, the value is meaningful there."""
+    config = _parse_toml_config({"returns_descriptions": "forbidden"})
+    assert config.returns_descriptions is Policy.FORBIDDEN
+
+
 def test_parse_policy_invalid_value() -> None:
-    """Unknown policy value: raises ValueError."""
-    with pytest.raises(ValueError, match="is not a valid Policy"):
+    """Unknown policy value: raises ValueError naming the key and the accepted values."""
+    with pytest.raises(ValueError, match="'returns_none': invalid value 'maybe', expected one of required, forbidden, optional"):
         _parse_toml_config({"returns_none": "maybe"})
 
 
@@ -235,12 +234,167 @@ def test_option_values_reflect_config() -> None:
     assert values["style"] == "google"
 
 
-def test_always_on_rule_stays_enabled_when_ignored() -> None:
-    """A rule listed in ALWAYS_ON: is_rule_enabled returns True even when ignored."""
-    config = _parse_toml_config({"select": ["ALL"], "ignore": list(ALWAYS_ON)})
+def test_always_on_rule_stays_enabled_when_not_selected() -> None:
+    """A rule listed in ALWAYS_ON: is_rule_enabled returns True even when not selected."""
+    config = _parse_toml_config({"select": ["docstring_exists"]})
     for rule in ALWAYS_ON:
         assert rule not in config.enabled_rules
         assert config.is_rule_enabled(rule)
+
+
+# ---------------------------------------------------------------------------
+# unknown keys and rules
+# ---------------------------------------------------------------------------
+
+
+def test_parse_unknown_key() -> None:
+    """Key absent from the registries: raises ValueError naming it."""
+    with pytest.raises(ValueError, match="unknown configuration key 'param_order'"):
+        _parse_toml_config({"param_order": True})
+
+
+def test_parse_unknown_keys_are_all_reported() -> None:
+    """Several unknown keys: all of them are named in the message."""
+    with pytest.raises(ValueError, match="unknown configuration keys 'allow_oneliner', 'summary_punctuation'"):
+        _parse_toml_config({"allow_oneliner": True, "summary_punctuation": True})
+
+
+def test_parse_unknown_scope_key() -> None:
+    """Unknown key under scope: raises ValueError naming the section."""
+    with pytest.raises(ValueError, match="scope: unknown configuration key 'function'"):
+        _parse_toml_config({"scope": {"function": True}})
+
+
+def test_parse_unknown_rule_in_select() -> None:
+    """Unknown rule name in select: raises ValueError naming it."""
+    with pytest.raises(ValueError, match="select: unknown rule 'param_order'"):
+        _parse_toml_config({"select": ["args_order", "param_order"]})
+
+
+def test_parse_unknown_rule_in_ignore() -> None:
+    """Unknown rule name in ignore: raises ValueError naming it."""
+    with pytest.raises(ValueError, match="ignore: unknown rule 'docstring_exist'"):
+        _parse_toml_config({"ignore": ["docstring_exist"]})
+
+
+def test_parse_select_all_is_accepted() -> None:
+    """Select = ALL: the wildcard is not treated as a rule name."""
+    config = _parse_toml_config({"select": ["ALL"]})
+    assert set(config.enabled_rules) == set(RULES_REGISTRY)
+
+
+def test_parse_ignore_always_on_rule() -> None:
+    """Always-on rule in ignore: raises ValueError instead of silently doing nothing."""
+    with pytest.raises(ValueError, match="ignore: 'blank_lines' cannot be ignored"):
+        _parse_toml_config({"ignore": ["blank_lines"]})
+
+
+# ---------------------------------------------------------------------------
+# overrides
+# ---------------------------------------------------------------------------
+
+
+def test_parse_override_policy_and_option() -> None:
+    """Override carrying a policy and an option: both are parsed."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "args_section": "optional", "summary_max_length": 120}]})
+    assert len(config.overrides) == 1
+    assert config.overrides[0].paths == ["tests/**"]
+    assert config.overrides[0].values["args_section"] is Policy.OPTIONAL
+    assert config.overrides[0].values["summary_max_length"] == 120
+
+
+def test_parse_override_without_paths() -> None:
+    """Override missing its paths list: raises ValueError."""
+    with pytest.raises(ValueError, match="non-empty 'paths'"):
+        _parse_toml_config({"overrides": [{"args_section": "optional"}]})
+
+
+def test_parse_override_run_level_key() -> None:
+    """Override carrying a run-level key: raises ValueError naming the key."""
+    with pytest.raises(ValueError, match="'exclude' cannot be set per path"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "exclude": ["x"]}]})
+
+
+def test_parse_override_unknown_key() -> None:
+    """Override carrying an unknown key: raises ValueError naming the override."""
+    with pytest.raises(ValueError, match=r"override \['tests/\*\*'\]: unknown configuration key 'allow_oneliner'"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "allow_oneliner": True}]})
+
+
+def test_parse_override_unknown_rule() -> None:
+    """Override ignoring an unknown rule: raises ValueError naming the override."""
+    with pytest.raises(ValueError, match=r"override \['tests/\*\*'\]: ignore: unknown rule 'param_order'"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "ignore": ["param_order"]}]})
+
+
+def test_parse_override_invalid_policy_value() -> None:
+    """Override carrying an invalid policy value: raises ValueError naming the key."""
+    with pytest.raises(ValueError, match="'args_section': invalid value 'maybe'"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "args_section": "maybe"}]})
+
+
+def test_for_path_without_override_returns_self() -> None:
+    """No override declared: for_path returns the very same config object."""
+    config = LinterConfig()
+    assert config.for_path("src/foo.py") is config
+
+
+def test_for_path_applies_matching_override() -> None:
+    """Matching override: the policy is overridden, the base config is left untouched."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "args_section": "optional"}]})
+    resolved = config.for_path("tests/linter/test_foo.py")
+    assert resolved.args_section is Policy.OPTIONAL
+    assert config.args_section is Policy.REQUIRED
+
+
+def test_for_path_ignores_non_matching_override() -> None:
+    """Override whose patterns do not match: the base config is returned as is."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "args_section": "optional"}]})
+    assert config.for_path("src/foo.py").args_section is Policy.REQUIRED
+
+
+def test_for_path_last_override_wins() -> None:
+    """Two matching overrides: the last declared one wins."""
+    config = _parse_toml_config(
+        {
+            "overrides": [
+                {"paths": ["tests/**"], "args_section": "optional"},
+                {"paths": ["tests/integration/**"], "args_section": "forbidden"},
+            ]
+        }
+    )
+    assert config.for_path("tests/integration/test_x.py").args_section is Policy.FORBIDDEN
+    assert config.for_path("tests/unit/test_y.py").args_section is Policy.OPTIONAL
+
+
+def test_for_path_earlier_override_not_merged() -> None:
+    """Two matching overrides: only the last one applies, the earlier keys are dropped."""
+    config = _parse_toml_config(
+        {
+            "overrides": [
+                {"paths": ["tests/**"], "summary_max_length": 120, "ignore": ["imperative_mood"]},
+                {"paths": ["tests/integration/**"], "args_section": "forbidden"},
+            ]
+        }
+    )
+    resolved = config.for_path("tests/integration/test_x.py")
+    assert resolved.args_section is Policy.FORBIDDEN
+    assert resolved.summary_max_length == LinterConfig().summary_max_length
+    assert "imperative_mood" in resolved.enabled_rules
+
+
+def test_for_path_ignore_removes_from_inherited_rules() -> None:
+    """Ignore key in an override: the rule is removed from the inherited set."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "ignore": ["imperative_mood"]}]})
+    resolved = config.for_path("tests/test_foo.py")
+    assert "imperative_mood" not in resolved.enabled_rules
+    assert "imperative_mood" in config.enabled_rules
+
+
+def test_for_path_select_replaces_inherited_rules() -> None:
+    """Select key in an override: the inherited set is replaced by the listed rules."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "select": ["docstring_exists"]}]})
+    assert config.for_path("tests/test_foo.py").enabled_rules == ["docstring_exists"]
 
 
 # ---------------------------------------------------------------------------
@@ -288,7 +442,7 @@ def test_load_config_toml_with_section(tmp_path: Path) -> None:
     f.write_text('[tool.docstring-linter]\nselect = ["ALL"]\nworkers = 4\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 4
-    assert "returns_type_match" in config.enabled_rules
+    assert "returns_match" in config.enabled_rules
     assert config_file == f
 
 
@@ -298,7 +452,7 @@ def test_load_config_standalone_toml(tmp_path: Path) -> None:
     f.write_text('workers = 3\nselect = ["ALL"]\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 3
-    assert "returns_type_match" in config.enabled_rules
+    assert "returns_match" in config.enabled_rules
     assert config_file == f
 
 

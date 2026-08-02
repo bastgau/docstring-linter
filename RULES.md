@@ -4,7 +4,7 @@ Python linter that checks docstring conformance to Google style.
 
 ## Rule Reference
 
-20 rules and 14 style policies, configurable in `pyproject.toml` file or `.docstring-linter.toml` file. Eleven rules are always on and cannot be disabled, and are therefore not listed by `docstring-linter --list-rules`: `args_match`, `attributes_match`, `blank_lines`, `duplicate_arg`, `empty_section`, `entry_spacing`, `no_blank_line_in_section`, `raises_match`, `returns_type_match`, `summary_exists`, `yields_match`. The five content rules are always on because requiring a section and then tolerating wrong content in it makes no sense. `summary_exists` is always on because every supported style opens a docstring with a summary. The two layout rules are always on because their toggle would only serve to allow a codebase to mix layouts, which is what this linter exists to prevent; the layout itself is chosen through `blank_lines_before_section` and `blank_lines_before_closing_quotes`.
+20 rules and 15 style policies, configurable in `pyproject.toml` file or `.docstring-linter.toml` file. Eleven rules are always on, are rejected in `ignore`, and are therefore not listed by `docstring-linter --list-rules`: `args_match`, `attributes_match`, `blank_lines`, `duplicate_arg`, `empty_section`, `entry_spacing`, `no_blank_line_in_section`, `raises_match`, `returns_match`, `summary_exists`, `yields_match`. The five content rules are always on because requiring a section and then tolerating wrong content in it makes no sense. `summary_exists` is always on because every supported style opens a docstring with a summary. The two layout rules are always on because their toggle would only serve to allow a codebase to mix layouts, which is what this linter exists to prevent; the layout itself is chosen through `blank_lines_before_section` and `blank_lines_before_closing_quotes`.
 
 ---
 
@@ -275,7 +275,7 @@ Moved to the [Style Policies](#style-policies) section: presence of the `Returns
 
 ---
 
-### returns_type_match *(always on)*
+### returns_match *(always on)*
 
 When a `Returns:` section exists, its type must match the signature, and the type must not be missing. This rule never reports a missing section (that is `returns_section`).
 
@@ -666,13 +666,14 @@ name: description
 
 ```python
 # Bad
-def process(value: str, other: int, third: str) -> None:
+def process(value: str, other: int, third: str, fourth: str) -> None:
     """Process data.
 
     Args:
         value(str): No space before the parenthesis.
         other (int) : Space before the colon.
         third (str):No space after the colon.
+        fourth (str)
 
     """
 
@@ -763,7 +764,7 @@ def read_lines(path: str) -> Iterator[str]:
 
 ## Style Policies
 
-Fourteen constructs are not on/off checks but style choices, where the opposite convention is equally valid. They are configured by value, not through `select` / `ignore`.
+Fifteen constructs are not on/off checks but style choices, where the opposite convention is equally valid. They are configured by value, not through `select` / `ignore`.
 
 All policies accept `"required"`, `"forbidden"`, or `"optional"`.
 
@@ -781,8 +782,8 @@ Section presence policies, one per documentable section:
 | Policy | Default | Rule checking the content when present |
 |---|---|---|
 | `args_section` | `"required"` | `args_match` (always on) |
-| `returns_section` | `"required"` | `returns_type_match` (always on) |
-| `yields_section` | `"required"` | `yields_type_match` (always on) |
+| `returns_section` | `"required"` | `returns_match` (always on) |
+| `yields_section` | `"required"` | `yields_match` (always on) |
 | `raises_section` | `"required"` | `raises_match` (always on) |
 | `attributes_section` | `"required"` | `attributes_match` (always on) |
 
@@ -800,6 +801,7 @@ One more policy governs what an entry declares:
 | Policy | Default | Applies to |
 |---|---|---|
 | `documented_types` | `"required"` | Type between parentheses in `Args:` and `Attributes:` entries |
+| `returns_descriptions` | `"required"` | Description on the `Returns:` and `Yields:` lines |
 
 The two halves are independent. The policy answers "must this be documented", the rule answers "is what is documented correct". Under `"optional"`, nothing forces you to document, but everything you do document is still checked. Under `"forbidden"`, the section is rejected and the content rule is not run, to avoid reporting the same block twice.
 
@@ -810,6 +812,8 @@ The two halves are independent. The policy answers "must this be documented", th
 ### returns_none
 
 Governs the `Returns: None` section on every function or method whose signature declares `-> None`. Does not apply to `__init__` methods, covered by `init_returns_none`, nor to generators, covered by `yields_section`.
+
+Not applied at all when `returns_section = "forbidden"`: that value drops the `Returns:` section from the whole docstring, `-> None` functions included.
 
 A one-liner docstring cannot contain a `Returns:` section, so under `"required"` a one-liner on a `-> None` function is an error.
 
@@ -854,7 +858,7 @@ def reset() -> None:
 
 ### init_returns_none
 
-Same policy applied to `__init__` methods. Defaults to `"forbidden"`: an `__init__` always returns `None`, documenting it adds nothing.
+Same policy applied to `__init__` methods. Defaults to `"forbidden"`: an `__init__` always returns `None`, documenting it adds nothing. Like `returns_none`, it is not applied when `returns_section = "forbidden"`.
 
 ```toml
 [tool.docstring-linter]
@@ -975,7 +979,7 @@ def create_user(name: str, age: int) -> dict:
 
 ### returns_section
 
-A function whose signature declares a return type other than `None` must have a `Returns:` section. The `-> None` case is owned by `returns_none` and `init_returns_none`.
+A function whose signature declares a return type other than `None` must have a `Returns:` section. Under `"required"` and `"optional"`, the `-> None` case is owned by `returns_none` and `init_returns_none`. Under `"forbidden"`, those two policies are not applied: no `Returns:` section is expected anywhere, whatever their value.
 
 A generator that documents `Returns:` instead of `Yields:` is always reported, whatever the value of this policy.
 
@@ -1001,7 +1005,7 @@ def get_name() -> str:
     """
     return "Alice"
 
-# optional: the section becomes free, but when present returns_type_match
+# optional: the section becomes free, but when present returns_match
 # still validates its type
 # forbidden: any Returns section is rejected
 ```
@@ -1030,7 +1034,7 @@ def read_lines(path: str) -> Iterator[str]:
     with open(path) as f:
         yield from f
 
-# optional: the section becomes free, but when present yields_type_match
+# optional: the section becomes free, but when present yields_match
 # still requires a type
 # forbidden: any Yields section is rejected
 ```
@@ -1176,7 +1180,7 @@ def process(x: int) -> int:
 
 Governs the type declared between parentheses in `Args:` and `Attributes:` entries. The signature already carries the type, so a project may consider the docstring copy redundant.
 
-Does not apply to `Returns:` and `Yields:`, where the type is the payload of the line: removing it would leave prose with nothing to identify. Their types stay mandatory, checked by `returns_type_match` and `yields_match`.
+Does not apply to `Returns:` and `Yields:`, where the type is the payload of the line: removing it would leave prose with nothing to identify. Their types stay mandatory, checked by `returns_match` and `yields_match`.
 
 ```toml
 [tool.docstring-linter]
@@ -1213,6 +1217,43 @@ def create_user(name: str) -> dict:
 ```
 
 The description of an entry is never optional: an `Args:`, `Attributes:`, `Raises:` or `Yields:` entry without a description is always reported. A name alone carries no information the signature does not already give.
+
+---
+
+### returns_descriptions
+
+Governs the description on the `Returns:` and `Yields:` lines. Both are the same slot, a function documents one or the other.
+
+A documented type of `None` is exempt: on `Returns: None` the type is the whole content of the line, there is nothing to describe.
+
+This policy accepts `"forbidden"`: a type-only line is a style some projects adopt, the type alone already names what the function produces. There is no equivalent for `Args:`, `Attributes:` and `Raises:` entries, whose description is always required: an entry stripped of it carries nothing the signature does not already state, and dropping the whole section with `args_section = "forbidden"` says it properly.
+
+```toml
+[tool.docstring-linter]
+returns_descriptions = "required"
+```
+
+```python
+# required (default)
+def get_name() -> str:
+    """Get the user name.
+
+    Returns:
+        str: The user name.
+
+    """
+
+# forbidden: the type stands alone
+def get_name() -> str:
+    """Get the user name.
+
+    Returns:
+        str
+
+    """
+
+# optional: both forms accepted
+```
 
 ---
 

@@ -87,6 +87,7 @@ examples_section = "optional"          # idem
 notes_section = "optional"             # idem
 todo_section = "optional"              # idem
 documented_types = "required"          # idem
+returns_descriptions = "required"      # "required" | "forbidden" | "optional"
 exclude_empty_init_method = true
 exclude_empty_init_module = true
 ignore_placeholder_docstrings = false
@@ -125,6 +126,7 @@ examples_section = "optional"          # idem
 notes_section = "optional"             # idem
 todo_section = "optional"              # idem
 documented_types = "required"          # idem
+returns_descriptions = "required"      # "required" | "forbidden" | "optional"
 exclude_empty_init_method = true
 exclude_empty_init_module = true
 ignore_placeholder_docstrings = false
@@ -141,19 +143,48 @@ functions = true
 methods = true
 ```
 
+### Per-path overrides
+
+A base configuration plus any number of `[[tool.docstring-linter.overrides]]` blocks. Each block declares the path patterns it applies to, then the settings it changes.
+
+```toml
+[tool.docstring-linter]
+select = ["ALL"]
+args_section = "required"
+
+[[tool.docstring-linter.overrides]]
+paths = ["tests/**"]
+ignore = ["imperative_mood", "args_order"]
+args_section = "optional"
+summary_max_length = 120
+
+[[tool.docstring-linter.overrides]]
+paths = ["example/**", "docs/**"]
+select = ["docstring_exists"]
+```
+
+- `paths` is required and matched with `PurePath.full_match`, so `tests/**` covers the whole tree. A path given on the command line as an absolute path is matched relative to the current directory as well.
+- **A single block applies to a given file**: the last declared among those matching it. The other matching blocks are ignored, blocks never accumulate. Declare the general case first and the exceptions after it, and make each block self-contained.
+- The block that applies is resolved against the base configuration, so a setting it does not declare keeps its base value, not the linter default.
+- `ignore` removes rules from the inherited set, `select` replaces that set entirely. Same meaning as at the base level.
+- An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`.
+- `exclude`, `workers`, `style` and `scope.*` apply to the whole run and are rejected inside an override.
+
+`docstring-linter --list-rules` prints the overrides after the base configuration, showing only what each one changes.
+
 ### Keys
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `style` | `"google"` | Docstring style to enforce. |
 | `select` | all rules | Rules to enable. `["ALL"]` enables everything. |
-| `ignore` | `[]` | Rules to disable (applied after `select`). Has no effect on always-on rules. |
-| `returns_none` | `"required"` | Policy for `Returns: None` on `-> None` functions. |
-| `init_returns_none` | `"forbidden"` | Policy for `Returns: None` on `__init__` methods. |
+| `ignore` | `[]` | Rules to disable (applied after `select`). Always-on rules cannot be listed here. |
+| `returns_none` | `"required"` | Policy for `Returns: None` on `-> None` functions. Not applied when `returns_section = "forbidden"`. |
+| `init_returns_none` | `"forbidden"` | Policy for `Returns: None` on `__init__` methods. Not applied when `returns_section = "forbidden"`. |
 | `summary_on_first_line` | `"required"` | Policy for the summary on the opening `"""` line. |
 | `summary_final_period` | `"required"` | Policy for the period ending the summary line. |
 | `args_section` | `"required"` | Policy for documenting every parameter of the signature. |
-| `returns_section` | `"required"` | Policy for the `Returns:` section on a non-`None` return type. |
+| `returns_section` | `"required"` | Policy for the `Returns:` section on a non-`None` return type. `"forbidden"` also disables `returns_none` and `init_returns_none`. |
 | `yields_section` | `"required"` | Policy for the `Yields:` section on generators. |
 | `raises_section` | `"required"` | Policy for documenting every exception raised. |
 | `attributes_section` | `"required"` | Policy for documenting every class attribute. |
@@ -162,6 +193,7 @@ methods = true
 | `notes_section` | `"optional"` | Policy for the `Note:` section. |
 | `todo_section` | `"optional"` | Policy for the `Todo:` section. |
 | `documented_types` | `"required"` | Policy for the type between parentheses in `Args:` and `Attributes:` entries. |
+| `returns_descriptions` | `"required"` | Policy for the description on the `Returns:` and `Yields:` lines. |
 | `exclude_empty_init_method` | `true` | Do not require a docstring on `__init__` methods with no parameter beyond `self` and a body limited to `pass` or a docstring. |
 | `exclude_empty_init_module` | `true` | Do not require a docstring on `__init__.py` files with an empty body (empty file or comments only). |
 | `ignore_placeholder_docstrings` | `false` | Skip docstrings containing only `...`. |
@@ -175,9 +207,18 @@ methods = true
 | `scope.functions` | `true` | Check function docstrings. |
 | `scope.methods` | `true` | Check method docstrings. |
 
-Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five section policies, `"optional"` means the section is not required, but what the docstring does declare is still checked by the matching rule (`args_match`, `returns_type_match`, `yields_type_match`, `raises_match`, `attributes_match`). The two `exclude_empty_init_*` options only lift `docstring_exists`: a docstring that is present is always checked.
+Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five section policies, `"optional"` means the section is not required, but what the docstring does declare is still checked by the matching rule (`args_match`, `returns_match`, `yields_match`, `raises_match`, `attributes_match`). The two `exclude_empty_init_*` options only lift `docstring_exists`: a docstring that is present is always checked.
 
 `docstring-linter --list-rules` prints the rules, the policies, and the options that change what gets checked, each with the value it has in the current config.
+
+### Strict configuration
+
+Anything the linter does not recognize is an error, reported on stderr with exit code 2 before any file is read. This covers a key absent from the table above (including inside `[scope]` and inside an override), a rule name absent from `--list-rules` in `select` or `ignore`, an always-on rule listed in `ignore`, and an invalid `style` or policy value.
+
+```console
+$ docstring-linter src/
+Configuration error: unknown configuration key 'param_order'.
+```
 
 ## Rule Reference
 
@@ -211,8 +252,8 @@ prek install
 #### Composite action
 
 ```yaml
-- uses: actions/checkout@v4
-- uses: actions/setup-python@v5
+- uses: actions/checkout@v7
+- uses: actions/setup-python@v7
   with:
     python-version: "3.14"
 - uses: bastgau/docstring-linter@v0.1.0

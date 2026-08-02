@@ -9,6 +9,7 @@ from linter.rules._base import GOOGLE_SECTION_ORDER, GOOGLE_SECTIONS, SECTION_HE
 _SECTION_WITH_ENTRIES = frozenset({"Args", "Attributes", "Raises"})
 
 _ENTRY_LAX = re.compile(r"^\s{4}(\*{0,2}\w+)\s*(\([^)]*\))?\s*:\s*(.*)$")
+_ENTRY_LAX_NO_COLON = re.compile(r"^\s{4}(\*{0,2}\w+)\s*(\([^)]+\))\s*$")
 _ENTRY_STRICT = re.compile(r"^ {4}\*{0,2}\w+(?: \([^)]*\))?:(?: \S.*)?$")
 
 
@@ -338,7 +339,7 @@ def check_entry_spacing(entity: CodeEntity) -> list[LintError]:
         if current_section not in _SECTION_WITH_ENTRIES:
             continue
 
-        entry = _ENTRY_LAX.match(line)
+        entry = _ENTRY_LAX.match(line) or _ENTRY_LAX_NO_COLON.match(line)
         if entry is None or _ENTRY_STRICT.match(line.rstrip()):
             continue
 

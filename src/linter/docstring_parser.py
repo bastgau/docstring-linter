@@ -50,6 +50,7 @@ class GoogleStyleParser(BaseDocstringParser):
         SECTION_PATTERN (re.Pattern): Regex for section headers.
         ARG_PATTERN (re.Pattern): Regex for typed arg lines.
         ARG_NO_TYPE_PATTERN (re.Pattern): Regex for untyped arg lines.
+        ARG_NO_COLON_PATTERN (re.Pattern): Regex for typed arg lines missing their colon.
         RETURN_PATTERN (re.Pattern): Regex for return type lines.
         RAISE_PATTERN (re.Pattern): Regex for raise lines.
 
@@ -62,7 +63,8 @@ class GoogleStyleParser(BaseDocstringParser):
     CANDIDATE_SECTION_PATTERN = re.compile(r"^([A-Z][A-Za-z]*):\s*$")
     ARG_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*\(([^)]+)\)\s*:\s*(.*)$")
     ARG_NO_TYPE_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*:\s*(.*)$")
-    RETURN_PATTERN = re.compile(r"^\s{4}(.+?)\s*:\s+(.+)$")
+    ARG_NO_COLON_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*\(([^)]+)\)\s*$")
+    RETURN_PATTERN = re.compile(r"^\s{4}([^:]+?)\s*:\s*(.*)$")
     RAISE_PATTERN = re.compile(r"^\s{4}(\w+)\s*:\s*(.*)$")
 
     @property
@@ -213,6 +215,16 @@ class GoogleStyleParser(BaseDocstringParser):
                 args.append(current_arg)
                 continue
 
+            match = self.ARG_NO_COLON_PATTERN.match(line)
+            if match:
+                current_arg = DocstringArg(
+                    name=match.group(1),
+                    type_annotation=match.group(2).strip(),
+                    description="",
+                )
+                args.append(current_arg)
+                continue
+
             stripped = line.strip()
             if stripped and current_arg:
                 current_arg.description = f"{current_arg.description} {stripped}".strip()
@@ -234,11 +246,19 @@ class GoogleStyleParser(BaseDocstringParser):
             if match:
                 return DocstringReturn(
                     type_annotation=match.group(1).strip(),
-                    description=match.group(2).strip(),
+                    description=match.group(2).strip() or None,
                 )
             stripped = line.strip()
+            if not stripped:
+                continue
+
             if stripped.lower() == "none":
                 return DocstringReturn(type_annotation="None", description=None)
+
+            # degraded form, no colon: a single token is a type, anything else is prose
+            if " " in stripped:
+                return DocstringReturn(type_annotation=None, description=stripped)
+            return DocstringReturn(type_annotation=stripped, description=None)
 
         return None
 
@@ -301,6 +321,16 @@ class GoogleStyleParser(BaseDocstringParser):
                     name=match.group(1),
                     type_annotation=None,
                     description=match.group(2).strip(),
+                )
+                attrs.append(current_attr)
+                continue
+
+            match = self.ARG_NO_COLON_PATTERN.match(line)
+            if match:
+                current_attr = DocstringAttribute(
+                    name=match.group(1),
+                    type_annotation=match.group(2).strip(),
+                    description="",
                 )
                 attrs.append(current_attr)
                 continue

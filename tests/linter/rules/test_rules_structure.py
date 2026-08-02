@@ -335,15 +335,7 @@ def test_no_blank_line_in_example_ignored() -> None:
 
 
 def _entry(line: str) -> str:
-    """Build a docstring whose Args section holds a single entry.
-
-    Args:
-        line (str): Entry line, without its leading indentation.
-
-    Returns:
-        str: Docstring ready to be attached to an entity.
-
-    """
+    """Build a docstring whose Args section holds a single entry."""
     return f"Summary.\n\nArgs:\n    {line}\n\n"
 
 
@@ -377,6 +369,14 @@ def test_entry_spacing_no_space_after_colon() -> None:
     entity = _func(docstring=raw, raw_docstring=raw)
     errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _neutral())
     assert any(e.rule == "entry_spacing" for e in errors)
+
+
+def test_entry_spacing_missing_colon() -> None:
+    """Entry written 'name (type)' without its colon: returns entry_spacing error."""
+    raw = _entry("value (str)")
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _neutral())
+    assert any(e.rule == "entry_spacing" and "value (str): description" in e.message for e in errors)
 
 
 def test_entry_spacing_untyped_entry() -> None:
@@ -425,15 +425,7 @@ def test_entry_spacing_cannot_be_disabled() -> None:
 
 
 def _with_section(header: str) -> str:
-    """Build a docstring holding a single named section.
-
-    Args:
-        header (str): Section name, without its colon.
-
-    Returns:
-        str: Docstring ready to be attached to an entity.
-
-    """
+    """Build a docstring holding a single named section."""
     return f"Summary.\n\n{header}:\n    Content.\n\n"
 
 
