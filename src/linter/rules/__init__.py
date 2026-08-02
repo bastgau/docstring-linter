@@ -6,36 +6,41 @@ missing, incomplete, or incorrectly formatted documentation.
 
 from typing import TYPE_CHECKING
 
+from linter.config import Policy
 from linter.models import CodeEntity, LintError, NodeType, ParsedDocstring
 from linter.rules._base import GOOGLE_SECTION_ORDER, GOOGLE_SECTIONS, is_placeholder, make_error
 from linter.rules.args import (
-    check_allow_oneliner,
     check_args_match,
+    check_args_order,
+    check_args_section,
     check_duplicate_arg,
-    check_forbid_init_returns_none,
-    check_param_order,
+    check_init_returns_none,
     check_raises_match,
+    check_raises_section,
     check_return_type_annotation,
+    check_returns_none,
     check_returns_section,
     check_returns_type_match,
+    check_yields_match,
     check_yields_section,
 )
-from linter.rules.attributes import check_attributes_section
+from linter.rules.attributes import check_attributes_match, check_attributes_section
 from linter.rules.docstring import (
+    check_description_section,
     check_docstring_exists,
     check_imperative_mood,
     check_summary_exists,
-    check_summary_first_line,
-    check_summary_punctuation,
+    check_summary_final_period,
+    check_summary_on_first_line,
     check_summary_too_long,
     check_unknown_section,
 )
 from linter.rules.structure import (
-    check_blank_line_after_section,
-    check_blank_line_before_section,
-    check_closing_quotes_blank_line,
+    check_blank_lines,
     check_empty_section,
+    check_entry_spacing,
     check_indentation,
+    check_named_section,
     check_no_blank_line_in_section,
     check_section_capitalization,
     check_section_order,
@@ -69,10 +74,9 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
     """
     errors: list[LintError] = []
 
-    if entity.is_empty_init and config.exclude_empty_init:
-        return errors
+    docstring_optional = (entity.is_empty_init and config.exclude_empty_init_method) or (entity.is_empty_init_module and config.exclude_empty_init_module)
 
-    if config.is_rule_enabled("docstring_exists"):
+    if config.is_rule_enabled("docstring_exists") and not docstring_optional:
         errors.extend(check_docstring_exists(entity))
 
     if not entity.docstring or not entity.docstring.strip():
@@ -83,11 +87,15 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
             return []
         return [make_error(entity, "docstring_exists", f"Placeholder docstring: '{entity.docstring.strip()}'.")]
 
-    if config.is_rule_enabled("summary_exists"):
-        errors.extend(check_summary_exists(entity, parsed_doc))
+    errors.extend(check_summary_exists(entity, parsed_doc))
 
-    if config.is_rule_enabled("summary_punctuation"):
-        errors.extend(check_summary_punctuation(entity, parsed_doc))
+    errors.extend(check_summary_final_period(entity, parsed_doc, config.summary_final_period))
+
+    errors.extend(check_description_section(entity, parsed_doc, config.description_section))
+
+    errors.extend(check_named_section(entity, ("Example", "Examples"), config.examples_section, "examples_section"))
+    errors.extend(check_named_section(entity, ("Note", "Notes"), config.notes_section, "notes_section"))
+    errors.extend(check_named_section(entity, ("Todo",), config.todo_section, "todo_section"))
 
     if config.is_rule_enabled("summary_too_long"):
         errors.extend(check_summary_too_long(entity, parsed_doc, config.summary_max_length))
@@ -96,32 +104,39 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
         if config.is_rule_enabled("return_type_annotation"):
             errors.extend(check_return_type_annotation(entity))
 
-        if config.is_rule_enabled("args_match"):
-            errors.extend(check_args_match(entity, parsed_doc))
+        errors.extend(check_args_section(entity, parsed_doc, config.args_section))
 
-        if config.is_rule_enabled("duplicate_arg"):
-            errors.extend(check_duplicate_arg(entity, parsed_doc))
+        if config.args_section is not Policy.FORBIDDEN:
+            errors.extend(check_args_match(entity, parsed_doc, config.documented_types))
 
-        if config.is_rule_enabled("param_order"):
-            errors.extend(check_param_order(entity, parsed_doc))
+        errors.extend(check_duplicate_arg(entity, parsed_doc))
 
-        if config.is_rule_enabled("returns_section"):
-            errors.extend(check_returns_section(entity, parsed_doc))
+        if config.is_rule_enabled("args_order"):
+            errors.extend(check_args_order(entity, parsed_doc))
 
-        if config.is_rule_enabled("returns_type_match"):
+        errors.extend(check_returns_section(entity, parsed_doc, config.returns_section))
+
+        if config.returns_section is not Policy.FORBIDDEN:
             errors.extend(check_returns_type_match(entity, parsed_doc))
 
-        errors.extend(check_forbid_init_returns_none(entity, parsed_doc, config))
-        errors.extend(check_allow_oneliner(entity, parsed_doc, config))
+        errors.extend(check_returns_none(entity, parsed_doc, config.returns_none))
+        errors.extend(check_init_returns_none(entity, parsed_doc, config.init_returns_none))
 
-        if config.is_rule_enabled("raises_match"):
+        errors.extend(check_raises_section(entity, parsed_doc, config.raises_section))
+
+        if config.raises_section is not Policy.FORBIDDEN:
             errors.extend(check_raises_match(entity, parsed_doc))
 
-        if config.is_rule_enabled("yields_section"):
-            errors.extend(check_yields_section(entity, parsed_doc))
+        errors.extend(check_yields_section(entity, parsed_doc, config.yields_section))
 
-    if entity.node_type == NodeType.CLASS and config.is_rule_enabled("attributes_section"):
-        errors.extend(check_attributes_section(entity, parsed_doc))
+        if config.yields_section is not Policy.FORBIDDEN:
+            errors.extend(check_yields_match(entity, parsed_doc))
+
+    if entity.node_type == NodeType.CLASS:
+        errors.extend(check_attributes_section(entity, parsed_doc, config.attributes_section))
+
+        if config.attributes_section is not Policy.FORBIDDEN:
+            errors.extend(check_attributes_match(entity, parsed_doc, config.documented_types))
 
     if config.is_rule_enabled("indentation"):
         errors.extend(check_indentation(entity))
@@ -135,25 +150,17 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
     if config.is_rule_enabled("unknown_section"):
         errors.extend(check_unknown_section(entity, parsed_doc))
 
-    if config.is_rule_enabled("empty_section"):
-        errors.extend(check_empty_section(entity))
+    errors.extend(check_empty_section(entity))
 
-    if config.is_rule_enabled("blank_line_before_section"):
-        errors.extend(check_blank_line_before_section(entity))
-
-    if config.is_rule_enabled("blank_line_after_section"):
-        errors.extend(check_blank_line_after_section(entity))
+    errors.extend(check_blank_lines(entity, config.blank_lines_before_section, config.blank_lines_before_closing_quotes))
 
     if config.is_rule_enabled("imperative_mood") and entity.node_type != NodeType.MODULE:
         errors.extend(check_imperative_mood(entity, parsed_doc))
 
-    if config.is_rule_enabled("summary_first_line"):
-        errors.extend(check_summary_first_line(entity))
+    errors.extend(check_summary_on_first_line(entity, config.summary_on_first_line))
 
-    if config.is_rule_enabled("closing_quotes_blank_line"):
-        errors.extend(check_closing_quotes_blank_line(entity))
+    errors.extend(check_no_blank_line_in_section(entity))
 
-    if config.is_rule_enabled("no_blank_line_in_section"):
-        errors.extend(check_no_blank_line_in_section(entity))
+    errors.extend(check_entry_spacing(entity))
 
     return errors

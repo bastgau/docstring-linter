@@ -71,7 +71,8 @@ class CodeEntity:  # pylint: disable=too-many-instance-attributes
         args (list[ArgInfo]): Function arguments.
         return_type (str | None): Return type annotation.
         raises (list[RaiseInfo]): Explicit raise statements.
-        is_empty_init (bool): Whether this is an empty __init__.
+        is_empty_init (bool): Whether this is an empty __init__ method.
+        is_empty_init_module (bool): Whether this is an empty __init__.py module.
         is_generator (bool): Whether the function contains a yield statement.
         class_attributes (list[str]): Attribute names declared on a class.
 
@@ -87,6 +88,7 @@ class CodeEntity:  # pylint: disable=too-many-instance-attributes
     return_type: str | None = None
     raises: list[RaiseInfo] = field(default_factory=lambda: [])
     is_empty_init: bool = False
+    is_empty_init_module: bool = False
     is_generator: bool = False
     class_attributes: list[str] = field(default_factory=lambda: [])
 
