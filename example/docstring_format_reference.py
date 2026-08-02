@@ -59,7 +59,12 @@ class MyClass:
         return {"result": value}
 
     def reset(self) -> None:
-        """Short one-liner for simple methods."""
+        """Short one-liner for simple methods.
+
+        Returns:
+            None
+
+        """
         self.count = 0
 
 def divide_new(numerator: int, *, denominator: int) -> float:
@@ -122,6 +127,14 @@ def my_function(data: list[object], limit: int = 10) -> list[object]:
 
 def simple_function() -> None:
     """Short one-liner for simple functions.
+
+    Returns:
+        None
+
+    """
+
+def simple2_function() -> None:
+    """Short description for simple functions.
 
     Returns:
         None

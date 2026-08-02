@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 251 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 339 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -14,6 +14,7 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | `test_docstring_parser.py` | `test_parse_arg_with_type_and_description` | Arg with type and description: all fields populated. |
 | `test_docstring_parser.py` | `test_parse_arg_without_type` | Arg without type annotation: type_annotation is None. |
 | `test_docstring_parser.py` | `test_parse_arg_multiline_description` | Arg with continuation line: description is concatenated. |
+| `test_docstring_parser.py` | `test_parse_arg_with_stars` | Starred args: the stars are kept in the parsed name. |
 | `test_docstring_parser.py` | `test_parse_multiple_args` | Multiple args: all are returned in order. |
 | `test_docstring_parser.py` | `test_parse_returns_with_type_and_description` | Standard Returns line: type and description are extracted. |
 | `test_docstring_parser.py` | `test_parse_returns_none_keyword` | Returns section containing only 'None': type_annotation is 'None', description is None. |
@@ -62,6 +63,8 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_extract_args_skips_self_and_cls` | Both self and cls are always excluded from the result, regardless of position. |
 | `test_ast_parser.py` | `test_extract_args_skips_cls_in_kwonly` | Keyword-only arg named cls is excluded, just like in positional position. |
 | `test_ast_parser.py` | `test_extract_args_mixed_positional_and_keyword_only` | Mix of positional and keyword-only args: both are returned in declaration order. |
+| `test_ast_parser.py` | `test_extract_args_vararg_and_kwarg` | *args and **kwargs are extracted with their stars in the name. |
+| `test_ast_parser.py` | `test_extract_args_vararg_without_annotation` | *args without annotation: type_annotation is None. |
 | `test_ast_parser.py` | `test_extract_args_positional_only` | Positional-only args (before /): extracted with name and type. |
 | `test_ast_parser.py` | `test_extract_args_positional_only_skips_self` | self in positional-only position: excluded like elsewhere. |
 | `test_ast_parser.py` | `test_extract_args_positional_only_default_alignment` | Defaults align by the end of posonlyargs + args combined. |
@@ -104,6 +107,7 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `test_ast_parser.py` | `test_parse_file_returns_module_entity` | Any Python file produces a MODULE entity as the first result, with its docstring. |
+| `test_ast_parser.py` | `test_parse_file_extracts_function` | Top-level function: extracted as a FUNCTION entity with the function name. |
 | `test_ast_parser.py` | `test_parse_file_extracts_method` | Method inside a class: extracted as a METHOD entity named ClassName.method_name. |
 | `test_ast_parser.py` | `test_parse_file_sets_is_empty_init` | __init__ with no args and pass body: is_empty_init is True on the extracted entity. |
 | `test_ast_parser.py` | `test_parse_file_syntax_error` | File with invalid Python syntax: SyntaxError is raised and not swallowed. |
@@ -127,15 +131,19 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
+| `rules/test_rules_docstring.py` | `test_summary_exists_cannot_be_disabled` | Rule listed in ignore: the missing summary is still reported, the rule is always on. |
 | `rules/test_rules_docstring.py` | `test_summary_exists_present` | Summary present: no error. |
 | `rules/test_rules_docstring.py` | `test_summary_exists_missing` | No summary in parsed_doc: returns summary_exists error. |
 
-### summary_punctuation
+### summary_final_period (policy)
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_docstring.py` | `test_summary_punctuation_present` | Summary ending with period: no error. |
-| `rules/test_rules_docstring.py` | `test_summary_punctuation_missing_period` | Summary without period: returns summary_punctuation error. |
+| `rules/test_rules_docstring.py` | `test_summary_final_period_required_missing` | Policy required, summary without period: returns summary_final_period error. |
+| `rules/test_rules_docstring.py` | `test_summary_final_period_required_present` | Policy required, summary ending with period: no error. |
+| `rules/test_rules_docstring.py` | `test_summary_final_period_forbidden_present` | Policy forbidden, summary ending with period: returns summary_final_period error. |
+| `rules/test_rules_docstring.py` | `test_summary_final_period_forbidden_missing` | Policy forbidden, summary without period: no error. |
+| `rules/test_rules_docstring.py` | `test_summary_final_period_optional_accepts_both` | Policy optional: period present or absent, no error either way. |
 
 ### return_type_annotation
 
@@ -145,15 +153,22 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_return_type_annotation_missing` | Function without -> annotation: returns return_type_annotation error. |
 | `rules/test_rules_args.py` | `test_return_type_annotation_not_checked_for_class` | Class entity: return_type_annotation rule is not applied. |
 
-### args_match
+### args_section (policy) / args_match
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_args.py` | `test_args_match_correct` | Arg matches signature and docstring perfectly: no error. |
-| `rules/test_rules_args.py` | `test_args_match_missing_from_docstring` | Arg in signature but not in docstring: returns args_match error. |
+| `rules/test_rules_args.py` | `test_args_section_required_missing` | Policy required, arg in signature but not in docstring: returns args_section error. |
+| `rules/test_rules_args.py` | `test_args_section_optional_missing` | Policy optional, arg in signature but not in docstring: no error. |
+| `rules/test_rules_args.py` | `test_args_section_optional_still_checks_documented_args` | Policy optional, a documented arg with a wrong type: args_match still reports it. |
+| `rules/test_rules_args.py` | `test_args_section_forbidden_present` | Policy forbidden, documented args: returns args_section error. |
+| `rules/test_rules_args.py` | `test_args_section_starred_args_documented` | *args and **kwargs documented with their stars: no error. |
+| `rules/test_rules_args.py` | `test_args_section_starred_args_undocumented` | **kwargs in signature but not documented: returns args_section error. |
 | `rules/test_rules_args.py` | `test_args_match_extra_in_docstring` | Arg in docstring but not in signature: returns args_match error. |
 | `rules/test_rules_args.py` | `test_args_match_type_mismatch` | Arg type in docstring differs from signature: returns args_match error. |
-| `rules/test_rules_args.py` | `test_args_match_missing_type_in_docstring` | Arg missing type in docstring: returns args_match error. |
+| `rules/test_rules_args.py` | `test_args_match_missing_type_in_docstring` | Policy required, arg missing type in docstring: returns args_match error. |
+| `rules/test_rules_args.py` | `test_args_match_type_optional` | Policy optional, arg documented without a type: no args_match error. |
+| `rules/test_rules_args.py` | `test_args_match_type_forbidden` | Policy forbidden, arg documented with a type: returns args_match error. |
+| `rules/test_rules_args.py` | `test_args_match_correct` | Arg matches signature and docstring perfectly: no error. |
 | `rules/test_rules_args.py` | `test_args_match_missing_description_in_docstring` | Arg with no description in docstring: returns args_match error. |
 | `rules/test_rules_args.py` | `test_args_match_no_sig_args_no_doc_args` | No args in signature and no args in docstring: no error. |
 | `rules/test_rules_args.py` | `test_args_match_doc_arg_extra_via_detailed_path` | Arg in sig and doc but extra doc arg: reports the extra. |
@@ -165,23 +180,29 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_duplicate_arg_detected` | Arg documented twice: duplicate_arg error. |
 | `rules/test_rules_args.py` | `test_duplicate_arg_no_duplicate` | All args unique: no duplicate_arg error. |
 | `rules/test_rules_args.py` | `test_duplicate_arg_no_args` | No args: no duplicate_arg error. |
-| `rules/test_rules_args.py` | `test_duplicate_arg_disabled` | Rule disabled: duplicate not reported. |
+| `rules/test_rules_args.py` | `test_duplicate_arg_cannot_be_disabled` | Rule listed in ignore: duplicate is still reported, the rule is always on. |
 
-### param_order
-
-| Fichier | Fonction | Description |
-|---|---|---|
-| `rules/test_rules_args.py` | `test_param_order_wrong_order` | Args in docstring in different order than signature: param_order error. |
-| `rules/test_rules_args.py` | `test_param_order_correct` | Args in docstring match signature order: no error. |
-| `rules/test_rules_args.py` | `test_param_order_no_args` | No args: no error. |
-| `rules/test_rules_args.py` | `test_param_order_disabled` | Rule disabled: wrong order not reported. |
-
-### returns_section
+### args_order
 
 | Fichier | Fonction | Description |
 |---|---|---|
+| `rules/test_rules_args.py` | `test_args_order_wrong_order` | Args in docstring in different order than signature: args_order error. |
+| `rules/test_rules_args.py` | `test_args_order_correct` | Args in docstring match signature order: no error. |
+| `rules/test_rules_args.py` | `test_args_order_no_args` | No args: no error. |
+| `rules/test_rules_args.py` | `test_args_order_disabled` | Rule disabled: wrong order not reported. |
+
+### returns_section (policy)
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_args.py` | `test_returns_section_required_missing` | Policy required, return type but no Returns section: returns returns_section error. |
+| `rules/test_rules_args.py` | `test_returns_section_optional_missing` | Policy optional, return type but no Returns section: no error. |
+| `rules/test_rules_args.py` | `test_returns_section_optional_still_checks_type` | Policy optional, a Returns section with a wrong type: returns_type_match still reports it. |
+| `rules/test_rules_args.py` | `test_returns_section_forbidden_present` | Policy forbidden, Returns section present: returns returns_section error. |
 | `rules/test_rules_args.py` | `test_returns_section_correct` | Returns section matches signature: no error. |
-| `rules/test_rules_args.py` | `test_returns_section_missing` | Function with return type but no Returns section: returns returns_section error. |
+| `rules/test_rules_args.py` | `test_returns_section_ignores_none_return_type` | Function -> None without Returns section: returns_section does not flag it. |
+| `rules/test_rules_args.py` | `test_returns_section_error_when_generator_has_returns` | Generator documenting Returns: returns returns_section error. |
+| `rules/test_rules_args.py` | `test_returns_section_exempt_for_generator_without_returns` | Generator without Returns section: the returns_section policy is not triggered. |
 
 ### returns_type_match
 
@@ -191,54 +212,69 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_returns_type_match_missing_type` | Returns section present but no type declared: returns returns_type_match error. |
 | `rules/test_rules_args.py` | `test_returns_type_match_no_section_no_error` | No Returns section: returns_type_match does not flag a missing section. |
 | `rules/test_rules_args.py` | `test_returns_type_match_correct` | Returns section type matches signature: no returns_type_match error. |
+| `rules/test_rules_args.py` | `test_returns_type_match_cannot_be_disabled` | Rule listed in ignore: the type mismatch is still reported, the rule is always on. |
 
-### forbid_init_returns_none
-
-| Fichier | Fonction | Description |
-|---|---|---|
-| `rules/test_rules_args.py` | `test_forbid_init_returns_none_no_returns_ok_when_enabled` | __init__ -> None without Returns section: no error (rule enabled, default). |
-| `rules/test_rules_args.py` | `test_forbid_init_returns_none_forbidden_when_enabled` | __init__ -> None with rule enabled: documenting Returns: None is an error. |
-| `rules/test_rules_args.py` | `test_forbid_init_returns_none_required_when_disabled` | __init__ -> None with rule disabled: missing Returns: None is a forbid_init_returns_none error. |
-| `rules/test_rules_args.py` | `test_forbid_init_returns_none_independent_of_returns_section` | __init__ -> None with Returns: None and returns_section off: still forbidden. |
-
-### allow_oneliner
+### returns_none (policy)
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_args.py` | `test_allow_oneliner_no_returns_ok_when_enabled` | One-liner -> None without Returns section: no error (rule enabled, default). |
-| `rules/test_rules_args.py` | `test_allow_oneliner_required_when_disabled` | One-liner -> None with rule disabled: one-liner not allowed is an allow_oneliner error. |
-| `rules/test_rules_args.py` | `test_allow_oneliner_independent_of_returns_section` | One-liner -> None with allow_oneliner off and returns_section off: still flagged. |
+| `rules/test_rules_args.py` | `test_returns_none_required_missing` | Policy required, no Returns section: returns returns_none error. |
+| `rules/test_rules_args.py` | `test_returns_none_required_present` | Policy required, Returns: None section present: no error. |
+| `rules/test_rules_args.py` | `test_returns_none_required_flags_oneliner` | Policy required, one-liner docstring cannot hold the section: returns returns_none error. |
+| `rules/test_rules_args.py` | `test_returns_none_forbidden_present` | Policy forbidden, Returns: None section present: returns returns_none error. |
+| `rules/test_rules_args.py` | `test_returns_none_forbidden_missing` | Policy forbidden, no Returns section: no error. |
+| `rules/test_rules_args.py` | `test_returns_none_optional_accepts_both` | Policy optional: section present or absent, no error either way. |
+| `rules/test_rules_args.py` | `test_returns_none_skips_init` | __init__ -> None is not covered by the returns_none policy. |
+| `rules/test_rules_args.py` | `test_returns_none_skips_generator` | Generator is not covered by the returns_none policy. |
 
-### raises_match
+### init_returns_none (policy)
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_args.py` | `test_raises_match_correct` | Raise matches code and docstring: no error. |
-| `rules/test_rules_args.py` | `test_raises_match_undocumented` | Raise in code but not in docstring: returns raises_match error. |
+| `rules/test_rules_args.py` | `test_init_returns_none_required_missing` | Policy required, __init__ without Returns section: returns init_returns_none error. |
+| `rules/test_rules_args.py` | `test_init_returns_none_required_present` | Policy required, __init__ with Returns: None section: no error. |
+| `rules/test_rules_args.py` | `test_init_returns_none_forbidden_present` | Policy forbidden (default), __init__ with Returns: None section: returns init_returns_none error. |
+| `rules/test_rules_args.py` | `test_init_returns_none_optional_accepts_both` | Policy optional: section present or absent on __init__, no error either way. |
+
+### raises_section (policy) / raises_match
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_args.py` | `test_raises_section_required_undocumented` | Policy required, raise in code but not documented: returns raises_section error. |
+| `rules/test_rules_args.py` | `test_raises_section_optional_undocumented` | Policy optional, raise in code but not documented: no error. |
+| `rules/test_rules_args.py` | `test_raises_section_optional_still_checks_documented` | Policy optional, an exception documented but never raised: raises_match still reports it. |
+| `rules/test_rules_args.py` | `test_raises_section_forbidden_present` | Policy forbidden, documented exceptions: returns raises_section error. |
 | `rules/test_rules_args.py` | `test_raises_match_phantom_documented` | Raise in docstring but not in code: returns raises_match error. |
+| `rules/test_rules_args.py` | `test_raises_match_missing_description` | Exception documented without a description: returns raises_match error. |
+| `rules/test_rules_args.py` | `test_raises_match_correct` | Raises section matches the code: no error. |
 
-### yields_section
+### yields_section (policy) / yields_match
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_args.py` | `test_yields_section_missing` | Generator without Yields section: returns yields_section error. |
-| `rules/test_rules_args.py` | `test_yields_section_missing_type` | Generator with Yields section but no type: returns yields_section error. |
+| `rules/test_rules_args.py` | `test_yields_section_required_missing` | Policy required, generator without Yields section: returns yields_section error. |
+| `rules/test_rules_args.py` | `test_yields_section_optional_missing` | Policy optional, generator without Yields section: no error. |
+| `rules/test_rules_args.py` | `test_yields_section_forbidden_present` | Policy forbidden, Yields section present: returns yields_section error. |
+| `rules/test_rules_args.py` | `test_yields_match_missing_type` | Yields section without a type: returns yields_match error. |
+| `rules/test_rules_args.py` | `test_yields_match_missing_description` | Yields section without a description: returns yields_match error. |
 | `rules/test_rules_args.py` | `test_yields_section_correct` | Generator with correct Yields section: no error. |
-| `rules/test_rules_args.py` | `test_yields_section_not_applied_to_non_generator` | Non-generator function: yields_section rule is not applied. |
-| `rules/test_rules_args.py` | `test_returns_section_error_when_generator_has_returns` | Generator with Returns section instead of Yields: returns returns_section error. |
-| `rules/test_rules_args.py` | `test_returns_section_exempt_for_generator_without_returns` | Generator without Returns section: returns_section rule is not triggered. |
+| `rules/test_rules_args.py` | `test_yields_section_not_applied_to_non_generator` | Non-generator function: the yields_section policy is not applied. |
 
-### attributes_section
+### attributes_section (policy) / attributes_match
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_attributes.py` | `test_attributes_section_correct` | Attribute with type and description: no error. |
-| `rules/test_rules_attributes.py` | `test_attributes_section_missing` | Class with attributes but no Attributes section: returns attributes_section error. |
-| `rules/test_rules_attributes.py` | `test_attributes_section_missing_type` | Attribute without type in docstring: returns attributes_section error. |
-| `rules/test_rules_attributes.py` | `test_attributes_section_missing_description` | Attribute without description in docstring: returns attributes_section error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_required_missing` | Policy required, class with attributes but no Attributes section: returns an error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_optional_missing` | Policy optional, class with attributes but no Attributes section: no error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_forbidden_present` | Policy forbidden, Attributes section present: returns an error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_attribute_not_documented` | Policy required, class attribute missing from the section: returns an error. |
 | `rules/test_rules_attributes.py` | `test_attributes_section_no_attributes_no_error` | Class with no attributes and no Attributes section: no error. |
-| `rules/test_rules_attributes.py` | `test_attributes_section_attribute_not_documented` | Class attribute missing from the Attributes section: returns attributes_section error. |
-| `rules/test_rules_attributes.py` | `test_attributes_section_phantom_documented` | Attribute documented but not a class attribute: returns attributes_section error. |
+| `rules/test_rules_attributes.py` | `test_attributes_section_correct` | Attribute with type and description: no error. |
+| `rules/test_rules_attributes.py` | `test_attributes_match_missing_type` | Policy required, attribute without type in docstring: returns attributes_match error. |
+| `rules/test_rules_attributes.py` | `test_attributes_match_type_forbidden` | Policy forbidden, attribute documented with a type: returns attributes_match error. |
+| `rules/test_rules_attributes.py` | `test_attributes_match_missing_description` | Attribute without description in docstring: returns attributes_match error. |
+| `rules/test_rules_attributes.py` | `test_attributes_match_phantom_documented` | Attribute documented but not a class attribute: returns attributes_match error. |
+| `rules/test_rules_attributes.py` | `test_attributes_match_checked_when_section_optional` | Policy optional: a documented attribute is still checked. |
 
 ### indentation
 
@@ -278,22 +314,31 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `rules/test_rules_structure.py` | `test_empty_section_with_content` | Args section with content: no empty_section error. |
+| `rules/test_rules_structure.py` | `test_empty_section_cannot_be_disabled` | Rule listed in ignore: the empty section is still reported, the rule is always on. |
 | `rules/test_rules_structure.py` | `test_empty_section_detected` | Args section with no content: returns empty_section error. |
 
-### blank_line_before_section
+### blank_lines
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_structure.py` | `test_blank_line_before_section_present` | Section header preceded by blank line: no error. |
-| `rules/test_rules_structure.py` | `test_blank_line_before_section_missing` | Section header not preceded by blank line: returns blank_line_before_section error. |
-| `rules/test_rules_structure.py` | `test_blank_line_before_section_first_line_skipped` | Section header on first line of docstring: rule skips it. |
-
-### blank_line_after_section
-
-| Fichier | Fonction | Description |
-|---|---|---|
-| `rules/test_rules_structure.py` | `test_blank_line_after_section_present` | Blank line between sections: no error. |
-| `rules/test_rules_structure.py` | `test_blank_line_after_section_missing` | Two consecutive sections without blank line between them: returns blank_line_after_section error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_after_summary_missing` | Description glued to the summary: returns blank_lines error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_after_summary_present` | One blank line between summary and description: no blank_lines error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_after_summary_too_many` | Two blank lines between summary and description: returns blank_lines error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_after_summary_only_summary` | Docstring limited to a summary: the gap is not checked. |
+| `rules/test_rules_structure.py` | `test_blank_lines_after_summary_section_follows` | Summary followed by a section header: governed by blank_lines_before_section only. |
+| `rules/test_rules_structure.py` | `test_blank_lines_before_section_default_missing` | Default of 1, no blank line before a section header: returns blank_lines error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_before_section_default_present` | Default of 1, one blank line before each section header: no error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_before_section_zero` | Configured to 0, no blank line before a section header: no error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_before_section_zero_but_gap_present` | Configured to 0, a blank line before a section header: returns blank_lines error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_before_section_two` | Configured to 2, only one blank line before a section header: returns blank_lines error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_section_on_first_line_skipped` | Section header on the first line of the docstring: not counted. |
+| `rules/test_rules_structure.py` | `test_blank_lines_before_closing_quotes_default_missing` | Default of 1, no blank line before the closing quotes: returns blank_lines error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_before_closing_quotes_default_present` | Default of 1, one blank line before the closing quotes: no error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_before_closing_quotes_too_many` | Default of 1, two blank lines before the closing quotes: returns blank_lines error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_before_closing_quotes_zero` | Configured to 0, no blank line before the closing quotes: no error. |
+| `rules/test_rules_structure.py` | `test_blank_lines_cannot_be_disabled` | Rule listed in ignore: a wrong blank line count is still reported, the rule is always on. |
+| `rules/test_rules_structure.py` | `test_blank_lines_one_liner_skipped` | One-liner docstring: the closing quotes count is not checked. |
+| `rules/test_rules_structure.py` | `test_blank_lines_module_skipped` | Module entity: the closing quotes count is not checked. |
 
 ### imperative_mood
 
@@ -315,39 +360,70 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_docstring.py` | `test_summary_too_long_custom_limit` | Summary exceeds custom max_length of 40: returns error. |
 | `rules/test_rules_docstring.py` | `test_summary_too_long_no_summary` | No summary: summary_too_long rule not triggered. |
 
-### summary_first_line
+### summary_on_first_line (policy)
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_docstring.py` | `test_summary_first_line_correct` | raw_docstring starts with summary text: no error. |
-| `rules/test_rules_docstring.py` | `test_summary_first_line_wrong` | raw_docstring starts with newline: returns summary_first_line error. |
+| `rules/test_rules_docstring.py` | `test_summary_on_first_line_required_wrong` | Policy required, raw_docstring starts with newline: returns summary_on_first_line error. |
+| `rules/test_rules_docstring.py` | `test_summary_on_first_line_required_correct` | Policy required, raw_docstring starts with summary text: no error. |
+| `rules/test_rules_docstring.py` | `test_summary_on_first_line_forbidden_wrong` | Policy forbidden, summary on the opening quotes line: returns summary_on_first_line error. |
+| `rules/test_rules_docstring.py` | `test_summary_on_first_line_forbidden_correct` | Policy forbidden, summary on the next line: no error. |
+| `rules/test_rules_docstring.py` | `test_summary_on_first_line_optional_accepts_both` | Policy optional: summary on either line, no error. |
 
-### closing_quotes_blank_line
+### entry_spacing
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_structure.py` | `test_closing_quotes_blank_line_correct` | Exactly one blank line before closing quotes: no error. |
-| `rules/test_rules_structure.py` | `test_closing_quotes_blank_line_missing` | No blank line before closing quotes: returns closing_quotes_blank_line error. |
-| `rules/test_rules_structure.py` | `test_closing_quotes_two_blank_lines` | Two blank lines before closing quotes: returns closing_quotes_blank_line error. |
-| `rules/test_rules_structure.py` | `test_closing_quotes_one_liner_skipped` | One-liner docstring: closing_quotes_blank_line rule not applied. |
-| `rules/test_rules_structure.py` | `test_closing_quotes_module_skipped` | Module entity: closing_quotes_blank_line rule not applied. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_canonical` | Entry written 'name (type): description': no error. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_missing_space_before_parenthesis` | Entry written 'name(type): description': returns entry_spacing error. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_space_before_colon` | Entry written 'name (type) : description': returns entry_spacing error. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_no_space_after_colon` | Entry written 'name (type):description': returns entry_spacing error. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_untyped_entry` | Entry without a type: the canonical form drops the parenthesis. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_starred_entry` | Starred entry written canonically: no error. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_ignores_continuation_lines` | Continuation line of a description: not read as an entry. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_ignores_other_sections` | Returns section content: not read as an entry. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_cannot_be_disabled` | Rule listed in ignore: the bad spacing is still reported, the rule is always on. |
 
 ### no_blank_line_in_section
 
 | Fichier | Fonction | Description |
 |---|---|---|
+| `rules/test_rules_structure.py` | `test_no_blank_line_in_section_cannot_be_disabled` | Rule listed in ignore: the blank line between entries is still reported, the rule is always on. |
 | `rules/test_rules_structure.py` | `test_no_blank_line_in_args_section` | Blank line between two Args entries: returns no_blank_line_in_section error. |
 | `rules/test_rules_structure.py` | `test_no_blank_line_in_raises_section` | Blank line between two Raises entries: returns no_blank_line_in_section error. |
 | `rules/test_rules_structure.py` | `test_no_blank_line_in_attributes_section` | Blank line between two Attributes entries: returns no_blank_line_in_section error. |
 | `rules/test_rules_structure.py` | `test_no_blank_line_in_section_correct` | No blank lines between Args entries: no error. |
 | `rules/test_rules_structure.py` | `test_no_blank_line_in_example_ignored` | Blank line inside Example section: not flagged (rule only applies to Args/Attributes/Raises). |
 
+### description_section (policy)
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_docstring.py` | `test_description_section_required_missing` | Policy required, docstring without description: returns description_section error. |
+| `rules/test_rules_docstring.py` | `test_description_section_required_present` | Policy required, docstring with a description: no error. |
+| `rules/test_rules_docstring.py` | `test_description_section_forbidden_present` | Policy forbidden, docstring with a description: returns description_section error. |
+| `rules/test_rules_docstring.py` | `test_description_section_optional_by_default` | Default config: neither presence nor absence of a description is reported. |
+
+### examples_section / notes_section / todo_section (policies)
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_structure.py` | `test_examples_section_required_missing` | Policy required, no Example section: returns examples_section error. |
+| `rules/test_rules_structure.py` | `test_examples_section_required_present_plural` | Policy required, an Examples section: the plural spelling is accepted. |
+| `rules/test_rules_structure.py` | `test_examples_section_forbidden_present` | Policy forbidden, an Example section: returns examples_section error. |
+| `rules/test_rules_structure.py` | `test_notes_section_forbidden_present` | Policy forbidden, a Note section: returns notes_section error. |
+| `rules/test_rules_structure.py` | `test_todo_section_forbidden_present` | Policy forbidden, a Todo section: returns todo_section error. |
+| `rules/test_rules_structure.py` | `test_named_sections_optional_by_default` | Default config: Example, Note and Todo sections are neither required nor rejected. |
+
 ### validate_entity
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_validate.py` | `test_empty_init_excluded_when_configured` | Empty __init__ with exclude_empty_init=True: no errors even with missing docstring. |
-| `rules/test_rules_validate.py` | `test_empty_init_not_excluded_when_flag_false` | Empty __init__ with exclude_empty_init=False: docstring_exists is still checked. |
+| `rules/test_rules_validate.py` | `test_empty_init_method_excluded_when_configured` | Empty __init__ with exclude_empty_init_method=True: no errors even with missing docstring. |
+| `rules/test_rules_validate.py` | `test_empty_init_method_not_excluded_when_flag_false` | Empty __init__ with exclude_empty_init_method=False: docstring_exists is still checked. |
+| `rules/test_rules_validate.py` | `test_empty_init_method_docstring_still_checked` | Empty __init__ with exclude_empty_init_method=True: an existing docstring is still checked. |
+| `rules/test_rules_validate.py` | `test_empty_init_module_excluded_when_configured` | Empty __init__.py with exclude_empty_init_module=True: no errors even with missing docstring. |
+| `rules/test_rules_validate.py` | `test_empty_init_module_not_excluded_when_flag_false` | Empty __init__.py with exclude_empty_init_module=False: docstring_exists is still checked. |
 | `rules/test_rules_validate.py` | `test_docstring_placeholder_ignored_when_configured` | Placeholder '...' with ignore_placeholder_docstrings=True: no errors. |
 | `rules/test_rules_validate.py` | `test_docstring_placeholder_error_when_not_ignored` | Placeholder '...' without ignore flag: returns docstring_exists error. |
 | `rules/test_rules_validate.py` | `test_disabled_rule_not_checked` | When all rules are disabled: no error for missing docstring. |
@@ -403,11 +479,20 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `test_cli.py` | `test_list_rules_output` | --list-rules: all rules appear in output grouped by category. |
+| `test_cli.py` | `test_list_rules_output` | --list-rules: configurable rules appear grouped by category, always-on rules do not. |
 
 ---
 
 ## test_reporter.py -- reporter
+
+### report_traceback
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_reporter.py` | `test_report_traceback_no_errors` | No errors: prints summary with 0 errors. |
+| `test_reporter.py` | `test_report_traceback_location_header` | With errors: prints one clickable header with the absolute path per entity. |
+| `test_reporter.py` | `test_report_traceback_groups_errors_by_entity` | Two errors on the same entity: a single header followed by both messages. |
+| `test_reporter.py` | `test_report_traceback_separate_entities` | Errors on different lines: one header each. |
 
 ### report_cli
 
@@ -438,11 +523,17 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `test_reporter.py` | `test_report_rules_all_categories_present` | All category names appear in output. |
-| `test_reporter.py` | `test_report_rules_all_rules_present` | All rule identifiers appear in output. |
+| `test_reporter.py` | `test_report_rules_all_categories_present` | Category names with at least one configurable rule appear in output. |
+| `test_reporter.py` | `test_report_rules_all_rules_present` | All configurable rule identifiers appear in output. |
 | `test_reporter.py` | `test_report_rules_enabled_rule_shows_checkmark` | Enabled rule shows checkmark marker. |
 | `test_reporter.py` | `test_report_rules_disabled_rule_shows_cross` | Disabled rule shows cross marker. |
 | `test_reporter.py` | `test_report_rules_off_by_default_label` | Rule in off_by_default shows '(disabled by default)' label. |
+| `test_reporter.py` | `test_report_rules_always_on_hidden` | Rule in always_on is not listed and is not counted in the header. |
+| `test_reporter.py` | `test_report_rules_category_hidden_when_all_rules_always_on` | Category whose rules are all always on: the category is not printed. |
+| `test_reporter.py` | `test_report_policies_all_policies_present` | All policy identifiers and their values appear in output. |
+| `test_reporter.py` | `test_report_policies_optional_value` | Policy set to optional shows its value on the matching line. |
+| `test_reporter.py` | `test_report_options_all_options_present` | All option identifiers and their values appear in output. |
+| `test_reporter.py` | `test_report_options_value_on_matching_line` | Each option value is printed on the line of its option. |
 
 ---
 
@@ -476,7 +567,8 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_parse_no_select_no_ignore` | Empty data: enabled_rules matches default config. |
 | `test_config.py` | `test_parse_style_google` | Style = 'google': config.style is DocstringStyle.GOOGLE. |
 | `test_config.py` | `test_parse_style_unknown` | Style = 'unknown': raises ValueError. |
-| `test_config.py` | `test_parse_exclude_empty_init_false` | exclude_empty_init = false: config.exclude_empty_init is False. |
+| `test_config.py` | `test_parse_exclude_empty_init_method_false` | exclude_empty_init_method = false: config.exclude_empty_init_method is False. |
+| `test_config.py` | `test_parse_exclude_empty_init_module_false` | exclude_empty_init_module = false: config.exclude_empty_init_module is False. |
 | `test_config.py` | `test_parse_workers` | Workers = 4: config.workers is 4. |
 | `test_config.py` | `test_parse_workers_zero_allowed` | Workers = 0: config.workers is 0 (auto-detect at runtime). |
 | `test_config.py` | `test_parse_scope_modules_false` | scope.modules = false: config.check_modules is False. |
@@ -485,6 +577,13 @@ This file lists the 251 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_parse_ignore_placeholder_docstrings` | ignore_placeholder_docstrings = true: config flag is True. |
 | `test_config.py` | `test_parse_summary_max_length` | summary_max_length = 72: config.summary_max_length is 72. |
 | `test_config.py` | `test_parse_summary_max_length_minimum_one` | summary_max_length = 0: clamped to 1. |
+| `test_config.py` | `test_parse_blank_lines_options` | blank_lines_before_section and blank_lines_before_closing_quotes: parsed as integers. |
+| `test_config.py` | `test_parse_blank_lines_options_minimum_zero` | Negative blank line counts: clamped to 0. |
+| `test_config.py` | `test_default_policies` | Default config: returns_none is required, init_returns_none is forbidden. |
+| `test_config.py` | `test_parse_policies` | returns_none and init_returns_none: parsed into Policy members. |
+| `test_config.py` | `test_parse_policy_invalid_value` | Unknown policy value: raises ValueError. |
+| `test_config.py` | `test_option_values_reflect_config` | option_values: returns every option of OPTIONS_REGISTRY with its current value. |
+| `test_config.py` | `test_always_on_rule_stays_enabled_when_ignored` | A rule listed in ALWAYS_ON: is_rule_enabled returns True even when ignored. |
 
 ### load_config
 

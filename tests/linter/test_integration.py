@@ -69,7 +69,7 @@ def test_lint_file_invalid_returns_errors(tmp_path: Path) -> None:
     config = LinterConfig()
     errors = lint_file(str(f), config)
     rules = {e.rule for e in errors}
-    assert "args_match" in rules
+    assert "args_section" in rules
     assert "returns_section" in rules
 
 
@@ -118,7 +118,7 @@ def test_collect_python_files_exclude_pattern(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_cli_list_rules_exit_zero() -> None:
+def test_cli_list_rules_exit_zero(tmp_path: Path) -> None:
     """--list-rules: exits with code 0 and prints rule names."""
     result = subprocess.run(
         [sys.executable, "-m", "linter.cli", "--list-rules"],
@@ -126,10 +126,11 @@ def test_cli_list_rules_exit_zero() -> None:
         text=True,
         check=False,
         env=_ENV,
+        cwd=tmp_path,
     )
     assert result.returncode == 0
     assert "docstring_exists" in result.stdout
-    assert "args_match" in result.stdout
+    assert "args_section" in result.stdout
 
 
 # ---------------------------------------------------------------------------
@@ -147,6 +148,7 @@ def test_cli_valid_file_exit_zero(tmp_path: Path) -> None:
         text=True,
         check=False,
         env=_ENV,
+        cwd=tmp_path,
     )
     assert result.returncode == 0
 
@@ -166,9 +168,10 @@ def test_cli_invalid_file_exit_one(tmp_path: Path) -> None:
         text=True,
         check=False,
         env=_ENV,
+        cwd=tmp_path,
     )
     assert result.returncode == 1
-    assert "args_match" in result.stdout or "args_match" in result.stderr
+    assert "args_section" in result.stdout or "args_section" in result.stderr
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +189,7 @@ def test_cli_syntax_error_no_crash(tmp_path: Path) -> None:
         text=True,
         check=False,
         env=_ENV,
+        cwd=tmp_path,
     )
     assert result.returncode == 0
     assert "Syntax error" in result.stdout or "Syntax error" in result.stderr
@@ -206,6 +210,7 @@ def test_cli_json_output_valid_file(tmp_path: Path) -> None:
         text=True,
         check=False,
         env=_ENV,
+        cwd=tmp_path,
     )
     assert result.returncode == 0
     report = json.loads(result.stdout)
@@ -223,6 +228,7 @@ def test_cli_json_output_invalid_file(tmp_path: Path) -> None:
         text=True,
         check=False,
         env=_ENV,
+        cwd=tmp_path,
     )
     assert result.returncode == 1
     report = json.loads(result.stdout)
@@ -230,7 +236,7 @@ def test_cli_json_output_invalid_file(tmp_path: Path) -> None:
     assert report["summary"]["files_checked"] == 1
     assert report["summary"]["files_with_errors"] == 1
     rules = {e["rule"] for e in report["errors"]}
-    assert "args_match" in rules
+    assert "args_section" in rules
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +254,7 @@ def test_cli_github_annotations_valid_file(tmp_path: Path) -> None:
         text=True,
         check=False,
         env=_ENV,
+        cwd=tmp_path,
     )
     assert result.returncode == 0
     assert "1 files checked, 0 errors." in result.stdout
@@ -263,6 +270,7 @@ def test_cli_github_annotations_invalid_file(tmp_path: Path) -> None:
         text=True,
         check=False,
         env=_ENV,
+        cwd=tmp_path,
     )
     assert result.returncode == 1
     assert "::error file=" in result.stdout

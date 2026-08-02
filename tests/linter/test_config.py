@@ -5,10 +5,13 @@ from pathlib import Path
 
 import pytest
 from linter.config import (
+    ALWAYS_ON,
     OFF_BY_DEFAULT,
+    OPTIONS_REGISTRY,
     RULES_REGISTRY,
     DocstringStyle,
     LinterConfig,
+    Policy,
     _parse_toml_config,  # pyright: ignore[reportPrivateUsage]
     load_config,
 )
@@ -124,10 +127,16 @@ def test_parse_style_unknown() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_parse_exclude_empty_init_false() -> None:
-    """exclude_empty_init = false: config.exclude_empty_init is False."""
-    config = _parse_toml_config({"exclude_empty_init": False})
-    assert config.exclude_empty_init is False
+def test_parse_exclude_empty_init_method_false() -> None:
+    """exclude_empty_init_method = false: config.exclude_empty_init_method is False."""
+    config = _parse_toml_config({"exclude_empty_init_method": False})
+    assert config.exclude_empty_init_method is False
+
+
+def test_parse_exclude_empty_init_module_false() -> None:
+    """exclude_empty_init_module = false: config.exclude_empty_init_module is False."""
+    config = _parse_toml_config({"exclude_empty_init_module": False})
+    assert config.exclude_empty_init_module is False
 
 
 def test_parse_workers() -> None:
@@ -181,6 +190,59 @@ def test_parse_summary_max_length_minimum_one() -> None:
     assert config.summary_max_length == 1
 
 
+def test_parse_blank_lines_options() -> None:
+    """blank_lines_before_section and blank_lines_before_closing_quotes: parsed as integers."""
+    config = _parse_toml_config({"blank_lines_before_section": 2, "blank_lines_before_closing_quotes": 0})
+    assert config.blank_lines_before_section == 2
+    assert config.blank_lines_before_closing_quotes == 0
+
+
+def test_parse_blank_lines_options_minimum_zero() -> None:
+    """Negative blank line counts: clamped to 0."""
+    config = _parse_toml_config({"blank_lines_before_section": -3, "blank_lines_before_closing_quotes": -1})
+    assert config.blank_lines_before_section == 0
+    assert config.blank_lines_before_closing_quotes == 0
+
+
+def test_default_policies() -> None:
+    """Default config: returns_none is required, init_returns_none is forbidden."""
+    config = LinterConfig()
+    assert config.returns_none is Policy.REQUIRED
+    assert config.init_returns_none is Policy.FORBIDDEN
+
+
+def test_parse_policies() -> None:
+    """returns_none and init_returns_none: parsed into Policy members."""
+    config = _parse_toml_config({"returns_none": "optional", "init_returns_none": "required"})
+    assert config.returns_none is Policy.OPTIONAL
+    assert config.init_returns_none is Policy.REQUIRED
+
+
+def test_parse_policy_invalid_value() -> None:
+    """Unknown policy value: raises ValueError."""
+    with pytest.raises(ValueError, match="is not a valid Policy"):
+        _parse_toml_config({"returns_none": "maybe"})
+
+
+def test_option_values_reflect_config() -> None:
+    """option_values: returns every option of OPTIONS_REGISTRY with its current value."""
+    config = _parse_toml_config({"exclude_empty_init_method": False, "summary_max_length": 72, "scope": {"modules": False}})
+    values = config.option_values()
+    assert set(values) == set(OPTIONS_REGISTRY)
+    assert values["exclude_empty_init_method"] == "false"
+    assert values["summary_max_length"] == "72"
+    assert values["scope.modules"] == "false"
+    assert values["style"] == "google"
+
+
+def test_always_on_rule_stays_enabled_when_ignored() -> None:
+    """A rule listed in ALWAYS_ON: is_rule_enabled returns True even when ignored."""
+    config = _parse_toml_config({"select": ["ALL"], "ignore": list(ALWAYS_ON)})
+    for rule in ALWAYS_ON:
+        assert rule not in config.enabled_rules
+        assert config.is_rule_enabled(rule)
+
+
 # ---------------------------------------------------------------------------
 # load_config
 # ---------------------------------------------------------------------------
@@ -226,7 +288,7 @@ def test_load_config_toml_with_section(tmp_path: Path) -> None:
     f.write_text('[tool.docstring-linter]\nselect = ["ALL"]\nworkers = 4\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 4
-    assert "forbid_init_returns_none" in config.enabled_rules
+    assert "returns_type_match" in config.enabled_rules
     assert config_file == f
 
 
@@ -236,7 +298,7 @@ def test_load_config_standalone_toml(tmp_path: Path) -> None:
     f.write_text('workers = 3\nselect = ["ALL"]\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 3
-    assert "forbid_init_returns_none" in config.enabled_rules
+    assert "returns_type_match" in config.enabled_rules
     assert config_file == f
 
 
