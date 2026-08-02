@@ -87,6 +87,7 @@ examples_section = "optional"          # idem
 notes_section = "optional"             # idem
 todo_section = "optional"              # idem
 documented_types = "required"          # idem
+returns_descriptions = "required"      # "required" | "forbidden" | "optional"
 exclude_empty_init_method = true
 exclude_empty_init_module = true
 ignore_placeholder_docstrings = false
@@ -125,6 +126,7 @@ examples_section = "optional"          # idem
 notes_section = "optional"             # idem
 todo_section = "optional"              # idem
 documented_types = "required"          # idem
+returns_descriptions = "required"      # "required" | "forbidden" | "optional"
 exclude_empty_init_method = true
 exclude_empty_init_module = true
 ignore_placeholder_docstrings = false
@@ -162,6 +164,7 @@ methods = true
 | `notes_section` | `"optional"` | Policy for the `Note:` section. |
 | `todo_section` | `"optional"` | Policy for the `Todo:` section. |
 | `documented_types` | `"required"` | Policy for the type between parentheses in `Args:` and `Attributes:` entries. |
+| `returns_descriptions` | `"required"` | Policy for the description on the `Returns:` and `Yields:` lines. |
 | `exclude_empty_init_method` | `true` | Do not require a docstring on `__init__` methods with no parameter beyond `self` and a body limited to `pass` or a docstring. |
 | `exclude_empty_init_module` | `true` | Do not require a docstring on `__init__.py` files with an empty body (empty file or comments only). |
 | `ignore_placeholder_docstrings` | `false` | Skip docstrings containing only `...`. |
@@ -175,7 +178,7 @@ methods = true
 | `scope.functions` | `true` | Check function docstrings. |
 | `scope.methods` | `true` | Check method docstrings. |
 
-Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five section policies, `"optional"` means the section is not required, but what the docstring does declare is still checked by the matching rule (`args_match`, `returns_type_match`, `yields_type_match`, `raises_match`, `attributes_match`). The two `exclude_empty_init_*` options only lift `docstring_exists`: a docstring that is present is always checked.
+Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five section policies, `"optional"` means the section is not required, but what the docstring does declare is still checked by the matching rule (`args_match`, `returns_match`, `yields_match`, `raises_match`, `attributes_match`). The two `exclude_empty_init_*` options only lift `docstring_exists`: a docstring that is present is always checked.
 
 `docstring-linter --list-rules` prints the rules, the policies, and the options that change what gets checked, each with the value it has in the current config.
 
@@ -211,8 +214,8 @@ prek install
 #### Composite action
 
 ```yaml
-- uses: actions/checkout@v4
-- uses: actions/setup-python@v5
+- uses: actions/checkout@v7
+- uses: actions/setup-python@v7
   with:
     python-version: "3.14"
 - uses: bastgau/docstring-linter@v0.1.0

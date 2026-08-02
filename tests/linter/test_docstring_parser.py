@@ -56,6 +56,14 @@ def test_parse_arg_without_type() -> None:
     assert result.args[0].description == "The input value."
 
 
+def test_parse_arg_without_colon() -> None:
+    """Typed arg missing its colon: name and type are read, description is empty."""
+    result = PARSER.parse("Do something.\n\nArgs:\n    path (str)\n")
+    assert result.args[0].name == "path"
+    assert result.args[0].type_annotation == "str"
+    assert not result.args[0].description
+
+
 def test_parse_arg_multiline_description() -> None:
     """Arg with continuation line: description is concatenated."""
     docstring = "Do something.\n\nArgs:\n    x (int): First line.\n        Second line.\n"
@@ -98,6 +106,22 @@ def test_parse_returns_none_keyword() -> None:
     assert result.returns is not None
     assert result.returns.type_annotation == "None"
     assert result.returns.description is None
+
+
+def test_parse_returns_bare_type() -> None:
+    """Returns section holding a bare type, no colon: type is read, description is None."""
+    result = PARSER.parse("Do something.\n\nReturns:\n    str\n")
+    assert result.returns is not None
+    assert result.returns.type_annotation == "str"
+    assert result.returns.description is None
+
+
+def test_parse_returns_bare_description() -> None:
+    """Returns section holding prose, no colon: description is read, type is None."""
+    result = PARSER.parse("Do something.\n\nReturns:\n    The user name.\n")
+    assert result.returns is not None
+    assert result.returns.type_annotation is None
+    assert result.returns.description == "The user name."
 
 
 def test_parse_no_returns_section() -> None:

@@ -234,8 +234,12 @@ def main() -> None:
     parser = _build_arg_parser()
     args = parser.parse_args()
 
-    config, config_file = load_config(args.config)
-    config = merge_cli_into_config(config, args)
+    try:
+        config, config_file = load_config(args.config)
+        config = merge_cli_into_config(config, args)
+    except ValueError as e:
+        print(f"Configuration error: {e}", file=sys.stderr)
+        sys.exit(2)
 
     if args.list_rules:
         report_rules(RULES_CATEGORIES, RULES_REGISTRY, OFF_BY_DEFAULT, ALWAYS_ON, frozenset(config.enabled_rules))
