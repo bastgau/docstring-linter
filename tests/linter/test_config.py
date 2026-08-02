@@ -218,6 +218,12 @@ def test_parse_policies() -> None:
     assert config.init_returns_none is Policy.REQUIRED
 
 
+def test_parse_policy_forbidden_allowed_on_returns_descriptions() -> None:
+    """returns_descriptions = forbidden: accepted, the value is meaningful there."""
+    config = _parse_toml_config({"returns_descriptions": "forbidden"})
+    assert config.returns_descriptions is Policy.FORBIDDEN
+
+
 def test_parse_policy_invalid_value() -> None:
     """Unknown policy value: raises ValueError."""
     with pytest.raises(ValueError, match="is not a valid Policy"):
@@ -288,7 +294,7 @@ def test_load_config_toml_with_section(tmp_path: Path) -> None:
     f.write_text('[tool.docstring-linter]\nselect = ["ALL"]\nworkers = 4\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 4
-    assert "returns_type_match" in config.enabled_rules
+    assert "returns_match" in config.enabled_rules
     assert config_file == f
 
 
@@ -298,7 +304,7 @@ def test_load_config_standalone_toml(tmp_path: Path) -> None:
     f.write_text('workers = 3\nselect = ["ALL"]\n', encoding="utf-8")
     config, config_file = load_config(str(f))
     assert config.workers == 3
-    assert "returns_type_match" in config.enabled_rules
+    assert "returns_match" in config.enabled_rules
     assert config_file == f
 
 

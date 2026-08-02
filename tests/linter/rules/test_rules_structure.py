@@ -379,6 +379,14 @@ def test_entry_spacing_no_space_after_colon() -> None:
     assert any(e.rule == "entry_spacing" for e in errors)
 
 
+def test_entry_spacing_missing_colon() -> None:
+    """Entry written 'name (type)' without its colon: returns entry_spacing error."""
+    raw = _entry("value (str)")
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _neutral())
+    assert any(e.rule == "entry_spacing" and "value (str): description" in e.message for e in errors)
+
+
 def test_entry_spacing_untyped_entry() -> None:
     """Entry without a type: the canonical form drops the parenthesis."""
     raw = _entry("value : A value.")

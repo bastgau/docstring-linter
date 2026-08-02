@@ -59,6 +59,7 @@ POLICIES_REGISTRY = {
     "notes_section": "Note section",
     "todo_section": "Todo section",
     "documented_types": "Type between parentheses in Args and Attributes entries",
+    "returns_descriptions": "Description on the Returns and Yields lines",
 }
 
 
@@ -102,7 +103,7 @@ RULES_CATEGORIES: dict[str, list[str]] = {
         "args_match",
         "args_order",
         "duplicate_arg",
-        "returns_type_match",
+        "returns_match",
         "yields_match",
         "raises_match",
         "attributes_match",
@@ -117,7 +118,7 @@ RULES_REGISTRY = {
     "args_match": "Documented args must match the signature (type, description, no phantom)",
     "duplicate_arg": "Argument must not be documented more than once in Args section",
     "args_order": "Args section must follow the same order as the function signature",
-    "returns_type_match": "When a Returns section exists, its type must match the signature",
+    "returns_match": "Returns section must match the signature type and carry a description",
     "yields_match": "Yields section must declare a type and a description",
     "raises_match": "Documented exceptions must be raised in the code and described",
     "attributes_match": "Documented attributes must match the class (type, description, no phantom)",
@@ -147,7 +148,7 @@ ALWAYS_ON: frozenset[str] = frozenset(
         "entry_spacing",
         "no_blank_line_in_section",
         "raises_match",
-        "returns_type_match",
+        "returns_match",
         "summary_exists",
         "yields_match",
     }
@@ -191,6 +192,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         notes_section (Policy): Policy for the presence of the Note section.
         todo_section (Policy): Policy for the presence of the Todo section.
         documented_types (Policy): Policy for the type in Args and Attributes entries.
+        returns_descriptions (Policy): Policy for the description on the Returns and Yields lines.
 
     """
 
@@ -223,6 +225,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     notes_section: Policy = Policy.OPTIONAL
     todo_section: Policy = Policy.OPTIONAL
     documented_types: Policy = Policy.REQUIRED
+    returns_descriptions: Policy = Policy.REQUIRED
 
     def policy_values(self) -> dict[str, str]:
         """Return the configured value of every style policy.

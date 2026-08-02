@@ -232,3 +232,16 @@ def test_list_rules_output(capsys: pytest.CaptureFixture[str], monkeypatch: pyte
             assert f"{rule} " not in out
         else:
             assert rule in out
+
+
+def test_main_invalid_config_value(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Invalid value in the config file: prints a configuration error and exits with 2."""
+    f = tmp_path / "bad.toml"
+    f.write_text('returns_descriptions = "maybe"\n', encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["docstring-linter", "--config", str(f), str(tmp_path)])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 2
+    assert "Configuration error" in capsys.readouterr().err

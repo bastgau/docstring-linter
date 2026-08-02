@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 339 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 349 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -13,11 +13,14 @@ This file lists the 339 tests of the `docstring-linter` project. Each entry show
 | `test_docstring_parser.py` | `test_parse_summary_and_description` | Summary + blank line + description: both summary and description are set. |
 | `test_docstring_parser.py` | `test_parse_arg_with_type_and_description` | Arg with type and description: all fields populated. |
 | `test_docstring_parser.py` | `test_parse_arg_without_type` | Arg without type annotation: type_annotation is None. |
+| `test_docstring_parser.py` | `test_parse_arg_without_colon` | Typed arg missing its colon: name and type are read, description is empty. |
 | `test_docstring_parser.py` | `test_parse_arg_multiline_description` | Arg with continuation line: description is concatenated. |
 | `test_docstring_parser.py` | `test_parse_arg_with_stars` | Starred args: the stars are kept in the parsed name. |
 | `test_docstring_parser.py` | `test_parse_multiple_args` | Multiple args: all are returned in order. |
 | `test_docstring_parser.py` | `test_parse_returns_with_type_and_description` | Standard Returns line: type and description are extracted. |
 | `test_docstring_parser.py` | `test_parse_returns_none_keyword` | Returns section containing only 'None': type_annotation is 'None', description is None. |
+| `test_docstring_parser.py` | `test_parse_returns_bare_type` | Returns section holding a bare type, no colon: type is read, description is None. |
+| `test_docstring_parser.py` | `test_parse_returns_bare_description` | Returns section holding prose, no colon: description is read, type is None. |
 | `test_docstring_parser.py` | `test_parse_no_returns_section` | Docstring without Returns section: returns field is None. |
 | `test_docstring_parser.py` | `test_parse_raises_single` | Single Raises entry: exception_type and description populated. |
 | `test_docstring_parser.py` | `test_parse_raises_multiline_description` | Raises entry with continuation line: description is concatenated. |
@@ -197,22 +200,26 @@ This file lists the 339 tests of the `docstring-linter` project. Each entry show
 |---|---|---|
 | `rules/test_rules_args.py` | `test_returns_section_required_missing` | Policy required, return type but no Returns section: returns returns_section error. |
 | `rules/test_rules_args.py` | `test_returns_section_optional_missing` | Policy optional, return type but no Returns section: no error. |
-| `rules/test_rules_args.py` | `test_returns_section_optional_still_checks_type` | Policy optional, a Returns section with a wrong type: returns_type_match still reports it. |
+| `rules/test_rules_args.py` | `test_returns_section_optional_still_checks_type` | Policy optional, a Returns section with a wrong type: returns_match still reports it. |
 | `rules/test_rules_args.py` | `test_returns_section_forbidden_present` | Policy forbidden, Returns section present: returns returns_section error. |
 | `rules/test_rules_args.py` | `test_returns_section_correct` | Returns section matches signature: no error. |
 | `rules/test_rules_args.py` | `test_returns_section_ignores_none_return_type` | Function -> None without Returns section: returns_section does not flag it. |
 | `rules/test_rules_args.py` | `test_returns_section_error_when_generator_has_returns` | Generator documenting Returns: returns returns_section error. |
 | `rules/test_rules_args.py` | `test_returns_section_exempt_for_generator_without_returns` | Generator without Returns section: the returns_section policy is not triggered. |
 
-### returns_type_match
+### returns_match
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_args.py` | `test_returns_type_match_mismatch` | Returns section type differs from signature: returns returns_type_match error. |
-| `rules/test_rules_args.py` | `test_returns_type_match_missing_type` | Returns section present but no type declared: returns returns_type_match error. |
-| `rules/test_rules_args.py` | `test_returns_type_match_no_section_no_error` | No Returns section: returns_type_match does not flag a missing section. |
-| `rules/test_rules_args.py` | `test_returns_type_match_correct` | Returns section type matches signature: no returns_type_match error. |
-| `rules/test_rules_args.py` | `test_returns_type_match_cannot_be_disabled` | Rule listed in ignore: the type mismatch is still reported, the rule is always on. |
+| `rules/test_rules_args.py` | `test_returns_match_mismatch` | Returns section type differs from signature: returns returns_match error. |
+| `rules/test_rules_args.py` | `test_returns_match_missing_type` | Returns section present but no type declared: returns returns_match error. |
+| `rules/test_rules_args.py` | `test_returns_match_no_section_no_error` | No Returns section: returns_match does not flag a missing section. |
+| `rules/test_rules_args.py` | `test_returns_match_missing_description` | Policy required, Returns section without a description: returns returns_match error. |
+| `rules/test_rules_args.py` | `test_returns_match_none_exempt_from_description` | Policy required, 'Returns: None': the description is not demanded. |
+| `rules/test_rules_args.py` | `test_returns_descriptions_optional` | Policy optional: a Returns line without description is accepted. |
+| `rules/test_rules_args.py` | `test_returns_descriptions_forbidden` | Policy forbidden: a Returns line carrying a description is reported. |
+| `rules/test_rules_args.py` | `test_returns_match_correct` | Returns section type matches signature: no returns_match error. |
+| `rules/test_rules_args.py` | `test_returns_match_cannot_be_disabled` | Rule listed in ignore: the type mismatch is still reported, the rule is always on. |
 
 ### returns_none (policy)
 
@@ -378,6 +385,7 @@ This file lists the 339 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_structure.py` | `test_entry_spacing_missing_space_before_parenthesis` | Entry written 'name(type): description': returns entry_spacing error. |
 | `rules/test_rules_structure.py` | `test_entry_spacing_space_before_colon` | Entry written 'name (type) : description': returns entry_spacing error. |
 | `rules/test_rules_structure.py` | `test_entry_spacing_no_space_after_colon` | Entry written 'name (type):description': returns entry_spacing error. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_missing_colon` | Entry written 'name (type)' without its colon: returns entry_spacing error. |
 | `rules/test_rules_structure.py` | `test_entry_spacing_untyped_entry` | Entry without a type: the canonical form drops the parenthesis. |
 | `rules/test_rules_structure.py` | `test_entry_spacing_starred_entry` | Starred entry written canonically: no error. |
 | `rules/test_rules_structure.py` | `test_entry_spacing_ignores_continuation_lines` | Continuation line of a description: not read as an entry. |
@@ -479,6 +487,7 @@ This file lists the 339 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
+| `test_cli.py` | `test_main_invalid_config_value` | Invalid value in the config file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_list_rules_output` | --list-rules: configurable rules appear grouped by category, always-on rules do not. |
 
 ---
@@ -582,6 +591,7 @@ This file lists the 339 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_default_policies` | Default config: returns_none is required, init_returns_none is forbidden. |
 | `test_config.py` | `test_parse_policies` | returns_none and init_returns_none: parsed into Policy members. |
 | `test_config.py` | `test_parse_policy_invalid_value` | Unknown policy value: raises ValueError. |
+| `test_config.py` | `test_parse_policy_forbidden_allowed_on_returns_descriptions` | returns_descriptions = forbidden: accepted, the value is meaningful there. |
 | `test_config.py` | `test_option_values_reflect_config` | option_values: returns every option of OPTIONS_REGISTRY with its current value. |
 | `test_config.py` | `test_always_on_rule_stays_enabled_when_ignored` | A rule listed in ALWAYS_ON: is_rule_enabled returns True even when ignored. |
 

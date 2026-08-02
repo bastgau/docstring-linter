@@ -147,8 +147,8 @@ def test_args_match_missing_description_in_docstring() -> None:
         summary="Do something.",
         args=[DocstringArg(name="x", type_annotation="int", description=None)],
     )
-    errors = validate_entity(entity, doc, _rule_only("args_match"))
-    assert any("missing description" in e.message for e in errors)
+    errors = validate_entity(entity, doc, _neutral())
+    assert any(e.rule == "args_match" and "missing description" in e.message for e in errors)
 
 
 def test_args_match_no_sig_args_no_doc_args() -> None:
@@ -192,11 +192,11 @@ def test_returns_section_optional_missing() -> None:
 
 
 def test_returns_section_optional_still_checks_type() -> None:
-    """Policy optional, a Returns section with a wrong type: returns_type_match still reports it."""
+    """Policy optional, a Returns section with a wrong type: returns_match still reports it."""
     entity = _func(return_type="int")
     doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="str"))
     errors = validate_entity(entity, doc, _neutral(returns_section=Policy.OPTIONAL))
-    assert any(e.rule == "returns_type_match" for e in errors)
+    assert any(e.rule == "returns_match" for e in errors)
 
 
 def test_returns_section_forbidden_present() -> None:
@@ -224,46 +224,78 @@ def test_returns_section_ignores_none_return_type() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Rule => returns_type_match
+# Rule => returns_match
 # ---------------------------------------------------------------------------
 
 
-def test_returns_type_match_mismatch() -> None:
-    """Returns section type differs from signature: returns returns_type_match error."""
+def test_returns_match_mismatch() -> None:
+    """Returns section type differs from signature: returns returns_match error."""
     entity = _func(return_type="int")
     doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="str"))
-    errors = validate_entity(entity, doc, _rule_only("returns_type_match"))
-    assert any(e.rule == "returns_type_match" and "mismatch" in e.message for e in errors)
+    errors = validate_entity(entity, doc, _neutral())
+    assert any(e.rule == "returns_match" and "mismatch" in e.message for e in errors)
 
 
-def test_returns_type_match_missing_type() -> None:
-    """Returns section present but no type declared: returns returns_type_match error."""
+def test_returns_match_missing_type() -> None:
+    """Returns section present but no type declared: returns returns_match error."""
     entity = _func(return_type="int")
     doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation=None))
-    errors = validate_entity(entity, doc, _rule_only("returns_type_match"))
-    assert any(e.rule == "returns_type_match" and "Missing type" in e.message for e in errors)
+    errors = validate_entity(entity, doc, _neutral())
+    assert any(e.rule == "returns_match" and "Missing type" in e.message for e in errors)
 
 
-def test_returns_type_match_no_section_no_error() -> None:
-    """No Returns section: returns_type_match does not flag a missing section."""
+def test_returns_match_no_section_no_error() -> None:
+    """No Returns section: returns_match does not flag a missing section."""
     entity = _func(return_type="int")
-    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _rule_only("returns_type_match"))
+    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _neutral())
     assert not errors
 
 
-def test_returns_type_match_cannot_be_disabled() -> None:
+def test_returns_match_cannot_be_disabled() -> None:
     """Rule listed in ignore: the type mismatch is still reported, the rule is always on."""
     entity = _func(return_type="int")
     doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="str"))
     errors = validate_entity(entity, doc, _neutral())
-    assert any(e.rule == "returns_type_match" for e in errors)
+    assert any(e.rule == "returns_match" for e in errors)
 
 
-def test_returns_type_match_correct() -> None:
-    """Returns section type matches signature: no returns_type_match error."""
+def test_returns_match_missing_description() -> None:
+    """Policy required, Returns section without a description: returns returns_match error."""
+    entity = _func(return_type="int")
+    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="int"))
+    errors = validate_entity(entity, doc, _neutral(returns_descriptions=Policy.REQUIRED))
+    assert any(e.rule == "returns_match" and "Missing description" in e.message for e in errors)
+
+
+def test_returns_match_none_exempt_from_description() -> None:
+    """Policy required, 'Returns: None': the description is not demanded."""
+    entity = _func(return_type="None")
+    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="None"))
+    errors = validate_entity(entity, doc, _neutral(returns_descriptions=Policy.REQUIRED))
+    assert not errors
+
+
+def test_returns_descriptions_optional() -> None:
+    """Policy optional: a Returns line without description is accepted."""
+    entity = _func(return_type="int")
+    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="int"))
+    errors = validate_entity(entity, doc, _neutral(returns_descriptions=Policy.OPTIONAL))
+    assert not errors
+
+
+def test_returns_descriptions_forbidden() -> None:
+    """Policy forbidden: a Returns line carrying a description is reported."""
     entity = _func(return_type="int")
     doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="int", description="The result."))
-    errors = validate_entity(entity, doc, _rule_only("returns_type_match"))
+    errors = validate_entity(entity, doc, _neutral(returns_descriptions=Policy.FORBIDDEN))
+    assert any(e.rule == "returns_match" and "must not carry a description" in e.message for e in errors)
+
+
+def test_returns_match_correct() -> None:
+    """Returns section type matches signature: no returns_match error."""
+    entity = _func(return_type="int")
+    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="int", description="The result."))
+    errors = validate_entity(entity, doc, _neutral())
     assert not errors
 
 
@@ -458,7 +490,7 @@ def test_yields_section_forbidden_present() -> None:
 
 
 def test_yields_match_missing_type() -> None:
-    """Yields section without a type: returns yields_type_match error."""
+    """Yields section without a type: returns yields_match error."""
     entity = _func(is_generator=True)
     doc = ParsedDocstring(summary="Do something.", yields=DocstringReturn(type_annotation=None))
     cfg = _neutral(yields_section=Policy.OPTIONAL)
@@ -470,7 +502,8 @@ def test_yields_match_missing_description() -> None:
     """Yields section without a description: returns yields_match error."""
     entity = _func(is_generator=True)
     doc = ParsedDocstring(summary="Do something.", yields=DocstringReturn(type_annotation="str", description=None))
-    errors = validate_entity(entity, doc, _neutral(yields_section=Policy.OPTIONAL))
+    cfg = _neutral(yields_section=Policy.OPTIONAL, returns_descriptions=Policy.REQUIRED)
+    errors = validate_entity(entity, doc, cfg)
     assert any(e.rule == "yields_match" and "Missing description" in e.message for e in errors)
 
 
