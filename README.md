@@ -164,7 +164,8 @@ select = ["docstring_exists"]
 ```
 
 - `paths` is required and matched with `PurePath.full_match`, so `tests/**` covers the whole tree. A path given on the command line as an absolute path is matched relative to the current directory as well.
-- Blocks are applied in declaration order and **the last match wins**, so declare the general case first and the exceptions after it.
+- **A single block applies to a given file**: the last declared among those matching it. The other matching blocks are ignored, blocks never accumulate. Declare the general case first and the exceptions after it, and make each block self-contained.
+- The block that applies is resolved against the base configuration, so a setting it does not declare keeps its base value, not the linter default.
 - `ignore` removes rules from the inherited set, `select` replaces that set entirely. Same meaning as at the base level.
 - An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`.
 - `exclude`, `workers`, `style` and `scope.*` apply to the whole run and are rejected inside an override.
@@ -178,12 +179,12 @@ select = ["docstring_exists"]
 | `style` | `"google"` | Docstring style to enforce. |
 | `select` | all rules | Rules to enable. `["ALL"]` enables everything. |
 | `ignore` | `[]` | Rules to disable (applied after `select`). Always-on rules cannot be listed here. |
-| `returns_none` | `"required"` | Policy for `Returns: None` on `-> None` functions. |
-| `init_returns_none` | `"forbidden"` | Policy for `Returns: None` on `__init__` methods. |
+| `returns_none` | `"required"` | Policy for `Returns: None` on `-> None` functions. Not applied when `returns_section = "forbidden"`. |
+| `init_returns_none` | `"forbidden"` | Policy for `Returns: None` on `__init__` methods. Not applied when `returns_section = "forbidden"`. |
 | `summary_on_first_line` | `"required"` | Policy for the summary on the opening `"""` line. |
 | `summary_final_period` | `"required"` | Policy for the period ending the summary line. |
 | `args_section` | `"required"` | Policy for documenting every parameter of the signature. |
-| `returns_section` | `"required"` | Policy for the `Returns:` section on a non-`None` return type. |
+| `returns_section` | `"required"` | Policy for the `Returns:` section on a non-`None` return type. `"forbidden"` also disables `returns_none` and `init_returns_none`. |
 | `yields_section` | `"required"` | Policy for the `Yields:` section on generators. |
 | `raises_section` | `"required"` | Policy for documenting every exception raised. |
 | `attributes_section` | `"required"` | Policy for documenting every class attribute. |

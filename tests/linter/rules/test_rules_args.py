@@ -365,6 +365,13 @@ def test_returns_none_skips_generator() -> None:
     assert not errors
 
 
+def test_returns_none_skipped_when_returns_section_forbidden() -> None:
+    """returns_section forbidden: the returns_none policy is not applied."""
+    entity = _func(return_type="None")
+    cfg = _neutral(returns_section=Policy.FORBIDDEN, returns_none=Policy.REQUIRED)
+    assert not validate_entity(entity, ParsedDocstring(summary="Do something."), cfg)
+
+
 # ---------------------------------------------------------------------------
 # Policy => init_returns_none
 # ---------------------------------------------------------------------------
@@ -400,6 +407,13 @@ def test_init_returns_none_optional_accepts_both() -> None:
     doc = ParsedDocstring(summary="Init.", returns=DocstringReturn(type_annotation="None"))
     assert not validate_entity(entity, ParsedDocstring(summary="Init."), cfg)
     assert not validate_entity(entity, doc, cfg)
+
+
+def test_init_returns_none_skipped_when_returns_section_forbidden() -> None:
+    """returns_section forbidden: the init_returns_none policy is not applied."""
+    entity = _func(name="MyClass.__init__", return_type="None", node_type=NodeType.METHOD)
+    cfg = _neutral(returns_section=Policy.FORBIDDEN, init_returns_none=Policy.REQUIRED)
+    assert not validate_entity(entity, ParsedDocstring(summary="Init."), cfg)
 
 
 # ---------------------------------------------------------------------------

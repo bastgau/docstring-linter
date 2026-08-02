@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 
 def _error(rule: str = "args_match", line: int = 10, filepath: str = "src/foo.py") -> LintError:
+    """Build a lint error on a dummy function."""
     return LintError(
         filepath=filepath,
         line=line,

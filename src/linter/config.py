@@ -281,7 +281,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     exclude_empty_init_method: bool = True
     exclude_empty_init_module: bool = True
     ignore_placeholder_docstrings: bool = False
-    exclude_patterns: list[str] = field(default_factory=lambda: ["test_*", "*_test.py", ".venv", ".git", "__pycache__", ".tox", ".mypy_cache", ".ruff_cache", ".pytest_cache"])
+    exclude_patterns: list[str] = field(default_factory=lambda: [".venv", ".git", "__pycache__", ".tox", ".mypy_cache", ".ruff_cache", ".pytest_cache"])
     enabled_rules: list[str] = field(default_factory=lambda: [r for r in RULES_REGISTRY if r not in OFF_BY_DEFAULT])
     output_format: str = "traceback"
     workers: int = 1
@@ -308,7 +308,8 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     def for_path(self, filepath: str) -> LinterConfig:
         """Return the config applying to a file, overrides included.
 
-        Matching overrides are applied in declaration order, the last one wins.
+        A single override applies, the last one declared among those matching.
+        It is resolved against this config, the other matching ones are ignored.
 
         Args:
             filepath (str): Path of the file being linted.
@@ -321,15 +322,13 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         if not matching:
             return self
 
+        override = matching[-1]
         resolved = copy.copy(self)
-        enabled = set(self.enabled_rules)
+        enabled = set(self.enabled_rules) if override.select is None else {rule for rule in override.select if rule in RULES_REGISTRY}
+        enabled -= {rule for rule in override.ignore if rule in RULES_REGISTRY}
 
-        for override in matching:
-            if override.select is not None:
-                enabled = {rule for rule in override.select if rule in RULES_REGISTRY}
-            enabled -= {rule for rule in override.ignore if rule in RULES_REGISTRY}
-            for name, value in override.values.items():
-                setattr(resolved, name, value)
+        for name, value in override.values.items():
+            setattr(resolved, name, value)
 
         resolved.enabled_rules = sorted(enabled)
         return resolved
