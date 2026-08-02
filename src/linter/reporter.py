@@ -8,7 +8,10 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from linter.config import Policy
+
 if TYPE_CHECKING:
+    from linter.config import ConfigOverride
     from linter.models import LintError
 
 
@@ -201,6 +204,36 @@ def report_options(registry: dict[str, str], values: dict[str, str]) -> None:
     for option, description in registry.items():
         print(f"    {Colors.GREEN}{values[option]:<10}{Colors.RESET} {Colors.BOLD}{option:<35}{Colors.RESET} {Colors.DIM}{description}{Colors.RESET}")
     print()
+
+
+def report_overrides(overrides: list[ConfigOverride], base: dict[str, str]) -> None:
+    """Print the per-path overrides, showing only what they change.
+
+    Args:
+        overrides (list[ConfigOverride]): Overrides declared in the config file.
+        base (dict[str, str]): Base value of every policy and option, for comparison.
+
+    Returns:
+        None
+
+    """
+    if not overrides:
+        return
+
+    count = len(overrides)
+    print(f"  {Colors.BOLD}{Colors.CYAN}Overrides{Colors.RESET}  {Colors.DIM}{count} declared, applied in order, the last match wins{Colors.RESET}")
+
+    for override in overrides:
+        print(f"    {Colors.BOLD}{', '.join(override.paths)}{Colors.RESET}")
+        if override.select is not None:
+            print(f"      {Colors.GREEN}{'select':<34}{Colors.RESET}{', '.join(override.select)}")
+        if override.ignore:
+            print(f"      {Colors.GREEN}{'ignore':<34}{Colors.RESET}{', '.join(override.ignore)}")
+        for name, value in override.values.items():
+            shown = value.value if isinstance(value, Policy) else str(value)
+            was = base.get(name, "")
+            print(f"      {Colors.GREEN}{name:<34}{Colors.RESET}{shown:<12}{Colors.DIM}(base: {was}){Colors.RESET}")
+        print()
 
 
 def report_rules(categories: dict[str, list[str]], registry: dict[str, str], off_by_default: frozenset[str], always_on: frozenset[str], enabled: frozenset[str]) -> None:

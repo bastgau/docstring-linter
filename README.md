@@ -143,6 +143,34 @@ functions = true
 methods = true
 ```
 
+### Per-path overrides
+
+A base configuration plus any number of `[[tool.docstring-linter.overrides]]` blocks. Each block declares the path patterns it applies to, then the settings it changes.
+
+```toml
+[tool.docstring-linter]
+select = ["ALL"]
+args_section = "required"
+
+[[tool.docstring-linter.overrides]]
+paths = ["tests/**"]
+ignore = ["imperative_mood", "args_order"]
+args_section = "optional"
+summary_max_length = 120
+
+[[tool.docstring-linter.overrides]]
+paths = ["example/**", "docs/**"]
+select = ["docstring_exists"]
+```
+
+- `paths` is required and matched with `PurePath.full_match`, so `tests/**` covers the whole tree. A path given on the command line as an absolute path is matched relative to the current directory as well.
+- Blocks are applied in declaration order and **the last match wins**, so declare the general case first and the exceptions after it.
+- `ignore` removes rules from the inherited set, `select` replaces that set entirely. Same meaning as at the base level.
+- An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`.
+- `exclude`, `workers`, `format`, `style` and `scope.*` apply to the whole run and are rejected inside an override.
+
+`docstring-linter --list-rules` prints the overrides after the base configuration, showing only what each one changes.
+
 ### Keys
 
 | Key | Default | Description |
