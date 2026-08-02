@@ -78,7 +78,7 @@ File "/workspaces/docstring-linter/example/docstring_format_reference.py", line 
 
 <details>
 
-<summary>Other output formats</summary>
+<summary>Other output formats</summary><br />
 
 `text` keeps the compact layout, one line per error grouped by file:
 

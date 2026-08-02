@@ -43,8 +43,6 @@ def log(message: str) -> None:
     print(message)
 ```
 
----
-
 ### Summary
 
 #### imperative_mood
@@ -104,8 +102,6 @@ Configure the limit in configuration file:
 summary_max_length = 72
 ```
 
----
-
 ### Args / Returns / Raises
 
 #### args_order
@@ -133,8 +129,6 @@ def process(x: int, y: str) -> None:
 
     """
 ```
-
----
 
 ### Sections
 
@@ -271,5 +265,3 @@ def process(x: int) -> int:
 
     """
 ```
-
----

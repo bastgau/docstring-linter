@@ -497,7 +497,7 @@ def get_name() -> str:
 
 ---
 
-### Automatic Exemptions
+## Automatic Exemptions
 
 | Case | Behavior |
 |------|----------|
@@ -509,7 +509,7 @@ def get_name() -> str:
 | Files excluded by pattern | Not scanned |
 | Module docstrings | `imperative_mood` not applied |
 
-#### exclude_empty_init_method
+### exclude_empty_init_method
 
 An `__init__` method counts as empty when it declares no parameter beyond `self` and its body contains only `pass` statements or a docstring. When `exclude_empty_init_method = true`, such a method is exempted from `docstring_exists` only: writing a docstring stays optional, but a docstring that is present is checked like any other.
 
@@ -539,7 +539,9 @@ There is no equivalent exemption for regular functions with an empty body: `def 
 exclude_empty_init_method = false   # check empty __init__ methods too
 ```
 
-#### exclude_empty_init_module
+---
+
+### exclude_empty_init_module
 
 An `__init__.py` counts as empty when its AST body is empty: an empty file, or a file containing only comments. A single import or a docstring is enough to make it non-empty, and therefore checked like any other module. As with the method case, the option only lifts `docstring_exists`.
 
@@ -559,6 +561,8 @@ exclude_empty_init_module = false   # check empty __init__.py files too
 ```
 
 This option only covers the empty case. To skip every `__init__.py` regardless of its content, use `exclude = ["__init__.py"]`.
+
+## Exclusion Patterns
 
 ### Default Exclusion Patterns
 
