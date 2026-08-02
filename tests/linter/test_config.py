@@ -73,9 +73,9 @@ def test_parse_select_all() -> None:
 
 
 def test_parse_select_all_with_ignore() -> None:
-    """Select = ['ALL'] + ignore = ['args_match']: all rules except args_match."""
-    config = _parse_toml_config({"select": ["ALL"], "ignore": ["args_match"]})
-    assert "args_match" not in config.enabled_rules
+    """Select = ['ALL'] + ignore = ['imperative_mood']: all rules except imperative_mood."""
+    config = _parse_toml_config({"select": ["ALL"], "ignore": ["imperative_mood"]})
+    assert "imperative_mood" not in config.enabled_rules
     assert "docstring_exists" in config.enabled_rules
 
 
@@ -87,15 +87,8 @@ def test_parse_select_explicit_list() -> None:
 
 def test_parse_ignore_only() -> None:
     """Ignore only (no select): starts from default set minus ignored rules."""
-    config = _parse_toml_config({"ignore": ["args_match"]})
-    assert "args_match" not in config.enabled_rules
-    assert "docstring_exists" in config.enabled_rules
-
-
-def test_parse_select_unknown_rule_ignored() -> None:
-    """Select with an unknown rule name: unknown rule is silently ignored."""
-    config = _parse_toml_config({"select": ["docstring_exists", "nonexistent_rule"]})
-    assert "nonexistent_rule" not in config.enabled_rules
+    config = _parse_toml_config({"ignore": ["imperative_mood"]})
+    assert "imperative_mood" not in config.enabled_rules
     assert "docstring_exists" in config.enabled_rules
 
 
@@ -117,8 +110,8 @@ def test_parse_style_google() -> None:
 
 
 def test_parse_style_unknown() -> None:
-    """Style = 'unknown': raises ValueError."""
-    with pytest.raises(ValueError, match="is not a valid DocstringStyle"):
+    """Style = 'unknown': raises ValueError listing the accepted styles."""
+    with pytest.raises(ValueError, match="'style': invalid value 'unknown', expected one of google, numpy, sphinx, pep257"):
         _parse_toml_config({"style": "unknown"})
 
 
@@ -225,8 +218,8 @@ def test_parse_policy_forbidden_allowed_on_returns_descriptions() -> None:
 
 
 def test_parse_policy_invalid_value() -> None:
-    """Unknown policy value: raises ValueError."""
-    with pytest.raises(ValueError, match="is not a valid Policy"):
+    """Unknown policy value: raises ValueError naming the key and the accepted values."""
+    with pytest.raises(ValueError, match="'returns_none': invalid value 'maybe', expected one of required, forbidden, optional"):
         _parse_toml_config({"returns_none": "maybe"})
 
 
@@ -241,12 +234,59 @@ def test_option_values_reflect_config() -> None:
     assert values["style"] == "google"
 
 
-def test_always_on_rule_stays_enabled_when_ignored() -> None:
-    """A rule listed in ALWAYS_ON: is_rule_enabled returns True even when ignored."""
-    config = _parse_toml_config({"select": ["ALL"], "ignore": list(ALWAYS_ON)})
+def test_always_on_rule_stays_enabled_when_not_selected() -> None:
+    """A rule listed in ALWAYS_ON: is_rule_enabled returns True even when not selected."""
+    config = _parse_toml_config({"select": ["docstring_exists"]})
     for rule in ALWAYS_ON:
         assert rule not in config.enabled_rules
         assert config.is_rule_enabled(rule)
+
+
+# ---------------------------------------------------------------------------
+# unknown keys and rules
+# ---------------------------------------------------------------------------
+
+
+def test_parse_unknown_key() -> None:
+    """Key absent from the registries: raises ValueError naming it."""
+    with pytest.raises(ValueError, match="unknown configuration key 'param_order'"):
+        _parse_toml_config({"param_order": True})
+
+
+def test_parse_unknown_keys_are_all_reported() -> None:
+    """Several unknown keys: all of them are named in the message."""
+    with pytest.raises(ValueError, match="unknown configuration keys 'allow_oneliner', 'summary_punctuation'"):
+        _parse_toml_config({"allow_oneliner": True, "summary_punctuation": True})
+
+
+def test_parse_unknown_scope_key() -> None:
+    """Unknown key under scope: raises ValueError naming the section."""
+    with pytest.raises(ValueError, match="scope: unknown configuration key 'function'"):
+        _parse_toml_config({"scope": {"function": True}})
+
+
+def test_parse_unknown_rule_in_select() -> None:
+    """Unknown rule name in select: raises ValueError naming it."""
+    with pytest.raises(ValueError, match="select: unknown rule 'param_order'"):
+        _parse_toml_config({"select": ["args_order", "param_order"]})
+
+
+def test_parse_unknown_rule_in_ignore() -> None:
+    """Unknown rule name in ignore: raises ValueError naming it."""
+    with pytest.raises(ValueError, match="ignore: unknown rule 'docstring_exist'"):
+        _parse_toml_config({"ignore": ["docstring_exist"]})
+
+
+def test_parse_select_all_is_accepted() -> None:
+    """Select = ALL: the wildcard is not treated as a rule name."""
+    config = _parse_toml_config({"select": ["ALL"]})
+    assert set(config.enabled_rules) == set(RULES_REGISTRY)
+
+
+def test_parse_ignore_always_on_rule() -> None:
+    """Always-on rule in ignore: raises ValueError instead of silently doing nothing."""
+    with pytest.raises(ValueError, match="ignore: 'blank_lines' cannot be ignored"):
+        _parse_toml_config({"ignore": ["blank_lines"]})
 
 
 # ---------------------------------------------------------------------------
@@ -273,6 +313,24 @@ def test_parse_override_run_level_key() -> None:
     """Override carrying a run-level key: raises ValueError naming the key."""
     with pytest.raises(ValueError, match="'exclude' cannot be set per path"):
         _parse_toml_config({"overrides": [{"paths": ["tests/**"], "exclude": ["x"]}]})
+
+
+def test_parse_override_unknown_key() -> None:
+    """Override carrying an unknown key: raises ValueError naming the override."""
+    with pytest.raises(ValueError, match=r"override \['tests/\*\*'\]: unknown configuration key 'allow_oneliner'"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "allow_oneliner": True}]})
+
+
+def test_parse_override_unknown_rule() -> None:
+    """Override ignoring an unknown rule: raises ValueError naming the override."""
+    with pytest.raises(ValueError, match=r"override \['tests/\*\*'\]: ignore: unknown rule 'param_order'"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "ignore": ["param_order"]}]})
+
+
+def test_parse_override_invalid_policy_value() -> None:
+    """Override carrying an invalid policy value: raises ValueError naming the key."""
+    with pytest.raises(ValueError, match="'args_section': invalid value 'maybe'"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "args_section": "maybe"}]})
 
 
 def test_for_path_without_override_returns_self() -> None:

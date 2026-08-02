@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 360 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 369 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -32,6 +32,7 @@ This file lists the 360 tests of the `docstring-linter` project. Each entry show
 | `test_docstring_parser.py` | `test_parse_example_section` | Docstring with Example section: examples list is populated. |
 | `test_docstring_parser.py` | `test_parse_examples_section` | Docstring with Examples section (plural): examples list is populated. |
 | `test_docstring_parser.py` | `test_parse_unknown_section_ignored` | Unknown section name: not parsed, does not affect other fields. |
+| `test_docstring_parser.py` | `test_unknown_section_detected` | Section name not in known list: captured in unknown_sections. |
 | `test_docstring_parser.py` | `test_unknown_section_known_not_flagged` | Known section: not captured in unknown_sections. |
 | `test_docstring_parser.py` | `test_unknown_section_multiple` | Multiple unknown sections in parsed docstring: all captured. |
 | `test_docstring_parser.py` | `test_parse_lowercase_section_not_recognized` | Lowercase section name (args: instead of Args:): not recognized, no args parsed. |
@@ -576,13 +577,12 @@ This file lists the 360 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `test_config.py` | `test_parse_select_all` | Select = ['ALL']: all rules in RULES_REGISTRY are enabled. |
-| `test_config.py` | `test_parse_select_all_with_ignore` | Select = ['ALL'] + ignore = ['args_match']: all rules except args_match. |
+| `test_config.py` | `test_parse_select_all_with_ignore` | Select = ['ALL'] + ignore = ['imperative_mood']: all rules except imperative_mood. |
 | `test_config.py` | `test_parse_select_explicit_list` | Select = ['docstring_exists', 'args_match']: only those two rules enabled. |
 | `test_config.py` | `test_parse_ignore_only` | Ignore only (no select): starts from default set minus ignored rules. |
-| `test_config.py` | `test_parse_select_unknown_rule_ignored` | Select with an unknown rule name: unknown rule is silently ignored. |
 | `test_config.py` | `test_parse_no_select_no_ignore` | Empty data: enabled_rules matches default config. |
 | `test_config.py` | `test_parse_style_google` | Style = 'google': config.style is DocstringStyle.GOOGLE. |
-| `test_config.py` | `test_parse_style_unknown` | Style = 'unknown': raises ValueError. |
+| `test_config.py` | `test_parse_style_unknown` | Style = 'unknown': raises ValueError listing the accepted styles. |
 | `test_config.py` | `test_parse_exclude_empty_init_method_false` | exclude_empty_init_method = false: config.exclude_empty_init_method is False. |
 | `test_config.py` | `test_parse_exclude_empty_init_module_false` | exclude_empty_init_module = false: config.exclude_empty_init_module is False. |
 | `test_config.py` | `test_parse_workers` | Workers = 4: config.workers is 4. |
@@ -597,10 +597,22 @@ This file lists the 360 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_parse_blank_lines_options_minimum_zero` | Negative blank line counts: clamped to 0. |
 | `test_config.py` | `test_default_policies` | Default config: returns_none is required, init_returns_none is forbidden. |
 | `test_config.py` | `test_parse_policies` | returns_none and init_returns_none: parsed into Policy members. |
-| `test_config.py` | `test_parse_policy_invalid_value` | Unknown policy value: raises ValueError. |
+| `test_config.py` | `test_parse_policy_invalid_value` | Unknown policy value: raises ValueError naming the key and the accepted values. |
 | `test_config.py` | `test_parse_policy_forbidden_allowed_on_returns_descriptions` | returns_descriptions = forbidden: accepted, the value is meaningful there. |
 | `test_config.py` | `test_option_values_reflect_config` | option_values: returns every option of OPTIONS_REGISTRY with its current value. |
-| `test_config.py` | `test_always_on_rule_stays_enabled_when_ignored` | A rule listed in ALWAYS_ON: is_rule_enabled returns True even when ignored. |
+| `test_config.py` | `test_always_on_rule_stays_enabled_when_not_selected` | A rule listed in ALWAYS_ON: is_rule_enabled returns True even when not selected. |
+
+### unknown keys and rules
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_config.py` | `test_parse_unknown_key` | Key absent from the registries: raises ValueError naming it. |
+| `test_config.py` | `test_parse_unknown_keys_are_all_reported` | Several unknown keys: all of them are named in the message. |
+| `test_config.py` | `test_parse_unknown_scope_key` | Unknown key under scope: raises ValueError naming the section. |
+| `test_config.py` | `test_parse_unknown_rule_in_select` | Unknown rule name in select: raises ValueError naming it. |
+| `test_config.py` | `test_parse_unknown_rule_in_ignore` | Unknown rule name in ignore: raises ValueError naming it. |
+| `test_config.py` | `test_parse_select_all_is_accepted` | Select = ALL: the wildcard is not treated as a rule name. |
+| `test_config.py` | `test_parse_ignore_always_on_rule` | Always-on rule in ignore: raises ValueError instead of silently doing nothing. |
 
 ### overrides
 
@@ -609,6 +621,9 @@ This file lists the 360 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_parse_override_policy_and_option` | Override carrying a policy and an option: both are parsed. |
 | `test_config.py` | `test_parse_override_without_paths` | Override missing its paths list: raises ValueError. |
 | `test_config.py` | `test_parse_override_run_level_key` | Override carrying a run-level key: raises ValueError naming the key. |
+| `test_config.py` | `test_parse_override_unknown_key` | Override carrying an unknown key: raises ValueError naming the override. |
+| `test_config.py` | `test_parse_override_unknown_rule` | Override ignoring an unknown rule: raises ValueError naming the override. |
+| `test_config.py` | `test_parse_override_invalid_policy_value` | Override carrying an invalid policy value: raises ValueError naming the key. |
 | `test_config.py` | `test_for_path_without_override_returns_self` | No override declared: for_path returns the very same config object. |
 | `test_config.py` | `test_for_path_applies_matching_override` | Matching override: the policy is overridden, the base config is left untouched. |
 | `test_config.py` | `test_for_path_ignores_non_matching_override` | Override whose patterns do not match: the base config is returned as is. |
@@ -624,7 +639,6 @@ This file lists the 360 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_load_config_toml_with_section` | pyproject.toml with [tool.docstring-linter] section: config is populated. |
 | `test_config.py` | `test_load_config_no_file_returns_default` | Explicit path that does not exist: returns default LinterConfig. |
 | `test_config.py` | `test_load_config_auto_discover` | No explicit path: load_config walks up directories to find pyproject.toml. |
-| `test_config.py` | `test_load_config_auto_discover` | No explicit path from subdirectory: pyproject.toml found by walking up. |
 | `test_config.py` | `test_load_config_standalone_toml` | .docstring-linter.toml with flat config: parsed directly without [tool.docstring-linter]. |
 | `test_config.py` | `test_load_config_custom_named_toml` | Explicitly passed non-pyproject.toml file: parsed directly regardless of name. |
 | `test_config.py` | `test_load_config_auto_discover_standalone` | No explicit path: .docstring-linter.toml discovered when no pyproject.toml present. |

@@ -21,8 +21,8 @@ Les priorités sont notées de 1 (faible) à 10 (haute).
 ## CLI / config
 
 - [x] Format de sortie `traceback` -- en-tête cliquable `File "path", line N, in entity` -- **7**
-- [ ] Rejeter les clés de configuration inconnues -- **9**
-  Aujourd'hui une clé inconnue est ignorée en silence. Toutes les clés renommées de la refonte (`param_order`, `exclude_empty_init`, `summary_punctuation`, `summary_first_line`, `closing_quotes_blank_line`, `blank_line_before_section`, `blank_line_after_section`, `allow_oneliner`, `forbid_init_returns_none`) cassent donc sans message.
+- [x] Rejeter les clés de configuration inconnues -- **9**
+  Clé inconnue au niveau racine, dans `[scope]` ou dans un override, nom de règle inconnu dans `select` / `ignore`, règle always-on dans `ignore`, valeur de `style` ou de policy invalide : erreur sur stderr et code de sortie 2 avant toute lecture de fichier.
 - [x] Configuration par répertoire -- `[[tool.docstring-linter.overrides]]` avec `paths` -- **7**
   Globs `full_match`, dernier bloc correspondant gagnant, `ignore` retire et `select` remplace, `scope.*` et les réglages d'exécution refusés dans un override.
 - [ ] `--quiet` -- n'afficher que les erreurs, supprimer le résumé et la config -- **5**
@@ -41,8 +41,6 @@ Les priorités sont notées de 1 (faible) à 10 (haute).
   Seule documentation des 11 règles always-on, absentes de `--list-rules`. Piste : générer l'ossature depuis `RULES_REGISTRY`, `POLICIES_REGISTRY` et `OPTIONS_REGISTRY`, ne garder à la main que les exemples.
 - [ ] Décider du sort de `TESTS.md` -- **6**
   301 lignes sur 313 sont la copie exacte du docstring du test. Piste : générer, et vérifier dans `lint-tests.sh` que le fichier commité correspond.
-- [ ] Note de migration pour la refonte règles / policies / options -- **8**
-  Table ancienne clé vers nouvelle clé, et changement de format de sortie par défaut.
 - [ ] Aligner la version -- **5**
   `pyproject.toml` déclare `0.1.0`, les tags vont jusqu'à `v0.5.0`, `README.md` référence `v0.1.0` dans les exemples pre-commit et GitHub Action.
 

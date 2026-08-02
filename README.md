@@ -167,7 +167,7 @@ select = ["docstring_exists"]
 - Blocks are applied in declaration order and **the last match wins**, so declare the general case first and the exceptions after it.
 - `ignore` removes rules from the inherited set, `select` replaces that set entirely. Same meaning as at the base level.
 - An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`.
-- `exclude`, `workers`, `format`, `style` and `scope.*` apply to the whole run and are rejected inside an override.
+- `exclude`, `workers`, `style` and `scope.*` apply to the whole run and are rejected inside an override.
 
 `docstring-linter --list-rules` prints the overrides after the base configuration, showing only what each one changes.
 
@@ -177,7 +177,7 @@ select = ["docstring_exists"]
 |-----|---------|-------------|
 | `style` | `"google"` | Docstring style to enforce. |
 | `select` | all rules | Rules to enable. `["ALL"]` enables everything. |
-| `ignore` | `[]` | Rules to disable (applied after `select`). Has no effect on always-on rules. |
+| `ignore` | `[]` | Rules to disable (applied after `select`). Always-on rules cannot be listed here. |
 | `returns_none` | `"required"` | Policy for `Returns: None` on `-> None` functions. |
 | `init_returns_none` | `"forbidden"` | Policy for `Returns: None` on `__init__` methods. |
 | `summary_on_first_line` | `"required"` | Policy for the summary on the opening `"""` line. |
@@ -209,6 +209,15 @@ select = ["docstring_exists"]
 Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five section policies, `"optional"` means the section is not required, but what the docstring does declare is still checked by the matching rule (`args_match`, `returns_match`, `yields_match`, `raises_match`, `attributes_match`). The two `exclude_empty_init_*` options only lift `docstring_exists`: a docstring that is present is always checked.
 
 `docstring-linter --list-rules` prints the rules, the policies, and the options that change what gets checked, each with the value it has in the current config.
+
+### Strict configuration
+
+Anything the linter does not recognize is an error, reported on stderr with exit code 2 before any file is read. This covers a key absent from the table above (including inside `[scope]` and inside an override), a rule name absent from `--list-rules` in `select` or `ignore`, an always-on rule listed in `ignore`, and an invalid `style` or policy value.
+
+```console
+$ docstring-linter src/
+Configuration error: unknown configuration key 'param_order'.
+```
 
 ## Rule Reference
 

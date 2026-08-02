@@ -156,6 +156,30 @@ ALWAYS_ON: frozenset[str] = frozenset(
 )
 
 
+# Keys accepted in the config file besides the policies
+SETTING_KEYS: frozenset[str] = frozenset(
+    {
+        "style",
+        "scope",
+        "select",
+        "ignore",
+        "exclude",
+        "workers",
+        "overrides",
+        "exclude_empty_init_method",
+        "exclude_empty_init_module",
+        "ignore_placeholder_docstrings",
+        "summary_max_length",
+        "blank_lines_before_section",
+        "blank_lines_before_closing_quotes",
+    }
+)
+
+CONFIG_KEYS: frozenset[str] = SETTING_KEYS | frozenset(POLICIES_REGISTRY)
+
+SCOPE_KEYS: frozenset[str] = frozenset({"modules", "classes", "functions", "methods"})
+
+
 # Options an override may carry: those that change what gets checked on a file
 OVERRIDABLE_OPTIONS: frozenset[str] = frozenset(
     {
@@ -420,6 +444,96 @@ def _find_config(explicit_path: str | None = None) -> Path | None:
     return None
 
 
+def _reject(unknown: list[str], noun: str, location: str = "") -> None:
+    """Raise on names the configuration does not define.
+
+    Args:
+        unknown (list[str]): Offending names, empty when everything is known.
+        noun (str): What the names stand for, in the singular.
+        location (str): Config section carrying them, empty for the top level.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If at least one name is unknown.
+
+    """
+    if not unknown:
+        return
+
+    label = noun if len(unknown) == 1 else f"{noun}s"
+    prefix = f"{location}: " if location else ""
+    msg = f"{prefix}unknown {label} {', '.join(repr(name) for name in unknown)}."
+    raise ValueError(msg)
+
+
+def _parse_policy(key: str, value: object) -> Policy:
+    """Convert a configured value into a Policy.
+
+    Args:
+        key (str): Policy identifier, used in the error message.
+        value (object): Value read from the config file.
+
+    Returns:
+        Policy: Matching policy.
+
+    Raises:
+        ValueError: If the value is not a policy name.
+
+    """
+    try:
+        return Policy(value)
+    except ValueError:
+        msg = f"'{key}': invalid value {value!r}, expected one of {', '.join(policy.value for policy in Policy)}."
+        raise ValueError(msg) from None
+
+
+def _parse_style(value: object) -> DocstringStyle:
+    """Convert a configured value into a DocstringStyle.
+
+    Args:
+        value (object): Value read from the config file.
+
+    Returns:
+        DocstringStyle: Matching style.
+
+    Raises:
+        ValueError: If the value is not a style name.
+
+    """
+    try:
+        return DocstringStyle(value)
+    except ValueError:
+        msg = f"'style': invalid value {value!r}, expected one of {', '.join(style.value for style in DocstringStyle)}."
+        raise ValueError(msg) from None
+
+
+def _validate_rules(select: list[str], ignore: list[str], location: str = "") -> None:
+    """Check the rule names listed in select and ignore.
+
+    Args:
+        select (list[str]): Rule names selected, 'ALL' accepted on its own.
+        ignore (list[str]): Rule names ignored.
+        location (str): Config section carrying them, empty for the top level.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If an always-on rule is ignored.
+
+    """
+    if select != ["ALL"]:
+        _reject(sorted(set(select) - set(RULES_REGISTRY)), "rule", f"{location}select" if location else "select")
+    _reject(sorted(set(ignore) - set(RULES_REGISTRY)), "rule", f"{location}ignore" if location else "ignore")
+
+    always_on = sorted(set(ignore) & ALWAYS_ON)
+    if always_on:
+        msg = f"{location}ignore: {', '.join(repr(rule) for rule in always_on)} cannot be ignored, always-on rules report an outright docstring defect."
+        raise ValueError(msg)
+
+
 def _parse_override(data: dict[str, object]) -> ConfigOverride:
     """Parse one [[overrides]] block into a ConfigOverride.
 
@@ -443,16 +557,20 @@ def _parse_override(data: dict[str, object]) -> ConfigOverride:
     if "select" in data:
         override.select = cast("list[str]", data["select"])
 
+    _validate_rules(override.select or [], override.ignore, f"override {paths}: ")
+
     for key, value in data.items():
         if key in {"paths", "select", "ignore"}:
             continue
         if key in POLICIES_REGISTRY:
-            override.values[key] = Policy(cast("str", value))
+            override.values[key] = _parse_policy(key, value)
         elif key in OVERRIDABLE_OPTIONS:
             override.values[key] = value
-        else:
+        elif key in CONFIG_KEYS:
             msg = f"override {paths}: '{key}' cannot be set per path, it applies to the whole run."
             raise ValueError(msg)
+        else:
+            _reject([key], "configuration key", f"override {paths}")
 
     return override
 
@@ -469,10 +587,13 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, 
     """
     config = LinterConfig()
 
+    _reject(sorted(set(data) - CONFIG_KEYS), "configuration key")
+
     if "style" in data:
-        config.style = DocstringStyle(data["style"])
+        config.style = _parse_style(data["style"])
 
     scope = cast("dict[str, bool]", data.get("scope", {}))
+    _reject(sorted(set(scope) - SCOPE_KEYS), "configuration key", "scope")
     if "modules" in scope:
         config.check_modules = scope["modules"]
     if "classes" in scope:
@@ -492,7 +613,7 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, 
         config.exclude_patterns = cast("list[str]", data["exclude"])
     for policy in POLICIES_REGISTRY:
         if policy in data:
-            setattr(config, policy, Policy(data[policy]))
+            setattr(config, policy, _parse_policy(policy, data[policy]))
     if "workers" in data:
         config.workers = max(0, cast("int", data["workers"]))
     if "summary_max_length" in data:
@@ -506,6 +627,7 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, 
 
     select = cast("list[str]", data.get("select", []))
     ignore = cast("list[str]", data.get("ignore", []))
+    _validate_rules(select, ignore)
 
     if select or ignore:
         if select == ["ALL"]:
