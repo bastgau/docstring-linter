@@ -367,6 +367,22 @@ def test_for_path_last_override_wins() -> None:
     assert config.for_path("tests/unit/test_y.py").args_section is Policy.OPTIONAL
 
 
+def test_for_path_earlier_override_not_merged() -> None:
+    """Two matching overrides: only the last one applies, the earlier keys are dropped."""
+    config = _parse_toml_config(
+        {
+            "overrides": [
+                {"paths": ["tests/**"], "summary_max_length": 120, "ignore": ["imperative_mood"]},
+                {"paths": ["tests/integration/**"], "args_section": "forbidden"},
+            ]
+        }
+    )
+    resolved = config.for_path("tests/integration/test_x.py")
+    assert resolved.args_section is Policy.FORBIDDEN
+    assert resolved.summary_max_length == LinterConfig().summary_max_length
+    assert "imperative_mood" in resolved.enabled_rules
+
+
 def test_for_path_ignore_removes_from_inherited_rules() -> None:
     """Ignore key in an override: the rule is removed from the inherited set."""
     config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "ignore": ["imperative_mood"]}]})

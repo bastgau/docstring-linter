@@ -3,4 +3,4 @@ repos:
     rev: main
     hooks:
       - id: docstring-linter
-        files: ^src/
+        files: ^(src|tests)/

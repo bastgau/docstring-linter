@@ -118,9 +118,8 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
 
         if config.returns_section is not Policy.FORBIDDEN:
             errors.extend(check_returns_match(entity, parsed_doc, config.returns_descriptions))
-
-        errors.extend(check_returns_none(entity, parsed_doc, config.returns_none))
-        errors.extend(check_init_returns_none(entity, parsed_doc, config.init_returns_none))
+            errors.extend(check_returns_none(entity, parsed_doc, config.returns_none))
+            errors.extend(check_init_returns_none(entity, parsed_doc, config.init_returns_none))
 
         errors.extend(check_raises_section(entity, parsed_doc, config.raises_section))
 

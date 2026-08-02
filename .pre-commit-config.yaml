@@ -121,6 +121,9 @@ repos:
         types: [python]
         groups: [local,github-src]
 
+  # ── Docstring linters (src/) ──────────────────────────────────────────────────
+  - repo: local
+    hooks:
       - id: docstring-linter-src
         name: docstring-linter-src
         entry: uv run docstring-linter
@@ -154,6 +157,18 @@ repos:
       - id: pylint-tests
         name: pylint-tests
         entry: uv run pylint
+        language: system
+        stages: [pre-commit]
+        types: [python]
+        files: ^tests/
+        groups: [local,github-tests]
+
+  # ── Docstring linters (tests/) ──────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: docstring-linter-tests
+        name: docstring-linter-tests
+        entry: uv run docstring-linter
         language: system
         stages: [pre-commit]
         types: [python]

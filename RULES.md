@@ -813,6 +813,8 @@ The two halves are independent. The policy answers "must this be documented", th
 
 Governs the `Returns: None` section on every function or method whose signature declares `-> None`. Does not apply to `__init__` methods, covered by `init_returns_none`, nor to generators, covered by `yields_section`.
 
+Not applied at all when `returns_section = "forbidden"`: that value drops the `Returns:` section from the whole docstring, `-> None` functions included.
+
 A one-liner docstring cannot contain a `Returns:` section, so under `"required"` a one-liner on a `-> None` function is an error.
 
 ```toml
@@ -856,7 +858,7 @@ def reset() -> None:
 
 ### init_returns_none
 
-Same policy applied to `__init__` methods. Defaults to `"forbidden"`: an `__init__` always returns `None`, documenting it adds nothing.
+Same policy applied to `__init__` methods. Defaults to `"forbidden"`: an `__init__` always returns `None`, documenting it adds nothing. Like `returns_none`, it is not applied when `returns_section = "forbidden"`.
 
 ```toml
 [tool.docstring-linter]
@@ -977,7 +979,7 @@ def create_user(name: str, age: int) -> dict:
 
 ### returns_section
 
-A function whose signature declares a return type other than `None` must have a `Returns:` section. The `-> None` case is owned by `returns_none` and `init_returns_none`.
+A function whose signature declares a return type other than `None` must have a `Returns:` section. Under `"required"` and `"optional"`, the `-> None` case is owned by `returns_none` and `init_returns_none`. Under `"forbidden"`, those two policies are not applied: no `Returns:` section is expected anywhere, whatever their value.
 
 A generator that documents `Returns:` instead of `Yields:` is always reported, whatever the value of this policy.
 
