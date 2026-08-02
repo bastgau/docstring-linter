@@ -1,10 +1,11 @@
 """Tests for reporter module."""
 
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from linter.models import LintError, NodeType
-from linter.reporter import report_cli, report_github_annotations, report_json, report_rules
+from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_policies, report_rules, report_traceback
 
 if TYPE_CHECKING:
     import pytest
@@ -19,6 +20,45 @@ def _error(rule: str = "args_match", line: int = 10, filepath: str = "src/foo.py
         rule=rule,
         message="Some error.",
     )
+
+
+# ---------------------------------------------------------------------------
+# report_traceback
+# ---------------------------------------------------------------------------
+
+
+def test_report_traceback_no_errors(capsys: pytest.CaptureFixture[str]) -> None:
+    """No errors: prints summary with 0 errors."""
+    report_traceback([], files_checked=3)
+    out = capsys.readouterr().out
+    assert "3 files checked, 0 errors." in out
+
+
+def test_report_traceback_location_header(capsys: pytest.CaptureFixture[str]) -> None:
+    """With errors: prints one clickable header with the absolute path per entity."""
+    report_traceback([_error("args_match", line=5)], files_checked=1)
+    out = capsys.readouterr().out
+    assert f'File "{Path("src/foo.py").resolve()}", line 5' in out
+    assert "my_func" in out
+    assert "args_match" in out
+
+
+def test_report_traceback_groups_errors_by_entity(capsys: pytest.CaptureFixture[str]) -> None:
+    """Two errors on the same entity: a single header followed by both messages."""
+    errors = [_error("args_match", line=5), _error("raises_match", line=5)]
+    report_traceback(errors, files_checked=1)
+    out = capsys.readouterr().out
+    assert out.count('", line 5') == 1
+    assert "args_match" in out
+    assert "raises_match" in out
+
+
+def test_report_traceback_separate_entities(capsys: pytest.CaptureFixture[str]) -> None:
+    """Errors on different lines: one header each."""
+    errors = [_error("args_match", line=5), _error("args_match", line=12)]
+    report_traceback(errors, files_checked=1)
+    out = capsys.readouterr().out
+    assert out.count("my_func") == 2
 
 
 # ---------------------------------------------------------------------------
@@ -150,19 +190,28 @@ _REGISTRY = {
     "rule_c": "Description of rule C.",
 }
 _OFF_BY_DEFAULT: frozenset[str] = frozenset({"rule_b"})
+_ALWAYS_ON: frozenset[str] = frozenset({"rule_c"})
 
 
 def test_report_rules_all_categories_present(capsys: pytest.CaptureFixture[str]) -> None:
-    """All category names appear in output."""
-    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, frozenset(_REGISTRY))
+    """Category names with at least one configurable rule appear in output."""
+    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, frozenset(), frozenset(_REGISTRY))
     out = capsys.readouterr().out
     assert "Presence" in out
     assert "Style" in out
 
 
+def test_report_rules_category_hidden_when_all_rules_always_on(capsys: pytest.CaptureFixture[str]) -> None:
+    """Category whose rules are all always on: the category is not printed."""
+    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, _ALWAYS_ON, frozenset(_REGISTRY))
+    out = capsys.readouterr().out
+    assert "Presence" in out
+    assert "Style" not in out
+
+
 def test_report_rules_all_rules_present(capsys: pytest.CaptureFixture[str]) -> None:
-    """All rule identifiers appear in output."""
-    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, frozenset(_REGISTRY))
+    """All configurable rule identifiers appear in output."""
+    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, frozenset(), frozenset(_REGISTRY))
     out = capsys.readouterr().out
     for rule in _REGISTRY:
         assert rule in out
@@ -170,7 +219,7 @@ def test_report_rules_all_rules_present(capsys: pytest.CaptureFixture[str]) -> N
 
 def test_report_rules_enabled_rule_shows_checkmark(capsys: pytest.CaptureFixture[str]) -> None:
     """Enabled rule shows ✔ marker."""
-    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, frozenset({"rule_a"}))
+    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, _ALWAYS_ON, frozenset({"rule_a"}))
     out = capsys.readouterr().out
     matching = [line for line in out.splitlines() if "rule_a" in line]
     assert matching
@@ -179,17 +228,81 @@ def test_report_rules_enabled_rule_shows_checkmark(capsys: pytest.CaptureFixture
 
 def test_report_rules_disabled_rule_shows_cross(capsys: pytest.CaptureFixture[str]) -> None:
     """Disabled rule shows ✘ marker."""
-    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, frozenset())
+    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, _ALWAYS_ON, frozenset())
     out = capsys.readouterr().out
     matching = [line for line in out.splitlines() if "rule_a" in line]
     assert matching
     assert "✘" in matching[0]
 
 
+def test_report_rules_always_on_hidden(capsys: pytest.CaptureFixture[str]) -> None:
+    """Rule in always_on is not listed and is not counted in the header."""
+    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, _ALWAYS_ON, frozenset())
+    out = capsys.readouterr().out
+    assert "rule_c" not in out
+    assert "2 configurable rules" in out
+
+
 def test_report_rules_off_by_default_label(capsys: pytest.CaptureFixture[str]) -> None:
     """Rule in off_by_default shows '(disabled by default)' label."""
-    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, frozenset())
+    report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, _ALWAYS_ON, frozenset())
     out = capsys.readouterr().out
     matching = [line for line in out.splitlines() if "rule_b" in line]
     assert matching
     assert "(disabled by default)" in matching[0]
+
+
+# ---------------------------------------------------------------------------
+# report_policies
+# ---------------------------------------------------------------------------
+
+_POLICIES = {
+    "policy_a": "Description of policy A.",
+    "policy_b": "Description of policy B.",
+}
+
+
+def test_report_policies_all_policies_present(capsys: pytest.CaptureFixture[str]) -> None:
+    """All policy identifiers and their values appear in output."""
+    report_policies(_POLICIES, {"policy_a": "required", "policy_b": "forbidden"})
+    out = capsys.readouterr().out
+    assert "policy_a" in out
+    assert "required" in out
+    assert "policy_b" in out
+    assert "forbidden" in out
+
+
+def test_report_policies_optional_value(capsys: pytest.CaptureFixture[str]) -> None:
+    """Policy set to optional shows its value on the matching line."""
+    report_policies(_POLICIES, {"policy_a": "optional", "policy_b": "required"})
+    out = capsys.readouterr().out
+    matching = [line for line in out.splitlines() if "policy_a" in line]
+    assert matching
+    assert "optional" in matching[0]
+
+
+# ---------------------------------------------------------------------------
+# report_options
+# ---------------------------------------------------------------------------
+
+_OPTIONS = {
+    "option_a": "Description of option A.",
+    "option_b": "Description of option B.",
+}
+
+
+def test_report_options_all_options_present(capsys: pytest.CaptureFixture[str]) -> None:
+    """All option identifiers and their values appear in output."""
+    report_options(_OPTIONS, {"option_a": "true", "option_b": "80"})
+    out = capsys.readouterr().out
+    assert "option_a" in out
+    assert "option_b" in out
+
+
+def test_report_options_value_on_matching_line(capsys: pytest.CaptureFixture[str]) -> None:
+    """Each option value is printed on the line of its option."""
+    report_options(_OPTIONS, {"option_a": "false", "option_b": "80"})
+    out = capsys.readouterr().out
+    matching = [line for line in out.splitlines() if "option_a" in line]
+    assert matching
+    assert "false" in matching[0]

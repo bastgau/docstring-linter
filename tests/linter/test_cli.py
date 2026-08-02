@@ -7,7 +7,7 @@ from pathlib import Path  # noqa: TC003
 
 import pytest
 from linter.cli import collect_python_files, lint_file, main, merge_cli_into_config, run
-from linter.config import RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig
+from linter.config import ALWAYS_ON, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig
 
 _VALID_SOURCE = '''\
 """Module docstring."""
@@ -218,7 +218,7 @@ def test_run_with_json_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]
 
 
 def test_list_rules_output(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
-    """--list-rules: all rules appear in output grouped by category."""
+    """--list-rules: configurable rules appear grouped by category, always-on rules do not."""
     monkeypatch.setattr(sys, "argv", ["docstring-linter", "--list-rules"])
     with pytest.raises(SystemExit) as exc:
         main()
@@ -228,4 +228,7 @@ def test_list_rules_output(capsys: pytest.CaptureFixture[str], monkeypatch: pyte
     for category in RULES_CATEGORIES:
         assert category in out
     for rule in RULES_REGISTRY:
-        assert rule in out
+        if rule in ALWAYS_ON:
+            assert f"{rule} " not in out
+        else:
+            assert rule in out

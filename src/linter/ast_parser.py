@@ -35,6 +35,7 @@ def parse_file(filepath: str) -> list[CodeEntity]:
             filepath=filepath,
             docstring=module_doc,
             raw_docstring=module_raw,
+            is_empty_init_module=Path(filepath).name == "__init__.py" and not tree.body,
         )
     )
 
@@ -57,7 +58,7 @@ def _walk_body(
         parent_class (str | None): Parent class name, or None for top-level.
 
     Returns:
-        None: This function mutates entities in place.
+        None
 
     """
     for node in body:
@@ -238,6 +239,9 @@ def _extract_args(arguments: ast.arguments) -> list[ArgInfo]:
             )
         )
 
+    if arguments.vararg is not None:
+        result.append(_star_arg(arguments.vararg, "*"))
+
     kw_defaults = arguments.kw_defaults
     for i, arg in enumerate(arguments.kwonlyargs):
         if arg.arg in skip:
@@ -256,7 +260,32 @@ def _extract_args(arguments: ast.arguments) -> list[ArgInfo]:
             )
         )
 
+    if arguments.kwarg is not None:
+        result.append(_star_arg(arguments.kwarg, "**"))
+
     return result
+
+
+def _star_arg(arg: ast.arg, prefix: str) -> ArgInfo:
+    """Build the ArgInfo of a *args or **kwargs parameter.
+
+    The stars are kept in the name so that the docstring entry compares
+    as-is, without normalising either side.
+
+    Args:
+        arg (ast.arg): AST argument node.
+        prefix (str): Star prefix, '*' or '**'.
+
+    Returns:
+        ArgInfo: Argument info carrying the starred name.
+
+    """
+    return ArgInfo(
+        name=f"{prefix}{arg.arg}",
+        type_annotation=ast.unparse(arg.annotation) if arg.annotation else None,
+        default=None,
+        line=arg.lineno,
+    )
 
 
 def _extract_raises(

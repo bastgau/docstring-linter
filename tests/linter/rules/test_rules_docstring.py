@@ -1,10 +1,11 @@
 """Tests for rules/docstring.py -- docstring presence and summary rules."""
 
+from linter.config import Policy
 from linter.models import ParsedDocstring
 
 from linter.rules import validate_entity
 
-from .conftest import _cfg, _func, _rule_only  # pyright: ignore[reportPrivateUsage]
+from .conftest import _cfg, _func, _neutral, _policy_only, _rule_only  # pyright: ignore[reportPrivateUsage]
 
 # ---------------------------------------------------------------------------
 # Rule => docstring_exists
@@ -57,6 +58,13 @@ def test_docstring_placeholder_error_when_not_ignored() -> None:
 # ---------------------------------------------------------------------------
 
 
+def test_summary_exists_cannot_be_disabled() -> None:
+    """Rule listed in ignore: the missing summary is still reported, the rule is always on."""
+    entity = _func(docstring="Args:\n    x (int): Value.", raw_docstring="Args:\n    x (int): Value.")
+    errors = validate_entity(entity, ParsedDocstring(summary=None), _neutral())
+    assert any(e.rule == "summary_exists" for e in errors)
+
+
 def test_summary_exists_missing() -> None:
     """No summary in parsed_doc: returns summary_exists error."""
     entity = _func()
@@ -73,42 +81,85 @@ def test_summary_exists_present() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Rule => summary_punctuation
+# Policy => summary_final_period
 # ---------------------------------------------------------------------------
 
 
-def test_summary_punctuation_missing_period() -> None:
-    """Summary without period: returns summary_punctuation error."""
+def test_summary_final_period_required_missing() -> None:
+    """Policy required, summary without period: returns summary_final_period error."""
     entity = _func(docstring="Do something", raw_docstring="Do something")
-    errors = validate_entity(entity, ParsedDocstring(summary="Do something"), _rule_only("summary_punctuation"))
+    errors = validate_entity(entity, ParsedDocstring(summary="Do something"), _policy_only("summary_final_period", Policy.REQUIRED))
     assert len(errors) == 1
-    assert errors[0].rule == "summary_punctuation"
+    assert errors[0].rule == "summary_final_period"
 
 
-def test_summary_punctuation_present() -> None:
-    """Summary ending with period: no error."""
+def test_summary_final_period_required_present() -> None:
+    """Policy required, summary ending with period: no error."""
     entity = _func()
-    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _rule_only("summary_punctuation"))
+    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _policy_only("summary_final_period", Policy.REQUIRED))
     assert not errors
 
 
+def test_summary_final_period_forbidden_present() -> None:
+    """Policy forbidden, summary ending with period: returns summary_final_period error."""
+    entity = _func()
+    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _policy_only("summary_final_period", Policy.FORBIDDEN))
+    assert any(e.rule == "summary_final_period" and "must not end" in e.message for e in errors)
+
+
+def test_summary_final_period_forbidden_missing() -> None:
+    """Policy forbidden, summary without period: no error."""
+    entity = _func(docstring="Do something", raw_docstring="Do something")
+    errors = validate_entity(entity, ParsedDocstring(summary="Do something"), _policy_only("summary_final_period", Policy.FORBIDDEN))
+    assert not errors
+
+
+def test_summary_final_period_optional_accepts_both() -> None:
+    """Policy optional: period present or absent, no error either way."""
+    cfg = _policy_only("summary_final_period", Policy.OPTIONAL)
+    assert not validate_entity(_func(), ParsedDocstring(summary="Do something."), cfg)
+    assert not validate_entity(_func(), ParsedDocstring(summary="Do something"), cfg)
+
+
 # ---------------------------------------------------------------------------
-# Rule => summary_first_line
+# Policy => summary_on_first_line
 # ---------------------------------------------------------------------------
 
 
-def test_summary_first_line_wrong() -> None:
-    """raw_docstring starts with newline: returns summary_first_line error."""
+def test_summary_on_first_line_required_wrong() -> None:
+    """Policy required, raw_docstring starts with newline: returns summary_on_first_line error."""
     entity = _func(raw_docstring="\nDo something.\n")
-    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _rule_only("summary_first_line"))
-    assert any(e.rule == "summary_first_line" for e in errors)
+    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _policy_only("summary_on_first_line", Policy.REQUIRED))
+    assert any(e.rule == "summary_on_first_line" for e in errors)
 
 
-def test_summary_first_line_correct() -> None:
-    """raw_docstring starts with summary text: no error."""
+def test_summary_on_first_line_required_correct() -> None:
+    """Policy required, raw_docstring starts with summary text: no error."""
     entity = _func(raw_docstring="Do something.")
-    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _rule_only("summary_first_line"))
+    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _policy_only("summary_on_first_line", Policy.REQUIRED))
     assert not errors
+
+
+def test_summary_on_first_line_forbidden_wrong() -> None:
+    """Policy forbidden, summary on the opening quotes line: returns summary_on_first_line error."""
+    entity = _func(raw_docstring="Do something.")
+    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _policy_only("summary_on_first_line", Policy.FORBIDDEN))
+    assert any(e.rule == "summary_on_first_line" and "line after" in e.message for e in errors)
+
+
+def test_summary_on_first_line_forbidden_correct() -> None:
+    """Policy forbidden, summary on the next line: no error."""
+    entity = _func(raw_docstring="\nDo something.\n")
+    errors = validate_entity(entity, ParsedDocstring(summary="Do something."), _policy_only("summary_on_first_line", Policy.FORBIDDEN))
+    assert not any(e.rule == "summary_on_first_line" for e in errors)
+
+
+def test_summary_on_first_line_optional_accepts_both() -> None:
+    """Policy optional: summary on either line, no error."""
+    cfg = _policy_only("summary_on_first_line", Policy.OPTIONAL)
+    for raw in ("Do something.", "\nDo something.\n"):
+        errors = validate_entity(_func(raw_docstring=raw), ParsedDocstring(summary="Do something."), cfg)
+        assert not any(e.rule == "summary_on_first_line" for e in errors)
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +218,7 @@ def test_summary_too_long_exceeds_limit() -> None:
     """Summary longer than max_length: returns summary_too_long error."""
     summary = "A" * 81
     entity = _func(docstring=summary, raw_docstring=summary)
-    cfg = _cfg(enabled_rules=["summary_too_long"], summary_max_length=80)
+    cfg = _neutral(enabled_rules=["summary_too_long"], summary_max_length=80)
     errors = validate_entity(entity, ParsedDocstring(summary=summary), cfg)
     assert len(errors) == 1
     assert errors[0].rule == "summary_too_long"
@@ -178,7 +229,7 @@ def test_summary_too_long_at_limit() -> None:
     """Summary exactly at max_length: no error."""
     summary = "A" * 80
     entity = _func(docstring=summary, raw_docstring=summary)
-    cfg = _cfg(enabled_rules=["summary_too_long"], summary_max_length=80)
+    cfg = _neutral(enabled_rules=["summary_too_long"], summary_max_length=80)
     errors = validate_entity(entity, ParsedDocstring(summary=summary), cfg)
     assert not errors
 
@@ -187,7 +238,7 @@ def test_summary_too_long_custom_limit() -> None:
     """Summary exceeds custom max_length of 40: returns error."""
     summary = "A" * 41
     entity = _func(docstring=summary, raw_docstring=summary)
-    cfg = _cfg(enabled_rules=["summary_too_long"], summary_max_length=40)
+    cfg = _neutral(enabled_rules=["summary_too_long"], summary_max_length=40)
     errors = validate_entity(entity, ParsedDocstring(summary=summary), cfg)
     assert any(e.rule == "summary_too_long" and "41" in e.message for e in errors)
 
@@ -195,9 +246,9 @@ def test_summary_too_long_custom_limit() -> None:
 def test_summary_too_long_no_summary() -> None:
     """No summary: summary_too_long rule not triggered."""
     entity = _func()
-    cfg = _cfg(enabled_rules=["summary_too_long"], summary_max_length=80)
+    cfg = _neutral(enabled_rules=["summary_too_long"], summary_max_length=80)
     errors = validate_entity(entity, ParsedDocstring(summary=None), cfg)
-    assert not errors
+    assert not any(e.rule == "summary_too_long" for e in errors)
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +278,7 @@ def test_unknown_section_none() -> None:
     entity = _func(docstring="Do something.")
     cfg = _cfg(enabled_rules=["unknown_section"])
     errors = validate_entity(entity, ParsedDocstring(unknown_sections=[]), cfg)
-    assert not errors
+    assert not any(e.rule == "unknown_section" for e in errors)
 
 
 def test_unknown_section_disabled() -> None:
@@ -235,4 +286,36 @@ def test_unknown_section_disabled() -> None:
     entity = _func(docstring="Do something.")
     cfg = _cfg(enabled_rules=[])
     errors = validate_entity(entity, ParsedDocstring(unknown_sections=["Arguments"]), cfg)
+    assert not any(e.rule == "unknown_section" for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# Policy => description_section
+# ---------------------------------------------------------------------------
+
+
+def test_description_section_required_missing() -> None:
+    """Policy required, docstring without description: returns description_section error."""
+    errors = validate_entity(_func(), ParsedDocstring(summary="Do something."), _policy_only("description_section", Policy.REQUIRED))
+    assert any(e.rule == "description_section" and "Missing" in e.message for e in errors)
+
+
+def test_description_section_required_present() -> None:
+    """Policy required, docstring with a description: no error."""
+    doc = ParsedDocstring(summary="Do something.", description="Details.")
+    errors = validate_entity(_func(), doc, _policy_only("description_section", Policy.REQUIRED))
     assert not errors
+
+
+def test_description_section_forbidden_present() -> None:
+    """Policy forbidden, docstring with a description: returns description_section error."""
+    doc = ParsedDocstring(summary="Do something.", description="Details.")
+    errors = validate_entity(_func(), doc, _policy_only("description_section", Policy.FORBIDDEN))
+    assert any(e.rule == "description_section" and "not allowed" in e.message for e in errors)
+
+
+def test_description_section_optional_by_default() -> None:
+    """Default config: neither presence nor absence of a description is reported."""
+    cfg = _policy_only("description_section", Policy.OPTIONAL)
+    assert not validate_entity(_func(), ParsedDocstring(summary="Do something."), cfg)
+    assert not validate_entity(_func(), ParsedDocstring(summary="Do something.", description="Details."), cfg)

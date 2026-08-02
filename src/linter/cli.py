@@ -11,10 +11,10 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 from linter.ast_parser import parse_file
-from linter.config import OFF_BY_DEFAULT, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig, load_config
+from linter.config import ALWAYS_ON, OFF_BY_DEFAULT, OPTIONS_REGISTRY, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig, load_config
 from linter.docstring_parser import get_parser
 from linter.models import LintError, NodeType
-from linter.reporter import report_cli, report_github_annotations, report_json, report_rules
+from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_policies, report_rules, report_traceback
 from linter.rules import validate_entity
 
 
@@ -195,8 +195,10 @@ def run(paths: list[str], config: LinterConfig) -> int:
         report_json(all_errors, len(files))
     elif config.output_format == "github-annotations":
         report_github_annotations(all_errors, len(files))
-    else:
+    elif config.output_format == "text":
         report_cli(all_errors, len(files))
+    else:
+        report_traceback(all_errors, len(files))
 
     return 1 if all_errors else 0
 
@@ -216,14 +218,19 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--list-rules", action="store_true", help="List all available rules and exit.")
     parser.add_argument("--config", default=None, help="Path to pyproject.toml (default: auto-detect).")
     parser.add_argument("--style", choices=[s.value for s in DocstringStyle], default=None, help=argparse.SUPPRESS)
-    parser.add_argument("--format", choices=["text", "json", "github-annotations"], default=None, help="Output format (default: text).")
+    parser.add_argument("--format", choices=["traceback", "text", "json", "github-annotations"], default=None, help="Output format (default: traceback).")
     parser.add_argument("--exclude", nargs="*", default=None, help="Glob patterns to exclude (overrides pyproject.toml).")
     parser.add_argument("--workers", type=int, default=None, help="Number of parallel workers (0 = auto, 1 = sequential). Overrides pyproject.toml.")
     return parser
 
 
 def main() -> None:
-    """Parse CLI arguments, load config, and delegate to run()."""
+    """Parse CLI arguments, load config, and delegate to run().
+
+    Returns:
+        None
+
+    """
     parser = _build_arg_parser()
     args = parser.parse_args()
 
@@ -231,13 +238,15 @@ def main() -> None:
     config = merge_cli_into_config(config, args)
 
     if args.list_rules:
-        report_rules(RULES_CATEGORIES, RULES_REGISTRY, OFF_BY_DEFAULT, frozenset(config.enabled_rules))
+        report_rules(RULES_CATEGORIES, RULES_REGISTRY, OFF_BY_DEFAULT, ALWAYS_ON, frozenset(config.enabled_rules))
+        report_policies(POLICIES_REGISTRY, config.policy_values())
+        report_options(OPTIONS_REGISTRY, config.option_values())
         sys.exit(0)
 
     if not args.paths:
         parser.error("the following arguments are required: paths")
 
-    if config.output_format == "text":
+    if config.output_format in ("text", "traceback"):
         if config_file is not None:
             print(f"Config: {config_file}")
         else:

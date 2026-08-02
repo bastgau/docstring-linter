@@ -2,6 +2,8 @@
 
 from typing import TYPE_CHECKING
 
+from linter.config import Policy
+
 from ._base import make_error
 
 if TYPE_CHECKING:
@@ -79,41 +81,70 @@ def check_summary_exists(entity: CodeEntity, parsed_doc: ParsedDocstring | None)
     return []
 
 
-def check_summary_punctuation(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> list[LintError]:
-    """Check that summary line ends with a period.
+def check_description_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None, policy: Policy) -> list[LintError]:
+    """Apply the presence policy to the description paragraph.
 
     Args:
         entity (CodeEntity): Entity to check.
         parsed_doc (ParsedDocstring | None): Parsed docstring.
+        policy (Policy): Policy to apply.
 
     Returns:
-        list[LintError]: Errors if period is missing.
+        list[LintError]: Errors if the policy is violated.
+
+    """
+    if parsed_doc is None:
+        return []
+
+    if policy is Policy.REQUIRED and not parsed_doc.description:
+        return [make_error(entity, "description_section", "Missing description below the summary.")]
+    if policy is Policy.FORBIDDEN and parsed_doc.description:
+        return [make_error(entity, "description_section", "Description below the summary is not allowed.")]
+    return []
+
+
+def check_summary_final_period(entity: CodeEntity, parsed_doc: ParsedDocstring | None, policy: Policy) -> list[LintError]:
+    """Apply the final period policy to the summary line.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+        policy (Policy): Policy to apply.
+
+    Returns:
+        list[LintError]: Errors if the policy is violated.
 
     """
     if parsed_doc is None or not parsed_doc.summary:
         return []
 
     summary = parsed_doc.summary.rstrip()
-    if not summary.endswith("."):
-        return [make_error(entity, "summary_punctuation", f"Summary line must end with a period. Got: '{summary[-20:]}'.")]
+    if policy is Policy.REQUIRED and not summary.endswith("."):
+        return [make_error(entity, "summary_final_period", f"Summary line must end with a period. Got: '{summary[-20:]}'.")]
+    if policy is Policy.FORBIDDEN and summary.endswith("."):
+        return [make_error(entity, "summary_final_period", f"Summary line must not end with a period. Got: '{summary[-20:]}'.")]
     return []
 
 
-def check_summary_first_line(entity: CodeEntity) -> list[LintError]:
-    """Check that summary starts on the same line as opening triple quotes.
+def check_summary_on_first_line(entity: CodeEntity, policy: Policy) -> list[LintError]:
+    """Apply the summary position policy relative to the opening quotes.
 
     Args:
         entity (CodeEntity): Entity to check.
+        policy (Policy): Policy to apply.
 
     Returns:
-        list[LintError]: Errors if summary is not on the first line.
+        list[LintError]: Errors if the policy is violated.
 
     """
     if not entity.raw_docstring:
         return []
 
-    if entity.raw_docstring.startswith("\n"):
-        return [make_error(entity, "summary_first_line", 'Summary must start on the same line as opening """.')]
+    on_first_line = not entity.raw_docstring.startswith("\n")
+    if policy is Policy.REQUIRED and not on_first_line:
+        return [make_error(entity, "summary_on_first_line", 'Summary must start on the same line as opening """.')]
+    if policy is Policy.FORBIDDEN and on_first_line:
+        return [make_error(entity, "summary_on_first_line", 'Summary must start on the line after opening """.')]
     return []
 
 

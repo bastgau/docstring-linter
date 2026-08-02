@@ -162,6 +162,27 @@ def test_extract_args_mixed_positional_and_keyword_only() -> None:
     assert args[1].name == "b"
 
 
+def test_extract_args_vararg_and_kwarg() -> None:
+    """*args and **kwargs are extracted with their stars in the name."""
+    node = _parse_func("def f(a: int, *rest: str, **opts: object): pass")
+    args = _extract_args(node.args)
+
+    names = [arg.name for arg in args]
+    assert names == ["a", "*rest", "**opts"]
+    assert args[1].type_annotation == "str"
+    assert args[2].type_annotation == "object"
+
+
+def test_extract_args_vararg_without_annotation() -> None:
+    """*args without annotation: type_annotation is None."""
+    node = _parse_func("def f(*rest): pass")
+    args = _extract_args(node.args)
+
+    assert len(args) == 1
+    assert args[0].name == "*rest"
+    assert args[0].type_annotation is None
+
+
 def test_extract_args_positional_only() -> None:
     """Positional-only args (before /) are extracted with name and type.
 

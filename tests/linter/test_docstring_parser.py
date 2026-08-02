@@ -63,6 +63,13 @@ def test_parse_arg_multiline_description() -> None:
     assert result.args[0].description == "First line. Second line."
 
 
+def test_parse_arg_with_stars() -> None:
+    """Starred args: the stars are kept in the parsed name."""
+    result = PARSER.parse("Do something.\n\nArgs:\n    *rest (str): Fragments.\n    **opts (object): Options.\n")
+    assert [arg.name for arg in result.args] == ["*rest", "**opts"]
+    assert result.args[0].type_annotation == "str"
+
+
 def test_parse_multiple_args() -> None:
     """Multiple args: all are returned in order."""
     docstring = "Do something.\n\nArgs:\n    x (int): First.\n    y (str): Second.\n"

@@ -60,10 +60,10 @@ class GoogleStyleParser(BaseDocstringParser):
         re.MULTILINE,
     )
     CANDIDATE_SECTION_PATTERN = re.compile(r"^([A-Z][A-Za-z]*):\s*$")
-    ARG_PATTERN = re.compile(r"^\s{4}(\w+)\s*\(([^)]+)\)\s*:\s*(.+)$")
-    ARG_NO_TYPE_PATTERN = re.compile(r"^\s{4}(\w+)\s*:\s*(.+)$")
+    ARG_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*\(([^)]+)\)\s*:\s*(.*)$")
+    ARG_NO_TYPE_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*:\s*(.*)$")
     RETURN_PATTERN = re.compile(r"^\s{4}(.+?)\s*:\s+(.+)$")
-    RAISE_PATTERN = re.compile(r"^\s{4}(\w+)\s*:\s*(.+)$")
+    RAISE_PATTERN = re.compile(r"^\s{4}(\w+)\s*:\s*(.*)$")
 
     @property
     def style(self) -> DocstringStyle:
@@ -115,7 +115,7 @@ class GoogleStyleParser(BaseDocstringParser):
 
         return result
 
-    def _split_sections(self, docstring: str) -> dict[str, str]:  # noqa: C901, PLR0912 # pylint: disable=R0912:too-many-branches,too-many-locals
+    def _split_sections(self, docstring: str) -> dict[str, str]:  # noqa: C901 # pylint: disable=R0912:too-many-branches,too-many-locals
         """Split docstring into named sections.
 
         Args:
@@ -134,7 +134,6 @@ class GoogleStyleParser(BaseDocstringParser):
         current_section: str | None = None
         section_lines: list[str] = []
         in_summary = True
-        found_blank_after_summary = False
 
         for line in lines:
             stripped = line.strip()
@@ -149,7 +148,7 @@ class GoogleStyleParser(BaseDocstringParser):
                 in_summary = False
                 continue
 
-            candidate_match = self.CANDIDATE_SECTION_PATTERN.match(stripped)
+            candidate_match = self.CANDIDATE_SECTION_PATTERN.match(line)
             if candidate_match and not in_summary:
                 name = candidate_match.group(1)
                 if current_section:
@@ -162,12 +161,10 @@ class GoogleStyleParser(BaseDocstringParser):
             if current_section:
                 section_lines.append(line)
             elif in_summary:
-                if stripped == "" and summary_lines:
-                    in_summary = False
-                    found_blank_after_summary = True
-                elif stripped:
+                if stripped:
                     summary_lines.append(stripped)
-            elif found_blank_after_summary and stripped:
+                    in_summary = False
+            elif stripped:
                 desc_lines.append(stripped)
 
         if current_section:
@@ -218,7 +215,7 @@ class GoogleStyleParser(BaseDocstringParser):
 
             stripped = line.strip()
             if stripped and current_arg:
-                current_arg.description = f"{current_arg.description} {stripped}"
+                current_arg.description = f"{current_arg.description} {stripped}".strip()
 
         return args
 
@@ -270,7 +267,7 @@ class GoogleStyleParser(BaseDocstringParser):
 
             stripped = line.strip()
             if stripped and current_raise:
-                current_raise.description = f"{current_raise.description} {stripped}"
+                current_raise.description = f"{current_raise.description} {stripped}".strip()
 
         return raises
 
@@ -310,7 +307,7 @@ class GoogleStyleParser(BaseDocstringParser):
 
             stripped = line.strip()
             if stripped and current_attr:
-                current_attr.description = f"{current_attr.description} {stripped}"
+                current_attr.description = f"{current_attr.description} {stripped}".strip()
 
         return attrs
 

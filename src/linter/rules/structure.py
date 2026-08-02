@@ -1,9 +1,15 @@
 """Rules related to docstring structure, formatting, and section layout."""
 
+import re
+
+from linter.config import Policy
 from linter.models import CodeEntity, LintError, NodeType
 from linter.rules._base import GOOGLE_SECTION_ORDER, GOOGLE_SECTIONS, SECTION_HEADER_RE, extract_section_headers, make_error
 
 _SECTION_WITH_ENTRIES = frozenset({"Args", "Attributes", "Raises"})
+
+_ENTRY_LAX = re.compile(r"^\s{4}(\*{0,2}\w+)\s*(\([^)]*\))?\s*:\s*(.*)$")
+_ENTRY_STRICT = re.compile(r"^ {4}\*{0,2}\w+(?: \([^)]*\))?:(?: \S.*)?$")
 
 
 def check_indentation(entity: CodeEntity) -> list[LintError]:
@@ -145,14 +151,95 @@ def check_empty_section(entity: CodeEntity) -> list[LintError]:
     return errors
 
 
-def check_blank_line_before_section(entity: CodeEntity) -> list[LintError]:
-    """Check that a blank line precedes each section header.
+def _plural(count: int) -> str:
+    """Return the singular or plural form of 'blank line'.
+
+    Args:
+        count (int): Number of blank lines.
+
+    Returns:
+        str: Wording matching the count.
+
+    """
+    return "blank line" if count == 1 else "blank lines"
+
+
+def check_blank_lines(entity: CodeEntity, before_section: int, before_closing_quotes: int) -> list[LintError]:
+    """Check the configured number of blank lines in the docstring layout.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        before_section (int): Blank lines expected before a section header.
+        before_closing_quotes (int): Blank lines expected before the closing quotes.
+
+    Returns:
+        list[LintError]: Errors for every gap that does not match.
+
+    """
+    return _check_after_summary(entity) + _check_before_sections(entity, before_section) + _check_before_closing_quotes(entity, before_closing_quotes)
+
+
+def _is_section_header(line: str) -> bool:
+    """Check whether a docstring line declares a known section.
+
+    Args:
+        line (str): Line to inspect.
+
+    Returns:
+        bool: True if the line is a Google section header.
+
+    """
+    match = SECTION_HEADER_RE.match(line.strip())
+    return match is not None and match.group(1) in GOOGLE_SECTIONS
+
+
+def _check_after_summary(entity: CodeEntity) -> list[LintError]:
+    """Check the single blank line separating the summary from the description.
+
+    The count is fixed at one: the description carries no header, so a
+    smaller gap makes the boundary disappear. Docstrings whose summary is
+    followed by nothing, or directly by a section header, are not concerned.
 
     Args:
         entity (CodeEntity): Entity to check.
 
     Returns:
-        list[LintError]: Errors if blank line is missing before a section.
+        list[LintError]: Error if the description does not follow one blank line.
+
+    """
+    if not entity.docstring:
+        return []
+
+    lines = entity.docstring.split("\n")
+    summary = next((i for i, line in enumerate(lines) if line.strip()), None)
+    if summary is None or _is_section_header(lines[summary]):
+        return []
+
+    found = 0
+    for line in lines[summary + 1 :]:
+        if line.strip():
+            break
+        found += 1
+    else:
+        return []
+
+    if _is_section_header(lines[summary + 1 + found]):
+        return []
+
+    if found != 1:
+        return [make_error(entity, "blank_lines", f"Expected 1 blank line between the summary and the description, found {found}.")]
+    return []
+
+
+def _check_before_sections(entity: CodeEntity, expected: int) -> list[LintError]:
+    """Check the number of blank lines preceding each section header.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        expected (int): Blank lines expected before a section header.
+
+    Returns:
+        list[LintError]: Errors for every section header with a wrong gap.
 
     """
     if not entity.docstring:
@@ -163,83 +250,102 @@ def check_blank_line_before_section(entity: CodeEntity) -> list[LintError]:
 
     for i, line in enumerate(lines):
         match = SECTION_HEADER_RE.match(line.strip())
-        if not match or match.group(1) not in GOOGLE_SECTIONS:
+        if not match or match.group(1) not in GOOGLE_SECTIONS or i == 0:
             continue
 
-        section_name = match.group(1)
+        found = 0
+        while found < i and lines[i - 1 - found].strip() == "":
+            found += 1
 
-        if i == 0:
-            continue
-
-        prev_line = lines[i - 1].strip()
-        if prev_line != "":
-            errors.append(make_error(entity, "blank_line_before_section", f"Missing blank line before '{section_name}:' section."))
+        if found != expected:
+            errors.append(make_error(entity, "blank_lines", f"Expected {expected} {_plural(expected)} before '{match.group(1)}:' section, found {found}."))
 
     return errors
 
 
-def check_blank_line_after_section(entity: CodeEntity) -> list[LintError]:
-    """Check that sections are separated by blank lines.
+def _check_before_closing_quotes(entity: CodeEntity, expected: int) -> list[LintError]:
+    """Check the number of blank lines preceding the closing triple quotes.
 
     Args:
         entity (CodeEntity): Entity to check.
+        expected (int): Blank lines expected before the closing quotes.
 
     Returns:
-        list[LintError]: Errors if blank line is missing between sections.
+        list[LintError]: Error if the gap does not match.
 
     """
-    if not entity.docstring:
-        return []
-
-    errors: list[LintError] = []
-    lines = entity.docstring.split("\n")
-    section_indices: list[tuple[int, str]] = []
-
-    for i, line in enumerate(lines):
-        match = SECTION_HEADER_RE.match(line.strip())
-        if match and match.group(1) in GOOGLE_SECTIONS:
-            section_indices.append((i, match.group(1)))
-
-    for idx in range(len(section_indices) - 1):
-        _, current_name = section_indices[idx]
-        next_pos, _ = section_indices[idx + 1]
-
-        if next_pos > 0 and lines[next_pos - 1].strip() != "":
-            errors.append(make_error(entity, "blank_line_after_section", f"Missing blank line after '{current_name}:' section content."))
-
-    return errors
-
-
-def check_closing_quotes_blank_line(entity: CodeEntity) -> list[LintError]:
-    """Check that multi-line docstrings have one blank line before closing quotes.
-
-    Args:
-        entity (CodeEntity): Entity to check.
-
-    Returns:
-        list[LintError]: Errors if blank line count before closing quotes is not exactly one.
-
-    """
-    if not entity.raw_docstring:
-        return []
-
-    if entity.node_type == NodeType.MODULE:
-        return []
-
-    if "\n" not in entity.raw_docstring:
+    if not entity.raw_docstring or entity.node_type == NodeType.MODULE or "\n" not in entity.raw_docstring:
         return []
 
     stripped = entity.raw_docstring.rstrip(" \t")
-    trailing_newlines = len(stripped) - len(stripped.rstrip("\n"))
+    found = len(stripped) - len(stripped.rstrip("\n")) - 1
 
-    quantity = 2
-    if trailing_newlines == quantity:
+    if found != expected:
+        return [make_error(entity, "blank_lines", f'Expected {expected} {_plural(expected)} before closing """, found {found}.')]
+    return []
+
+
+def check_named_section(entity: CodeEntity, names: tuple[str, ...], policy: Policy, rule: str) -> list[LintError]:
+    """Apply a presence policy to a section identified by its header.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        names (tuple[str, ...]): Accepted spellings of the header.
+        policy (Policy): Policy to apply.
+        rule (str): Rule identifier carrying the error.
+
+    Returns:
+        list[LintError]: Errors if the policy is violated.
+
+    """
+    if not entity.docstring or policy is Policy.OPTIONAL:
         return []
 
-    quantity = 1
-    msg = 'Missing blank line before closing """.' if trailing_newlines <= quantity else f'Expected exactly one blank line before closing """, found {trailing_newlines - 1}.'
+    found = [name for name in extract_section_headers(entity.docstring) if name in names]
 
-    return [make_error(entity, "closing_quotes_blank_line", msg)]
+    if policy is Policy.REQUIRED and not found:
+        return [make_error(entity, rule, f"Missing '{names[0]}:' section.")]
+    if policy is Policy.FORBIDDEN and found:
+        return [make_error(entity, rule, f"'{found[0]}:' section is not allowed.")]
+    return []
+
+
+def check_entry_spacing(entity: CodeEntity) -> list[LintError]:
+    """Check the spacing of every entry in Args, Attributes, and Raises.
+
+    The canonical form is 'name (type): description', with one space before
+    the parenthesis, none before the colon, and one after it.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+
+    Returns:
+        list[LintError]: Errors for every entry written differently.
+
+    """
+    if not entity.docstring:
+        return []
+
+    errors: list[LintError] = []
+    current_section: str | None = None
+
+    for line in entity.docstring.split("\n"):
+        match = SECTION_HEADER_RE.match(line.strip())
+        if match and match.group(1) in GOOGLE_SECTIONS:
+            current_section = match.group(1)
+            continue
+
+        if current_section not in _SECTION_WITH_ENTRIES:
+            continue
+
+        entry = _ENTRY_LAX.match(line)
+        if entry is None or _ENTRY_STRICT.match(line.rstrip()):
+            continue
+
+        canonical = f"{entry.group(1)} {entry.group(2)}:" if entry.group(2) else f"{entry.group(1)}:"
+        errors.append(make_error(entity, "entry_spacing", f"Entry '{entry.group(1)}' in '{current_section}:' must be written '{canonical} description'."))
+
+    return errors
 
 
 def check_no_blank_line_in_section(entity: CodeEntity) -> list[LintError]:

@@ -7,18 +7,42 @@ from linter.rules import validate_entity
 from .conftest import _cfg, _func, _rule_only  # pyright: ignore[reportPrivateUsage]
 
 
-def test_empty_init_excluded_when_configured() -> None:
-    """Empty __init__ with exclude_empty_init=True: no errors even with missing docstring."""
+def test_empty_init_method_excluded_when_configured() -> None:
+    """Empty __init__ with exclude_empty_init_method=True: no errors even with missing docstring."""
     entity = _func(name="MyClass.__init__", docstring=None, raw_docstring=None, is_empty_init=True)
-    cfg = _cfg(exclude_empty_init=True)
+    cfg = _cfg(exclude_empty_init_method=True)
     errors = validate_entity(entity, None, cfg)
     assert not errors
 
 
-def test_empty_init_not_excluded_when_flag_false() -> None:
-    """Empty __init__ with exclude_empty_init=False: docstring_exists is still checked."""
+def test_empty_init_method_not_excluded_when_flag_false() -> None:
+    """Empty __init__ with exclude_empty_init_method=False: docstring_exists is still checked."""
     entity = _func(name="MyClass.__init__", docstring=None, raw_docstring=None, is_empty_init=True)
-    cfg = _cfg(exclude_empty_init=False, enabled_rules=["docstring_exists"])
+    cfg = _cfg(exclude_empty_init_method=False, enabled_rules=["docstring_exists"])
+    errors = validate_entity(entity, None, cfg)
+    assert any(e.rule == "docstring_exists" for e in errors)
+
+
+def test_empty_init_method_docstring_still_checked() -> None:
+    """Empty __init__ with exclude_empty_init_method=True: an existing docstring is still checked."""
+    entity = _func(name="MyClass.__init__", docstring="initialize", raw_docstring="initialize", is_empty_init=True)
+    cfg = _cfg(exclude_empty_init_method=True)
+    errors = validate_entity(entity, ParsedDocstring(summary="initialize"), cfg)
+    assert any(e.rule == "summary_final_period" for e in errors)
+
+
+def test_empty_init_module_excluded_when_configured() -> None:
+    """Empty __init__.py with exclude_empty_init_module=True: no errors even with missing docstring."""
+    entity = CodeEntity(name="__init__", node_type=NodeType.MODULE, line=1, filepath="pkg/__init__.py", is_empty_init_module=True)
+    cfg = _cfg(exclude_empty_init_module=True)
+    errors = validate_entity(entity, None, cfg)
+    assert not errors
+
+
+def test_empty_init_module_not_excluded_when_flag_false() -> None:
+    """Empty __init__.py with exclude_empty_init_module=False: docstring_exists is still checked."""
+    entity = CodeEntity(name="__init__", node_type=NodeType.MODULE, line=1, filepath="pkg/__init__.py", is_empty_init_module=True)
+    cfg = _cfg(exclude_empty_init_module=False, enabled_rules=["docstring_exists"])
     errors = validate_entity(entity, None, cfg)
     assert any(e.rule == "docstring_exists" for e in errors)
 
