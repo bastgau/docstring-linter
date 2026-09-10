@@ -76,6 +76,7 @@ ignore = [
     "D203",   # en conflit avec D211 (on garde D211 : blank-line-before-class)
     "D213",   # en conflit avec D212 (on garde D212 : multi-line-summary-first-line)
     "COM812", # missing-trailing-comma
+    "CPY001", # missing copyright notice at top of file
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -116,31 +117,31 @@ docstring-linter = "linter.cli:main"
 
 [dependency-groups]
 dev = [
-    "prek>=0.4.5",
-    "pylint>=4.0.6",
-    "pyright>=1.1.411",
-    "pytest-cov>=7.1.0",
-    "pytest>=9.1.1",
-    "ruff>=0.15.20",
-    "shellcheck-py>=0.10.0",
-    "vulture>=2.16",
+    "prek==0.5.1",
+    "pylint==4.0.6",
+    "pyright==1.1.414",
+    "pytest-cov==7.1.0",
+    "pytest==9.1.1",
+    "ruff==0.16.5",
+    "shellcheck-py==0.10.0.1",
+    "vulture==2.16",
 ]
 
 github-src = [
-    "prek>=0.4.5",
-    "pylint>=4.0.6",
-    "pyright>=1.1.411",
-    "ruff>=0.15.20",
-    "shellcheck-py>=0.10.0",
+    "prek==0.5.1",
+    "pylint==4.0.6",
+    "pyright==1.1.414",
+    "ruff==0.16.5",
+    "shellcheck-py==0.10.0.1",
 ]
 
 github-tests = [
-    "prek>=0.4.5",
-    "pylint>=4.0.6",
-    "pytest-cov>=7.1.0",
-    "pytest>=9.1.1",
-    "ruff>=0.15.20",
-    "vulture>=2.16",
+    "prek==0.5.1",
+    "pylint==4.0.6",
+    "pytest-cov==7.1.0",
+    "pytest==9.1.1",
+    "ruff==0.16.5",
+    "vulture==2.16",
 ]
 
 [tool.sqlfluff.core]
