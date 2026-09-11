@@ -117,7 +117,7 @@ docstring-linter = "linter.cli:main"
 
 [dependency-groups]
 dev = [
-    "prek==0.5.1",
+    "prek==0.5.2",
     "pylint==4.0.8",
     "pyright==1.1.414",
     "pytest-cov==7.1.0",
@@ -128,7 +128,7 @@ dev = [
 ]
 
 github-src = [
-    "prek==0.5.1",
+    "prek==0.5.2",
     "pylint==4.0.8",
     "pyright==1.1.414",
     "ruff==0.16.6",
@@ -136,7 +136,7 @@ github-src = [
 ]
 
 github-tests = [
-    "prek==0.5.1",
+    "prek==0.5.2",
     "pylint==4.0.8",
     "pytest-cov==7.1.0",
     "pytest==9.1.1",
