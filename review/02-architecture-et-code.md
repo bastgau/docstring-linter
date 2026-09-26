@@ -43,7 +43,7 @@ cli.main
 | ARCH-01 | Moyenne | Couche d'extraction AST trop superficielle | Corrigé |
 | ARCH-02 | Moyenne | Règles non déclaratives, dispatcher monolithique, registres dupliqués | Corrigé |
 | ARCH-03 | Moyenne | Docstring re-parsé par chaque règle de structure, 3 définitions d'un en-tête | Partiel |
-| ARCH-04 | Moyenne | Abstraction multi-style creuse | Partiel |
+| ARCH-04 | Moyenne | Abstraction multi-style creuse | Corrigé |
 | ARCH-05 | Moyenne | Options énumérées à la main à 5 endroits | Partiel |
 | ARCH-06 | Haute | Always-on sans échappatoire | Reporté |
 | ARCH-07 | Moyenne | Modèle `CodeEntity` trop pauvre | Partiel |
@@ -170,7 +170,7 @@ class Entry:
 
 ### ARCH-04 - Abstraction multi-style creuse [Vérifié] - Moyenne
 
-**Statut : Partiel.** `b2fd640`. `DocstringStyle` réduit à `GOOGLE`, docstrings de paquet alignées. `BaseDocstringParser`, `PARSERS` et `--style` masqué sont conservés.
+**Statut : Corrigé.** `b2fd640` : `DocstringStyle` réduit à `GOOGLE`, docstrings de paquet alignées. `e077ef9` : `BaseDocstringParser`, `PARSERS`, `get_parser`, `DocstringStyle`, la clé `style` et l'option `--style` supprimés ; `lint_file` utilise `GoogleStyleParser` directement. `style = "google"` donne désormais "unknown configuration key" et le code 2 (à signaler dans le CHANGELOG, DOC-05). Sorties identiques sur `rich` [Vérifié].
 
 `BaseDocstringParser`, `PARSERS`, `DocstringStyle` (4 valeurs), `--style` masqué et les docstrings de paquet (`__init__.py:3-4`, `docstring_parser.py:3-5`) annoncent NumPy, Sphinx et PEP 257. Or toutes les règles de structure sont codées pour Google (`GOOGLE_SECTIONS`, `GOOGLE_SECTION_ORDER`, indentation à 4). Résultat : BUG-01 et une promesse non tenue.
 
@@ -243,7 +243,7 @@ Proposition : erreurs de configuration validées une fois dans `main()` ; au niv
 
 ### ARCH-10 - Tests [Vérifié] - Moyenne
 
-**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 590 tests, couverture branches 96 %. Tests de cohérence des registres ajoutés (`6bfff7a`, voir ARCH-02). Restent : seuil de couverture à 85, pas de test de corpus.
+**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 584 tests, couverture branches 96 %. Tests de cohérence des registres ajoutés (`6bfff7a`, voir ARCH-02). Restent : seuil de couverture à 85, pas de test de corpus.
 
 État : 372 tests, 1,45 s, 94,39 % de couverture branches, seuil CI 85 %.
 
