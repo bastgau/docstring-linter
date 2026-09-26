@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from linter.config import ConfigOverride, Policy
 from linter.models import LintError, NodeType
-from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_traceback
+from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_statistics, report_traceback
 
 from linter import reporter
 
@@ -102,6 +102,26 @@ def test_report_cli_multiple_files(capsys: pytest.CaptureFixture[str]) -> None:
     out = capsys.readouterr().out
     assert "src/a.py" in out
     assert "src/b.py" in out
+
+
+# ---------------------------------------------------------------------------
+# report_statistics
+# ---------------------------------------------------------------------------
+
+
+def test_report_statistics_no_errors(capsys: pytest.CaptureFixture[str]) -> None:
+    """No errors: prints summary with 0 errors."""
+    report_statistics([], files_checked=3)
+    assert "3 files checked, 0 errors." in capsys.readouterr().out
+
+
+def test_report_statistics_sorted_by_count_then_rule(capsys: pytest.CaptureFixture[str]) -> None:
+    """Most frequent rule first, ties in alphabetical order, counts right-aligned."""
+    rules = ["raises_match"] + ["args_match"] * 10 + ["returns_match", "blank_lines"]
+    report_statistics([_error(rule) for rule in rules], files_checked=2)
+    lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
+    assert lines[:4] == ["  10  args_match", "   1  blank_lines", "   1  raises_match", "   1  returns_match"]
+    assert "13 errors in 1 file (2 files checked)." in lines[4]
 
 
 # ---------------------------------------------------------------------------

@@ -66,6 +66,9 @@ docstring-linter --list-rules
 # Compact one-line-per-error report
 docstring-linter src/ --format text
 
+# Number of errors per rule
+docstring-linter src/ --statistics
+
 # JSON report (stdout)
 docstring-linter src/ --format json
 
@@ -83,6 +86,7 @@ docstring-linter src/ --config pyproject.toml
 | `--exclude` | Glob patterns to exclude. Overrides config file. |
 | `--workers` | Number of parallel workers (0 = auto, 1 = sequential). |
 | `--format` | Output format: `traceback` (default), `text`, `json`, or `github-annotations`. |
+| `--statistics` | Report the number of errors per rule instead of each error. Only with the `traceback` and `text` formats. |
 | `--list-rules` | Display all available rules and exit. |
 | `--config` | Explicit path to a config file (any `.toml`). |
 

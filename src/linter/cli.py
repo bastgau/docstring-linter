@@ -15,7 +15,7 @@ from linter.ast_parser import parse_file
 from linter.config import ALWAYS_ON, OFF_BY_DEFAULT, OPTIONS_REGISTRY, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig, load_config, path_matches
 from linter.docstring_parser import get_parser
 from linter.models import LintError, NodeType
-from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_traceback
+from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_statistics, report_traceback
 from linter.rules import validate_entity
 
 
@@ -163,12 +163,38 @@ def _resolve_workers(workers: int) -> int:
     return workers
 
 
-def run(paths: list[str], config: LinterConfig) -> int:
+def _report(errors: list[LintError], files_checked: int, output_format: str, *, statistics: bool) -> None:
+    """Print the lint results in the requested format.
+
+    Args:
+        errors (list[LintError]): Lint errors found.
+        files_checked (int): Total number of files checked.
+        output_format (str): Output format name.
+        statistics (bool): Report the number of errors per rule instead of each error.
+
+    Returns:
+        None
+
+    """
+    if statistics:
+        report_statistics(errors, files_checked)
+    elif output_format == "json":
+        report_json(errors, files_checked)
+    elif output_format == "github-annotations":
+        report_github_annotations(errors, files_checked)
+    elif output_format == "text":
+        report_cli(errors, files_checked)
+    else:
+        report_traceback(errors, files_checked)
+
+
+def run(paths: list[str], config: LinterConfig, *, statistics: bool = False) -> int:
     """Collect files, lint them, and report results.
 
     Args:
         paths (list[str]): File or directory paths to lint.
         config (LinterConfig): Linter configuration.
+        statistics (bool): Report the number of errors per rule instead of each error.
 
     Returns:
         int: Exit code -- 0 if no errors, 1 on lint errors, 2 if a path is missing or a file could not be analysed.
@@ -199,14 +225,7 @@ def run(paths: list[str], config: LinterConfig) -> int:
 
     all_errors = [error for errors, _ in results for error in errors]
 
-    if config.output_format == "json":
-        report_json(all_errors, len(files))
-    elif config.output_format == "github-annotations":
-        report_github_annotations(all_errors, len(files))
-    elif config.output_format == "text":
-        report_cli(all_errors, len(files))
-    else:
-        report_traceback(all_errors, len(files))
+    _report(all_errors, len(files), config.output_format, statistics=statistics)
 
     if failures:
         return 2
@@ -230,6 +249,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--style", choices=[s.value for s in DocstringStyle], default=None, help=argparse.SUPPRESS)
     parser.add_argument("--format", choices=["traceback", "text", "json", "github-annotations"], default=None, help="Output format (default: traceback).")
     parser.add_argument("--exclude", nargs="*", default=None, help="Glob patterns to exclude (overrides pyproject.toml).")
+    parser.add_argument("--statistics", action="store_true", help="Report the number of errors per rule instead of each error (traceback and text formats).")
     parser.add_argument("--workers", type=int, default=None, help="Number of parallel workers (0 = auto, 1 = sequential). Overrides pyproject.toml.")
     return parser
 
@@ -261,13 +281,17 @@ def main() -> None:
     if not args.paths:
         parser.error("the following arguments are required: paths")
 
+    if args.statistics and config.output_format not in ("text", "traceback"):
+        print(f"--statistics is not available with the {config.output_format} format.", file=sys.stderr)
+        sys.exit(2)
+
     if config.output_format in ("text", "traceback"):
         if config_file is not None:
             print(f"Config: {config_file}")
         else:
             print("Config: defaults (no config file found)")
 
-    sys.exit(run(args.paths, config))
+    sys.exit(run(args.paths, config, statistics=args.statistics))
 
 
 if __name__ == "__main__":

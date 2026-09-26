@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 561 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 565 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -593,6 +593,7 @@ This file lists the 561 tests of the `docstring-linter` project. Each entry show
 | `test_cli.py` | `test_run_missing_path_returns_two` | Path that does not exist: reported on stderr, run returns 2 without linting. |
 | `test_cli.py` | `test_run_parallel_workers` | Two workers on two files: errors from every file are collected. |
 | `test_cli.py` | `test_run_with_json_output` | Run with output_format=json: JSON report is printed to stdout. |
+| `test_cli.py` | `test_run_statistics_counts_errors_per_rule` | Run with statistics: one count per rule instead of each error, same exit code. |
 
 ### main / --list-rules
 
@@ -600,6 +601,7 @@ This file lists the 561 tests of the `docstring-linter` project. Each entry show
 |---|---|---|
 | `test_cli.py` | `test_main_invalid_config_value` | Invalid value in the config file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_missing_config_file` | --config pointing to a missing file: prints a configuration error and exits with 2. |
+| `test_cli.py` | `test_main_statistics_rejected_with_json` | --statistics with a machine-readable format: error on stderr and exit 2. |
 | `test_cli.py` | `test_list_rules_output` | --list-rules: configurable rules appear grouped by category, always-on rules do not. |
 
 ---
@@ -623,6 +625,13 @@ This file lists the 561 tests of the `docstring-linter` project. Each entry show
 | `test_reporter.py` | `test_report_cli_with_errors` | With errors: prints each error and a summary line. |
 | `test_reporter.py` | `test_report_cli_single_error_grammar` | Single error: summary says 'error' not 'errors'. |
 | `test_reporter.py` | `test_report_cli_multiple_files` | Errors in multiple files: each file is printed separately. |
+
+### report_statistics
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_reporter.py` | `test_report_statistics_no_errors` | No errors: prints summary with 0 errors. |
+| `test_reporter.py` | `test_report_statistics_sorted_by_count_then_rule` | Most frequent rule first, ties in alphabetical order, counts right-aligned. |
 
 ### report_json
 

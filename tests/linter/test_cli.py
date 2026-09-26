@@ -319,3 +319,27 @@ def test_main_missing_config_file(tmp_path: Path, capsys: pytest.CaptureFixture[
 
     assert exc.value.code == 2
     assert "config file not found" in capsys.readouterr().err
+
+
+def test_run_statistics_counts_errors_per_rule(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Run with statistics: one count per rule instead of each error, same exit code."""
+    f = tmp_path / "bad.py"
+    f.write_text('"""Module."""\n\ndef foo() -> int:\n    pass\n\n\ndef bar() -> int:\n    pass\n', encoding="utf-8")
+    assert run([str(f)], LinterConfig(), statistics=True) == 1
+    out = capsys.readouterr().out
+    assert "2  docstring_exists" in out
+    assert "foo" not in out
+    assert "2 errors in 1 file" in out
+
+
+def test_main_statistics_rejected_with_json(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """--statistics with a machine-readable format: error on stderr and exit 2."""
+    config = tmp_path / "linter.toml"
+    config.write_text("", encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["docstring-linter", "--config", str(config), "--statistics", "--format", "json", str(tmp_path)])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 2
+    assert "--statistics is not available with the json format." in capsys.readouterr().err

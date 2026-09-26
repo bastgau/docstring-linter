@@ -7,6 +7,7 @@ and JSON export for CI/CD integration.
 import json
 import os
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -100,6 +101,26 @@ def _escape_property(text: str) -> str:
     return _escape_data(text).replace(":", "%3A").replace(",", "%2C")
 
 
+def _print_summary(errors: list[LintError], files_checked: int) -> None:
+    """Print the closing line of a report with errors.
+
+    Args:
+        errors (list[LintError]): Lint errors found, at least one.
+        files_checked (int): Total number of files checked.
+
+    Returns:
+        None
+
+    """
+    file_count = len({e.filepath for e in errors})
+    error_count = len(errors)
+    print(
+        f"{Colors.RED}{Colors.BOLD}✗ {error_count} error{'s' if error_count > 1 else ''}{Colors.RESET} "
+        f"{Colors.DIM}in {file_count} file{'s' if file_count > 1 else ''} "
+        f"({_files(files_checked)} checked).{Colors.RESET}\n"
+    )
+
+
 def report_cli(errors: list[LintError], files_checked: int) -> None:
     """Print lint results to stdout with colors.
 
@@ -126,13 +147,7 @@ def report_cli(errors: list[LintError], files_checked: int) -> None:
             print(f"  {Colors.DIM}L{error.line:<4}{Colors.RESET} {Colors.CYAN}{error.entity_name}{Colors.RESET} {Colors.RED}[{error.rule}]{Colors.RESET} {error.message}")
         print()
 
-    file_count = len(by_file)
-    error_count = len(errors)
-    print(
-        f"{Colors.RED}{Colors.BOLD}✗ {error_count} error{'s' if error_count > 1 else ''}{Colors.RESET} "
-        f"{Colors.DIM}in {file_count} file{'s' if file_count > 1 else ''} "
-        f"({_files(files_checked)} checked).{Colors.RESET}\n"
-    )
+    _print_summary(errors, files_checked)
 
 
 def report_traceback(errors: list[LintError], files_checked: int) -> None:
@@ -165,13 +180,32 @@ def report_traceback(errors: list[LintError], files_checked: int) -> None:
             print(f"    {Colors.RED}[{error.rule}]{Colors.RESET} {error.message}")
         print()
 
-    file_count = len({e.filepath for e in errors})
-    error_count = len(errors)
-    print(
-        f"{Colors.RED}{Colors.BOLD}✗ {error_count} error{'s' if error_count > 1 else ''}{Colors.RESET} "
-        f"{Colors.DIM}in {file_count} file{'s' if file_count > 1 else ''} "
-        f"({_files(files_checked)} checked).{Colors.RESET}\n"
-    )
+    _print_summary(errors, files_checked)
+
+
+def report_statistics(errors: list[LintError], files_checked: int) -> None:
+    """Print the number of errors per rule, most frequent first.
+
+    Args:
+        errors (list[LintError]): List of lint errors to count.
+        files_checked (int): Total number of files checked.
+
+    Returns:
+        None
+
+    """
+    if not errors:
+        print(f"{_files(files_checked)} checked, 0 errors.")
+        return
+
+    counts = Counter(error.rule for error in errors)
+    width = len(str(max(counts.values())))
+    print()
+    for rule, count in sorted(counts.items(), key=lambda item: (-item[1], item[0])):
+        print(f"  {count:>{width}}  {Colors.RED}{rule}{Colors.RESET}")
+    print()
+
+    _print_summary(errors, files_checked)
 
 
 def report_json(errors: list[LintError], files_checked: int) -> None:
