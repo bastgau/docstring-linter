@@ -44,7 +44,7 @@ cli.main
 | ARCH-02 | Moyenne | Règles non déclaratives, dispatcher monolithique, registres dupliqués | Corrigé |
 | ARCH-03 | Moyenne | Docstring re-parsé par chaque règle de structure, 3 définitions d'un en-tête | Partiel |
 | ARCH-04 | Moyenne | Abstraction multi-style creuse | Corrigé |
-| ARCH-05 | Moyenne | Options énumérées à la main à 5 endroits | Partiel |
+| ARCH-05 | Moyenne | Options énumérées à la main à 5 endroits | Corrigé |
 | ARCH-06 | Haute | Always-on sans échappatoire | Reporté |
 | ARCH-07 | Moyenne | Modèle `CodeEntity` trop pauvre | Partiel |
 | ARCH-08 | Haute | `ValueError` comme fourre-tout au niveau fichier | Corrigé |
@@ -178,7 +178,7 @@ Recommandation (cohérente avec la règle "pas de fonctionnalité spéculative" 
 
 ### ARCH-05 - Options énumérées à la main [Vérifié] - Moyenne
 
-**Statut : Partiel.** `b6ad01e` et suivants. Validation typée par tables (`INT_OPTIONS` avec minimum, `BOOL_OPTIONS`, `CHOICE_OPTIONS`) partagée par la racine et les overrides. Les options restent énumérées dans `OPTIONS_REGISTRY`, `SETTING_KEYS`, `OVERRIDABLE_OPTIONS` et `LinterConfig`.
+**Statut : Corrigé.** `b6ad01e` : validation typée par tables (`INT_OPTIONS`, `BOOL_OPTIONS`, `CHOICE_OPTIONS`) partagée par la racine et les overrides. `8bb902d` : `SETTING_KEYS` et `OVERRIDABLE_OPTIONS` déduits des tables de types (`TYPED_OPTIONS`), `option_values()` générique ; ajouter une option ne touche plus que 5 endroits au lieu de 8. Tests de cohérence : option listée = champ typé, tableau des clés et liste des options d'override de `docs/configuration.md` exacts. Ensembles de clés, valeurs et sortie de `--list-rules` identiques avant et après [Vérifié]. Décision : table `Option` unique écartée.
 
 La liste des options apparaît dans `SETTING_KEYS`, `OVERRIDABLE_OPTIONS`, `OPTIONS_REGISTRY`, `LinterConfig`, `option_values()` et `_parse_toml_config` (`config.py:67-80`, `159-193`, `276-306`, `345-364`, `577-641`). Chaque ajout doit être répliqué ; la validation de type manque (BUG-06) et les bornes (`max(1, ...)`) ne s'appliquent qu'au niveau racine.
 
@@ -243,7 +243,7 @@ Proposition : erreurs de configuration validées une fois dans `main()` ; au niv
 
 ### ARCH-10 - Tests [Vérifié] - Moyenne
 
-**Statut : Corrigé.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST), tests de cohérence des registres et de `TESTS.md` (`6bfff7a`, `2ecc362`) ; 586 tests, couverture branches 96,24 %. `5779bbd` : seuil `fail_under` relevé de 85 à 90 [Vérifié]. Décision : pas de test de corpus (stdlib instable d'une version corrective à l'autre, code tiers à éviter, cas de l'annexe déjà couverts par `test_end_to_end.py`).
+**Statut : Corrigé.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST), tests de cohérence des registres et de `TESTS.md` (`6bfff7a`, `2ecc362`) ; 589 tests, couverture branches 96,24 %. `5779bbd` : seuil `fail_under` relevé de 85 à 90 [Vérifié]. Décision : pas de test de corpus (stdlib instable d'une version corrective à l'autre, code tiers à éviter, cas de l'annexe déjà couverts par `test_end_to_end.py`).
 
 État : 372 tests, 1,45 s, 94,39 % de couverture branches, seuil CI 85 %.
 
