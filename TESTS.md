@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 582 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 586 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -598,6 +598,10 @@ This file lists the 582 tests of the `docstring-linter` project. Each entry show
 | `test_cli.py` | `test_run_undecodable_file_returns_two` | File that is not valid UTF-8: reported as unreadable on stderr, run returns 2. |
 | `test_cli.py` | `test_run_failure_wins_over_lint_errors` | One unparsable file and one file with lint errors: run returns 2. |
 | `test_cli.py` | `test_run_missing_path_returns_two` | Path that does not exist: reported on stderr, run returns 2 without linting. |
+| `test_cli.py` | `test_resolve_workers_auto_is_the_default` | Default config: workers is 0, the auto mode. |
+| `test_cli.py` | `test_resolve_workers_auto_sequential_on_small_runs` | Auto mode below 50 files: sequential, the process pool would cost more than it saves. |
+| `test_cli.py` | `test_resolve_workers_auto_uses_usable_cpus` | Auto mode from 50 files: one worker per CPU usable by the process. |
+| `test_cli.py` | `test_resolve_workers_explicit_value_kept` | Explicit worker count: used as is, whatever the number of files. |
 | `test_cli.py` | `test_run_parallel_workers` | Two workers on two files: errors from every file are collected. |
 | `test_cli.py` | `test_run_with_json_output` | Run with output_format=json: JSON report is printed to stdout. |
 | `test_cli.py` | `test_run_statistics_counts_errors_per_rule` | Run with statistics: one count per rule instead of each error, same exit code. |

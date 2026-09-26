@@ -359,7 +359,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         exclude_patterns (list[str]): Glob patterns for files to exclude.
         enabled_rules (list[str]): List of enabled rule identifiers.
         output_format (str): Output format -- traceback, text, json, or github-annotations.
-        workers (int): Number of parallel workers (1 = sequential).
+        workers (int): Number of parallel workers (0 = auto, 1 = sequential).
         summary_max_length (int): Maximum allowed summary line length.
         blank_lines_before_section (int): Blank lines expected before a section header.
         blank_lines_before_closing_quotes (int): Blank lines expected before the closing quotes.
@@ -403,7 +403,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     exclude_patterns: list[str] = field(default_factory=lambda: [".venv", ".git", "__pycache__", ".tox", ".mypy_cache", ".ruff_cache", ".pytest_cache"])
     enabled_rules: list[str] = field(default_factory=lambda: [r for r in RULES_REGISTRY if r not in OFF_BY_DEFAULT])
     output_format: str = "traceback"
-    workers: int = 1
+    workers: int = 0
     summary_max_length: int = 80
     blank_lines_before_section: int = 1
     blank_lines_before_closing_quotes: int = 1

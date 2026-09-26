@@ -7,7 +7,7 @@ import sys
 from pathlib import Path  # noqa: TC003
 
 import pytest
-from linter.cli import collect_python_files, lint_file, main, merge_cli_into_config, run
+from linter.cli import _resolve_workers, collect_python_files, lint_file, main, merge_cli_into_config, run  # pyright: ignore[reportPrivateUsage]
 from linter.config import ALWAYS_ON, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig
 
 _VALID_SOURCE = '''\
@@ -259,6 +259,27 @@ def test_run_missing_path_returns_two(tmp_path: Path, capsys: pytest.CaptureFixt
     """Path that does not exist: reported on stderr, run returns 2 without linting."""
     assert run([str(tmp_path / "missing")], LinterConfig()) == 2
     assert "Path not found" in capsys.readouterr().err
+
+
+def test_resolve_workers_auto_is_the_default() -> None:
+    """Default config: workers is 0, the auto mode."""
+    assert LinterConfig().workers == 0
+
+
+def test_resolve_workers_auto_sequential_on_small_runs() -> None:
+    """Auto mode below 50 files: sequential, the process pool would cost more than it saves."""
+    assert _resolve_workers(0, 49) == 1
+
+
+def test_resolve_workers_auto_uses_usable_cpus(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Auto mode from 50 files: one worker per CPU usable by the process."""
+    monkeypatch.setattr("os.process_cpu_count", lambda: 3)
+    assert _resolve_workers(0, 50) == 3
+
+
+def test_resolve_workers_explicit_value_kept() -> None:
+    """Explicit worker count: used as is, whatever the number of files."""
+    assert _resolve_workers(4, 2) == 4
 
 
 def test_run_parallel_workers(tmp_path: Path) -> None:

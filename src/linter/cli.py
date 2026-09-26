@@ -150,18 +150,25 @@ def _lint_file_safe(filepath: str, config: LinterConfig) -> tuple[list[LintError
         return [], f"Cannot read {filepath}: {e}"
 
 
-def _resolve_workers(workers: int) -> int:
-    """Resolve worker count (0 = auto-detect CPU count).
+# Below this many files, auto mode stays sequential: starting the processes costs more than it saves
+_AUTO_PARALLEL_MIN_FILES = 50
+
+
+def _resolve_workers(workers: int, file_count: int) -> int:
+    """Resolve worker count (0 = auto: one per usable CPU, sequential on small runs).
 
     Args:
         workers (int): Configured worker count.
+        file_count (int): Number of files to lint.
 
     Returns:
         int: Resolved worker count.
 
     """
     if workers == 0:
-        return os.cpu_count() or 1
+        if file_count < _AUTO_PARALLEL_MIN_FILES:
+            return 1
+        return os.process_cpu_count() or 1
     return workers
 
 
@@ -213,7 +220,7 @@ def run(paths: list[str], config: LinterConfig, *, statistics: bool = False) -> 
         print("No Python files found.")
         return 0
 
-    workers = _resolve_workers(config.workers)
+    workers = _resolve_workers(config.workers, len(files))
 
     if workers <= 1 or len(files) == 1:
         results = [_lint_file_safe(filepath, config) for filepath in files]
@@ -252,7 +259,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--format", choices=["traceback", "text", "json", "github-annotations"], default=None, help="Output format (default: traceback).")
     parser.add_argument("--exclude", nargs="*", default=None, help="Glob patterns to exclude (overrides pyproject.toml).")
     parser.add_argument("--statistics", action="store_true", help="Report the number of errors per rule instead of each error (traceback and text formats).")
-    parser.add_argument("--workers", type=int, default=None, help="Number of parallel workers (0 = auto, 1 = sequential). Overrides pyproject.toml.")
+    parser.add_argument("--workers", type=int, default=None, help="Number of parallel workers (0 = auto, the default; 1 = sequential). Overrides pyproject.toml.")
     return parser
 
 

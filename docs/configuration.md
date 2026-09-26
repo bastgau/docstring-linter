@@ -79,7 +79,7 @@ See the Available keys section below for the complete list of options.
 | `sections_optional_on_one_liners` | `false` | Do not require the `Args:`, `Returns:`, `Yields:` and `Raises:` sections (nor `Returns: None`) on a one-line docstring, when the function or method has every parameter and its return annotated. A docstring of more than one line keeps every required section. |
 | `properties_as_attributes` | `false` | Document property getters like attributes: no `Returns:` section required, `imperative_mood` not applied. Property setters and deleters are not checked. |
 | `exclude` | see [built-in defaults](/docs/style-policies.md#default-exclusion-patterns) | Glob/literal patterns for files and directories to skip. See [matching rules](/docs/style-policies.md#default-exclusion-patterns). |
-| `workers` | `1` | Parallel workers. `0` = auto-detect CPU count. |
+| `workers` | `0` | Parallel workers. `0` = one per usable CPU, sequential below 50 files where starting the processes costs more than it saves. Any other value is used as is, `1` being sequential. |
 | `summary_max_length` | `80` | Maximum summary line length for `summary_too_long`. |
 | `blank_lines_before_section` | `1` | Blank lines expected before a section header, checked by `blank_lines`. |
 | `blank_lines_before_closing_quotes` | `1` | Blank lines expected before the closing `"""`, checked by `blank_lines`. |

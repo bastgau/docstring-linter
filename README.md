@@ -84,7 +84,7 @@ docstring-linter src/ --config pyproject.toml
 | Option | Description |
 |--------|-------------|
 | `--exclude` | Glob patterns to exclude. Overrides config file. |
-| `--workers` | Number of parallel workers (0 = auto, 1 = sequential). |
+| `--workers` | Number of parallel workers. `0` (default) = one per usable CPU, sequential below 50 files; `1` = sequential. |
 | `--format` | Output format: `traceback` (default), `text`, `json`, or `github-annotations`. |
 | `--statistics` | Report the number of errors per rule instead of each error. Only with the `traceback` and `text` formats. |
 | `--list-rules` | Display all available rules and exit. |
