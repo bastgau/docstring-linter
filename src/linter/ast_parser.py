@@ -209,8 +209,9 @@ def _extract_class_attributes(node: ast.ClassDef) -> list[str]:  # noqa: C901
             add(stmt.target.id)
         elif isinstance(stmt, ast.Assign):
             for target in stmt.targets:
-                if isinstance(target, ast.Name):
-                    add(target.id)
+                for leaf in _unpack_target(target):
+                    if isinstance(leaf, ast.Name):
+                        add(leaf.id)
 
     for stmt in node.body:
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and stmt.name == "__init__":
@@ -235,8 +236,27 @@ def _self_attr_names(func: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
         if isinstance(child, ast.AnnAssign) and _is_self_attr(child.target):
             names.append(child.target.attr)
         elif isinstance(child, ast.Assign):
-            names.extend(t.attr for t in child.targets if _is_self_attr(t))
+            names.extend(leaf.attr for target in child.targets for leaf in _unpack_target(target) if _is_self_attr(leaf))
     return names
+
+
+def _unpack_target(target: ast.expr) -> list[ast.expr]:
+    """Flatten a tuple or list assignment target into its elements.
+
+    'self.a, *self.b = ...' gives self.a and self.b.
+
+    Args:
+        target (ast.expr): Assignment target.
+
+    Returns:
+        list[ast.expr]: The target itself, or the elements of a tuple or list target.
+
+    """
+    if isinstance(target, (ast.Tuple, ast.List)):
+        return [leaf for element in target.elts for leaf in _unpack_target(element)]
+    if isinstance(target, ast.Starred):
+        return _unpack_target(target.value)
+    return [target]
 
 
 def _is_self_attr(target: ast.expr) -> TypeGuard[ast.Attribute]:
@@ -406,8 +426,8 @@ def _scan_body(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[list[Raise
     """Collect the raise statements and detect yields in one pass over a function body.
 
     Nested functions and lambdas are skipped: their raises and yields belong to them.
-    Raising a name bound by 'except ... as name' reports the caught exception types,
-    raising any other variable is ignored.
+    Raising a name bound by 'except ... as name', or a bare raise inside the handler,
+    reports the caught exception types; raising any other variable is ignored.
 
     Args:
         node (ast.FunctionDef | ast.AsyncFunctionDef): AST function node.
@@ -420,15 +440,21 @@ def _scan_body(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[list[Raise
     seen: set[str] = set()
     is_generator = False
     caught: dict[str, list[str]] = {}
+    reraised: dict[ast.Raise, list[str]] = {}
 
     for child in _walk_scope(node):
         if isinstance(child, (ast.Yield, ast.YieldFrom)):
             is_generator = True
-        elif isinstance(child, ast.ExceptHandler) and child.name and child.type is not None:
+        elif isinstance(child, ast.ExceptHandler) and child.type is not None:
             types = child.type.elts if isinstance(child.type, ast.Tuple) else [child.type]
-            caught[child.name] = [name for name in map(_exception_name, types) if name]
-        elif isinstance(child, ast.Raise) and child.exc is not None:
-            if isinstance(child.exc, ast.Name) and child.exc.id in caught:
+            names = [name for name in map(_exception_name, types) if name]
+            if child.name:
+                caught[child.name] = names
+            reraised.update(dict.fromkeys(_bare_raises(child), names))
+        elif isinstance(child, ast.Raise):
+            if child.exc is None:
+                names = reraised.get(child, [])
+            elif isinstance(child.exc, ast.Name) and child.exc.id in caught:
                 names = caught[child.exc.id]
             else:
                 exc_name = _exception_name(child.exc)
@@ -439,6 +465,31 @@ def _scan_body(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[list[Raise
                     raises.append(RaiseInfo(exception_type=name, line=child.lineno))
 
     return raises, is_generator
+
+
+def _bare_raises(handler: ast.ExceptHandler) -> list[ast.Raise]:
+    """Collect the bare raise statements that re-raise the exception of a handler.
+
+    Nested functions and nested handlers are skipped: a bare raise inside a
+    nested handler re-raises the exception that handler caught.
+
+    Args:
+        handler (ast.ExceptHandler): Except clause.
+
+    Returns:
+        list[ast.Raise]: Bare raise statements of the handler body.
+
+    """
+    found: list[ast.Raise] = []
+    stack: list[ast.AST] = list(handler.body)
+    while stack:
+        child = stack.pop()
+        if isinstance(child, (*_NESTED_SCOPES, ast.ExceptHandler)):
+            continue
+        if isinstance(child, ast.Raise) and child.exc is None:
+            found.append(child)
+        stack.extend(ast.iter_child_nodes(child))
+    return found
 
 
 def _is_empty_init(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:

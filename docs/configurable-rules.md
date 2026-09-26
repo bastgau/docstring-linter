@@ -128,7 +128,7 @@ def validate(x: int) -> int:
     return x
 ```
 
-Only capitalized class names count as raised: `raise ValueError`, `raise errors.ValidationError(...)`, and `raise err` inside `except ValueError as err`. A dotted name in the docstring is compared on its last segment.
+Only capitalized class names count as raised: `raise ValueError`, `raise errors.ValidationError(...)`, and `raise err` inside `except ValueError as err` or a bare `raise` inside `except ValueError`. A dotted name in the docstring is compared on its last segment.
 
 ---
 

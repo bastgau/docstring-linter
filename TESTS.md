@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 565 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 572 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -92,11 +92,14 @@ This file lists the 565 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_extract_raises_variable_ignored` | Raise err where err is a variable, not bound by an except clause: ignored. |
 | `test_ast_parser.py` | `test_extract_raises_bare_class_name` | Raise ValueError without call: the class name is recorded. |
 | `test_ast_parser.py` | `test_extract_raises_lowercase_factory_ignored` | Raise make_error('x'): a lowercase callable is not an exception class, ignored. |
-| `test_ast_parser.py` | `test_extract_raises_bare_raise_ignored` | Bare re-raise (raise with no argument): ignored because there is no exception type. |
+| `test_ast_parser.py` | `test_extract_raises_bare_raise_ignored` | Bare raise outside any handler: ignored because there is no exception type. |
 | `test_ast_parser.py` | `test_extract_raises_deduplicates` | Same exception raised twice: appears only once in the result list. |
 | `test_ast_parser.py` | `test_extract_raises_multiple_distinct` | Two different exceptions raised: both are present in the result. |
 | `test_ast_parser.py` | `test_scan_body_reraise_of_caught_name` | Raise err inside 'except ValueError as err': reported as ValueError, not as err. |
 | `test_ast_parser.py` | `test_scan_body_reraise_of_caught_tuple` | Raise err inside 'except (KeyError, mod.Error) as err': every caught type is reported. |
+| `test_ast_parser.py` | `test_scan_body_bare_raise_in_handler` | Bare raise inside 'except (KeyError, mod.Error)': every caught type is reported. |
+| `test_ast_parser.py` | `test_scan_body_bare_raise_in_nested_handler` | Bare raise in a handler nested in another: reports the inner caught type only. |
+| `test_ast_parser.py` | `test_scan_body_bare_raise_in_untyped_handler_ignored` | Bare raise inside a bare 'except:': ignored because no type is caught. |
 | `test_ast_parser.py` | `test_scan_body_dotted_exception` | Raise errors.ValidationError(...): reported by its last name segment. |
 | `test_ast_parser.py` | `test_scan_body_lowercase_attribute_ignored` | Raise self.error: not an exception class name, ignored. |
 | `test_ast_parser.py` | `test_scan_body_nested_function_ignored` | Raise and yield inside a nested function or lambda: not attributed to the outer function. |
@@ -123,6 +126,8 @@ This file lists the 565 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_extract_class_attributes_skips_dunder` | Dunder assignments like __slots__ are not treated as attributes. |
 | `test_ast_parser.py` | `test_extract_class_attributes_skips_constants` | All-uppercase names (constants) are not treated as attributes. |
 | `test_ast_parser.py` | `test_extract_class_attributes_none` | Class with no attributes: returns empty list. |
+| `test_ast_parser.py` | `test_extract_class_attributes_tuple_self_assignment` | self.a, *self.b = ... in __init__: every unpacked self attribute is extracted. |
+| `test_ast_parser.py` | `test_extract_class_attributes_tuple_class_assignment` | a, b = ... in the class body: both names are extracted. |
 | `test_ast_parser.py` | `test_extract_class_attributes_ignores_nested_function` | self.x assigned inside a function nested in __init__: not a class attribute. |
 
 ### parse_file
@@ -152,6 +157,8 @@ This file lists the 565 tests of the `docstring-linter` project. Each entry show
 |---|---|---|
 | `test_end_to_end.py` | `test_nested_generator_does_not_make_outer_a_generator` | Function defining a nested generator: documented with Returns, no error. |
 | `test_end_to_end.py` | `test_reraise_of_caught_exception` | Raise err inside 'except ValueError as err': ValueError documented, no error. |
+| `test_end_to_end.py` | `test_bare_reraise_requires_caught_exception` | Bare raise inside 'except ValueError': ValueError must be documented. |
+| `test_end_to_end.py` | `test_tuple_self_assignment_requires_attributes` | self.a, self.b = ... in __init__: both attributes must be documented. |
 | `test_end_to_end.py` | `test_dotted_exception` | Raise errors.ValidationError: documented by short or dotted name, no error. |
 | `test_end_to_end.py` | `test_undocumented_dotted_exception_reported` | Raise errors.ValidationError without Raises section: reported by raises_section. |
 | `test_end_to_end.py` | `test_function_under_if_is_linted` | Function defined under an if block: linted like a top-level function. |

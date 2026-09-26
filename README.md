@@ -227,8 +227,8 @@ prek install
 
 - Functions and classes defined inside a function are not checked.
 - Code under `if __name__ == "__main__":` and `@overload` signatures are skipped.
-- `Raises:` only sees the explicit `raise` statements of the function body: exceptions raised by called functions, a bare `raise` in an `except` block and the `raise` of a plain variable are not detected.
-- Class attributes are read from class-level assignments and from `self.x = ...` in `__init__` only: tuple assignments (`self.a, self.b = ...`) and attributes created in other methods are not detected.
+- `Raises:` only sees the explicit `raise` statements of the function body: exceptions raised by called functions and the `raise` of a plain variable are not detected.
+- Class attributes are read from class-level assignments and from `self.x = ...` in `__init__` only: attributes created in other methods are not detected.
 - Type aliases are not resolved, and Sphinx roles such as ``:class:`Path` `` are not recognized in documented types.
 - `exclude_overridden` only recognizes `@override`, not a method overridden through inheritance.
 - Every error points to the `def` or `class` line, not to the docstring line at fault.

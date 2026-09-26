@@ -288,7 +288,7 @@ def read_lines(path: str) -> Iterator[str]:
 
 ### raises_section
 
-Every exception explicitly raised in the body must be documented in the `Raises:` section. Bare, dynamic and indirect raises are never collected, see [Automatic Exemptions](#automatic-exemptions).
+Every exception explicitly raised in the body must be documented in the `Raises:` section. Dynamic and indirect raises are never collected, see [Automatic Exemptions](#automatic-exemptions).
 
 ```toml
 [tool.docstring-linter]
@@ -540,8 +540,8 @@ def get_name() -> str:
 | Property setter or deleter | Not checked at all if `properties_as_attributes = true` |
 | First parameter of a method (`self`, `cls`, `mcs`, ...) | Ignored in parameters, except on a `@staticmethod` |
 | `*args`, `**kwargs` | Documented with or without their stars according to `documented_stars` |
-| Bare `raise`, `raise variable`, `raise make_error()` | Not collected: only capitalized class names count (`raise ValueError`, `raise errors.ValidationError(...)`) |
-| `raise err` inside `except (A, B) as err` | Collected as the caught types `A` and `B` |
+| `raise variable`, `raise make_error()`, bare `raise` outside a typed `except` | Not collected: only capitalized class names count (`raise ValueError`, `raise errors.ValidationError(...)`) |
+| `raise err` inside `except (A, B) as err`, bare `raise` inside `except (A, B)` | Collected as the caught types `A` and `B` |
 | Code under `if __name__ == "__main__":` | Not scanned, its `else` branch is |
 | `@overload` stubs | Not scanned, the implementation is |
 | Files excluded by pattern | Not scanned |

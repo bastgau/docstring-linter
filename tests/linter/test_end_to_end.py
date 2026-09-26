@@ -73,6 +73,53 @@ def test_reraise_of_caught_exception(tmp_path: Path) -> None:
     assert not _lint(tmp_path, source)
 
 
+def test_bare_reraise_requires_caught_exception(tmp_path: Path) -> None:
+    """Bare raise inside 'except ValueError': ValueError must be documented."""
+    source = '''\
+        """Module."""
+
+
+        def convert(value: str) -> int:
+            """Convert the value.
+
+            Args:
+                value (str): The value.
+
+            Returns:
+                int: The value.
+
+            """
+            try:
+                return int(value)
+            except ValueError:
+                print(value)
+                raise
+        '''
+    assert _lint(tmp_path, source) == [("convert", "raises_section")]
+
+
+def test_tuple_self_assignment_requires_attributes(tmp_path: Path) -> None:
+    """self.a, self.b = ... in __init__: both attributes must be documented."""
+    source = '''\
+        """Module."""
+
+
+        class Pair:
+            """Hold two values.
+
+            Attributes:
+                first (int): First value.
+
+            """
+
+            def __init__(self) -> None:
+                """Build the pair."""
+                self.first, self.second = 1, 2
+        '''
+    errors = [e for e in _lint(tmp_path, source) if e[0] == "Pair"]
+    assert errors == [("Pair", "attributes_section")]
+
+
 def test_dotted_exception(tmp_path: Path) -> None:
     """Raise errors.ValidationError: documented by short or dotted name, no error."""
     source = '''\

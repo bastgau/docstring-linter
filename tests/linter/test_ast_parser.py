@@ -64,6 +64,18 @@ def test_extract_class_attributes_none() -> None:
     assert not _extract_class_attributes(node)
 
 
+def test_extract_class_attributes_tuple_self_assignment() -> None:
+    """self.a, *self.b = ... in __init__: every unpacked self attribute is extracted."""
+    node = _parse_class("class C:\n    def __init__(self):\n        self.a, (self.b, *self.c) = 1, (2, 3)\n        self.d, other = 4, 5\n")
+    assert _extract_class_attributes(node) == ["a", "b", "c", "d"]
+
+
+def test_extract_class_attributes_tuple_class_assignment() -> None:
+    """a, b = ... in the class body: both names are extracted."""
+    node = _parse_class("class C:\n    a, [b, MAX] = 1, [2, 3]\n")
+    assert _extract_class_attributes(node) == ["a", "b"]
+
+
 def test_extract_class_attributes_ignores_nested_function() -> None:
     """self.x assigned inside a function nested in __init__: not a class attribute."""
     node = _parse_class("class A:\n    def __init__(self):\n        self.a = 1\n        def later():\n            self.b = 2")
@@ -288,8 +300,27 @@ def test_extract_raises_lowercase_factory_ignored() -> None:
 
 
 def test_extract_raises_bare_raise_ignored() -> None:
-    """Bare re-raise (raise with no argument): ignored because there is no exception type."""
+    """Bare raise outside any handler: ignored because there is no exception type."""
     node = _parse_func("def f():\n    raise")
+    assert not _scan_body(node)[0]
+
+
+def test_scan_body_bare_raise_in_handler() -> None:
+    """Bare raise inside 'except (KeyError, mod.Error)': every caught type is reported."""
+    node = _parse_func("def f():\n    try:\n        pass\n    except (KeyError, mod.Error):\n        if x:\n            raise")
+    assert [r.exception_type for r in _scan_body(node)[0]] == ["KeyError", "Error"]
+
+
+def test_scan_body_bare_raise_in_nested_handler() -> None:
+    """Bare raise in a handler nested in another: reports the inner caught type only."""
+    source = "def f():\n    try:\n        pass\n    except KeyError:\n        try:\n            pass\n        except ValueError:\n            raise"
+    node = _parse_func(source)
+    assert [r.exception_type for r in _scan_body(node)[0]] == ["ValueError"]
+
+
+def test_scan_body_bare_raise_in_untyped_handler_ignored() -> None:
+    """Bare raise inside a bare 'except:': ignored because no type is caught."""
+    node = _parse_func("def f():\n    try:\n        pass\n    except:\n        raise")
     assert not _scan_body(node)[0]
 
 
