@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 415 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 425 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -143,6 +143,8 @@ This file lists the 415 tests of the `docstring-linter` project. Each entry show
 | `test_end_to_end.py` | `test_metaclass_first_parameter_not_required` | Metaclass __new__(mcs, ...): mcs is not required in Args. |
 | `test_end_to_end.py` | `test_staticmethod_first_parameter_required` | @staticmethod: the first parameter must be documented like any other. |
 | `test_end_to_end.py` | `test_overload_stubs_not_linted` | @overload stubs without docstring: only the documented implementation is linted. |
+| `test_end_to_end.py` | `test_google_convention_accepts_google_guide_style` | Google guide layout (untyped Args, no Returns: None, descriptive mood): no error under convention google. |
+| `test_end_to_end.py` | `test_strict_convention_rejects_google_guide_style` | Same source under the strict default: the house rules the google convention relaxes are reported. |
 
 ---
 
@@ -665,6 +667,19 @@ This file lists the 415 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_for_path_ignore_removes_from_inherited_rules` | Ignore key in an override: the rule is removed from the inherited set. |
 | `test_config.py` | `test_for_path_select_replaces_inherited_rules` | Select key in an override: the inherited set is replaced by the listed rules. |
 | `test_config.py` | `test_for_path_override_select_all` | Select = ['ALL'] in an override: every rule is enabled on the matching files. |
+
+### convention
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_config.py` | `test_convention_defaults_to_strict` | No convention key: strict convention, same settings as the built-in defaults. |
+| `test_config.py` | `test_convention_google_sets_defaults` | Convention = 'google': relaxed policies, no blank line before the closing quotes, two rules off. |
+| `test_config.py` | `test_convention_explicit_keys_win` | Convention = 'google' with explicit keys: the keys of the file override the convention. |
+| `test_config.py` | `test_convention_ignore_applies_on_top` | Convention = 'google' with ignore: rules removed from the convention set, disabled ones stay off. |
+| `test_config.py` | `test_convention_select_all_enables_everything` | Convention = 'google' with select = ['ALL']: every rule is enabled, the explicit key wins. |
+| `test_config.py` | `test_convention_unknown` | Convention = 'numpy': raises ValueError listing the accepted conventions. |
+| `test_config.py` | `test_convention_rejected_in_override` | Convention in an override: rejected, it sets the defaults of the whole run. |
+| `test_config.py` | `test_convention_listed_in_option_values` | option_values: reports the active convention. |
 
 ### value types
 

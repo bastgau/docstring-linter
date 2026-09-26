@@ -142,6 +142,13 @@ example/docstring_format_reference.py
 
 Every key has a built-in default, so no config file is required at all.
 
+The defaults enforce a strict house style. To follow the Google Python Style Guide layout instead (types in the signature only, no `Returns: None`, descriptive summaries accepted), start from the `google` convention:
+
+```toml
+[tool.docstring-linter]
+convention = "google"
+```
+
 The full list of options is available on the [configuration](/docs/configuration.md) page.
 
 ### Rule Reference

@@ -4,14 +4,14 @@ import textwrap
 from pathlib import Path  # noqa: TC003
 
 from linter.cli import lint_file
-from linter.config import LinterConfig
+from linter.config import LinterConfig, _parse_toml_config  # pyright: ignore[reportPrivateUsage]
 
 
-def _lint(tmp_path: Path, source: str) -> list[tuple[str, str]]:
-    """Lint a source snippet with the default config and return (entity, rule) pairs."""
+def _lint(tmp_path: Path, source: str, config: LinterConfig | None = None) -> list[tuple[str, str]]:
+    """Lint a source snippet, with the default config unless one is given, and return (entity, rule) pairs."""
     f = tmp_path / "sample.py"
     f.write_text(textwrap.dedent(source), encoding="utf-8")
-    return [(e.entity_name, e.rule) for e in lint_file(str(f), LinterConfig())]
+    return [(e.entity_name, e.rule) for e in lint_file(str(f), config or LinterConfig())]
 
 
 def test_nested_generator_does_not_make_outer_a_generator(tmp_path: Path) -> None:
@@ -224,3 +224,48 @@ def test_overload_stubs_not_linted(tmp_path: Path) -> None:
             return x
         '''
     assert not _lint(tmp_path, source)
+
+
+_GOOGLE_GUIDE_SOURCE = '''\
+    """Module."""
+
+
+    class Cache:
+        """Store computed values.
+
+        Attributes:
+            size: Number of cached values.
+        """
+
+        def __init__(self) -> None:
+            """Initialize an empty cache."""
+            self.size = 0
+            self._store: dict[str, int] = {}
+
+        def fetch(self, key: str, default: int | None = None) -> int | None:
+            """Fetches a cached value.
+
+            Args:
+                key: Cache key.
+                default: Value returned when the key is missing.
+
+            Returns:
+                int | None: The cached value, or the default.
+            """
+            return self._store.get(key, default)
+
+        def clear(self) -> None:
+            """Removes every cached value."""
+            self._store.clear()
+    '''
+
+
+def test_google_convention_accepts_google_guide_style(tmp_path: Path) -> None:
+    """Google guide layout (untyped Args, no Returns: None, descriptive mood): no error under convention google."""
+    assert not _lint(tmp_path, _GOOGLE_GUIDE_SOURCE, _parse_toml_config({"convention": "google"}))
+
+
+def test_strict_convention_rejects_google_guide_style(tmp_path: Path) -> None:
+    """Same source under the strict default: the house rules the google convention relaxes are reported."""
+    rules = {rule for _, rule in _lint(tmp_path, _GOOGLE_GUIDE_SOURCE)}
+    assert {"args_match", "attributes_section", "blank_lines", "imperative_mood", "returns_none"} <= rules

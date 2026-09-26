@@ -250,6 +250,71 @@ def test_always_on_rule_stays_enabled_when_not_selected() -> None:
 
 
 # ---------------------------------------------------------------------------
+# convention
+# ---------------------------------------------------------------------------
+
+
+def test_convention_defaults_to_strict() -> None:
+    """No convention key: strict convention, same settings as the built-in defaults."""
+    config = _parse_toml_config({})
+    assert config.convention == "strict"
+    assert config.policy_values() == LinterConfig().policy_values()
+    assert config.enabled_rules == LinterConfig().enabled_rules
+
+
+def test_convention_google_sets_defaults() -> None:
+    """Convention = 'google': relaxed policies, no blank line before the closing quotes, two rules off."""
+    config = _parse_toml_config({"convention": "google"})
+    assert config.returns_none is Policy.OPTIONAL
+    assert config.init_returns_none is Policy.OPTIONAL
+    assert config.documented_types is Policy.OPTIONAL
+    assert config.raises_section is Policy.OPTIONAL
+    assert config.attributes_section is Policy.OPTIONAL
+    assert config.blank_lines_before_closing_quotes == 0
+    assert "imperative_mood" not in config.enabled_rules
+    assert "return_type_annotation" not in config.enabled_rules
+    assert "args_order" in config.enabled_rules
+
+
+def test_convention_explicit_keys_win() -> None:
+    """Convention = 'google' with explicit keys: the keys of the file override the convention."""
+    config = _parse_toml_config({"convention": "google", "documented_types": "required", "blank_lines_before_closing_quotes": 1})
+    assert config.documented_types is Policy.REQUIRED
+    assert config.blank_lines_before_closing_quotes == 1
+    assert config.returns_none is Policy.OPTIONAL
+
+
+def test_convention_ignore_applies_on_top() -> None:
+    """Convention = 'google' with ignore: rules removed from the convention set, disabled ones stay off."""
+    enabled = _parse_toml_config({"convention": "google", "ignore": ["args_order"]}).enabled_rules
+    assert "args_order" not in enabled
+    assert "imperative_mood" not in enabled
+
+
+def test_convention_select_all_enables_everything() -> None:
+    """Convention = 'google' with select = ['ALL']: every rule is enabled, the explicit key wins."""
+    config = _parse_toml_config({"convention": "google", "select": ["ALL"]})
+    assert config.enabled_rules == sorted(RULES_REGISTRY)
+
+
+def test_convention_unknown() -> None:
+    """Convention = 'numpy': raises ValueError listing the accepted conventions."""
+    with pytest.raises(ValueError, match=re.escape("'convention': invalid value 'numpy', expected one of strict, google.")):
+        _parse_toml_config({"convention": "numpy"})
+
+
+def test_convention_rejected_in_override() -> None:
+    """Convention in an override: rejected, it sets the defaults of the whole run."""
+    with pytest.raises(ValueError, match="'convention' cannot be set per path"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "convention": "google"}]})
+
+
+def test_convention_listed_in_option_values() -> None:
+    """option_values: reports the active convention."""
+    assert _parse_toml_config({"convention": "google"}).option_values()["convention"] == "google"
+
+
+# ---------------------------------------------------------------------------
 # value types
 # ---------------------------------------------------------------------------
 

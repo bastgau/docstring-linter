@@ -60,6 +60,7 @@ POLICIES_REGISTRY = {
 
 # Settings that change what gets checked, reported by --list-rules
 OPTIONS_REGISTRY = {
+    "convention": "Convention providing the defaults of policies, options and rules",
     "style": "Docstring style enforced",
     "exclude_empty_init_method": "Docstring optional on __init__ methods with no parameter and an empty body",
     "exclude_empty_init_module": "Docstring optional on __init__.py modules with an empty body",
@@ -150,9 +151,43 @@ ALWAYS_ON: frozenset[str] = frozenset(
 )
 
 
+@dataclass(frozen=True)
+class Convention:
+    """Hold the defaults a convention sets before the config file keys apply.
+
+    Attributes:
+        values (dict[str, object]): Policies and options set by the convention.
+        disabled_rules (frozenset[str]): Configurable rules the convention turns off.
+
+    """
+
+    values: dict[str, object]
+    disabled_rules: frozenset[str]
+
+
+CONVENTIONS: dict[str, Convention] = {
+    # Built-in defaults: every section and type documented, house layout
+    "strict": Convention(values={}, disabled_rules=frozenset()),
+    # Google Python Style Guide: types live in the signature, no 'Returns: None',
+    # no blank line before the closing quotes, descriptive or imperative summary
+    "google": Convention(
+        values={
+            "returns_none": Policy.OPTIONAL,
+            "init_returns_none": Policy.OPTIONAL,
+            "documented_types": Policy.OPTIONAL,
+            "raises_section": Policy.OPTIONAL,
+            "attributes_section": Policy.OPTIONAL,
+            "blank_lines_before_closing_quotes": 0,
+        },
+        disabled_rules=frozenset({"imperative_mood", "return_type_annotation"}),
+    ),
+}
+
+
 # Keys accepted in the config file besides the policies
 SETTING_KEYS: frozenset[str] = frozenset(
     {
+        "convention",
         "style",
         "scope",
         "select",
@@ -263,6 +298,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     and what to exclude from validation.
 
     Attributes:
+        convention (str): Convention the defaults come from, a key of CONVENTIONS.
         style (DocstringStyle): Docstring style to enforce.
         check_modules (bool): Whether to check module docstrings.
         check_classes (bool): Whether to check class docstrings.
@@ -297,6 +333,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
 
     """
 
+    convention: str = "strict"
     style: DocstringStyle = DocstringStyle.GOOGLE
     check_modules: bool = True
     check_classes: bool = True
@@ -348,18 +385,11 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
 
         override = matching[-1]
         resolved = copy.copy(self)
-        if override.select is None:
-            enabled = set(self.enabled_rules)
-        elif override.select == ["ALL"]:
-            enabled = set(RULES_REGISTRY)
-        else:
-            enabled = {rule for rule in override.select if rule in RULES_REGISTRY}
-        enabled -= {rule for rule in override.ignore if rule in RULES_REGISTRY}
 
         for name, value in override.values.items():
             setattr(resolved, name, value)
 
-        resolved.enabled_rules = sorted(enabled)
+        resolved.enabled_rules = _resolve_rules(override.select, override.ignore, self.enabled_rules)
         return resolved
 
     def policy_values(self) -> dict[str, str]:
@@ -379,6 +409,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
 
         """
         return {
+            "convention": self.convention,
             "style": self.style.value,
             "exclude_empty_init_method": str(self.exclude_empty_init_method).lower(),
             "exclude_empty_init_module": str(self.exclude_empty_init_module).lower(),
@@ -526,6 +557,25 @@ def _parse_policy(key: str, value: object) -> Policy:
         raise ValueError(msg) from None
 
 
+def _parse_convention(value: object) -> str:
+    """Check that a configured value names a convention.
+
+    Args:
+        value (object): Value read from the config file.
+
+    Returns:
+        str: The convention name.
+
+    Raises:
+        ValueError: If the value is not a convention name.
+
+    """
+    if isinstance(value, str) and value in CONVENTIONS:
+        return value
+    msg = f"'convention': invalid value {value!r}, expected one of {', '.join(CONVENTIONS)}."
+    raise ValueError(msg)
+
+
 def _parse_style(value: object) -> DocstringStyle:
     """Convert a configured value into a DocstringStyle.
 
@@ -611,6 +661,28 @@ def _parse_option(key: str, value: object, location: str = "") -> int | bool:
         return max(INT_OPTIONS[key], value)
     msg = f"{location}'{key}': expected an integer, got {value!r}."
     raise ValueError(msg)
+
+
+def _resolve_rules(select: list[str] | None, ignore: list[str], inherited: list[str]) -> list[str]:
+    """Compute the enabled rules from select, ignore and the inherited set.
+
+    Args:
+        select (list[str] | None): Rules replacing the inherited set, ['ALL'] for every rule, None to keep it.
+        ignore (list[str]): Rules removed afterwards.
+        inherited (list[str]): Rules enabled before select and ignore apply.
+
+    Returns:
+        list[str]: Enabled rules, sorted.
+
+    """
+    if select is None:
+        enabled = set(inherited)
+    elif select == ["ALL"]:
+        enabled = set(RULES_REGISTRY)
+    else:
+        enabled = {rule for rule in select if rule in RULES_REGISTRY}
+    enabled -= set(ignore)
+    return sorted(enabled)
 
 
 def _validate_rules(select: list[str], ignore: list[str], location: str = "") -> None:
@@ -734,6 +806,13 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:
 
     _reject(sorted(set(data) - CONFIG_KEYS), "configuration key")
 
+    # The convention only moves the defaults: every key of the file still applies on top
+    config.convention = _parse_convention(data.get("convention", config.convention))
+    convention = CONVENTIONS[config.convention]
+    for key, value in convention.values.items():
+        setattr(config, key, value)
+    config.enabled_rules = [rule for rule in config.enabled_rules if rule not in convention.disabled_rules]
+
     if "style" in data:
         config.style = _parse_style(data["style"])
 
@@ -756,13 +835,6 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:
     _validate_rules(select, ignore)
 
     if select or ignore:
-        if select == ["ALL"]:
-            enabled: set[str] = set(RULES_REGISTRY)
-        elif select:
-            enabled = {r for r in select if r in RULES_REGISTRY}
-        else:
-            enabled = {r for r in RULES_REGISTRY if r not in OFF_BY_DEFAULT}
-        enabled -= {r for r in ignore if r in RULES_REGISTRY}
-        config.enabled_rules = sorted(enabled)
+        config.enabled_rules = _resolve_rules(select or None, ignore, config.enabled_rules)
 
     return config

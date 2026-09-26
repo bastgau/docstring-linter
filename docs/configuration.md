@@ -47,6 +47,7 @@ See the Available keys section below for the complete list of options.
 
 | Key | Default | Description |
 |-----|---------|-------------|
+| `convention` | `"strict"` | Set of defaults for the policies, options and rules below. See [Conventions](#conventions). |
 | `select` | all rules | [Configurable rules](/docs/configurable-rules.md) to enable. `["ALL"]` enables everything. |
 | `ignore` | `[]` | [Configurable rules](/docs/configurable-rules.md) to disable (applied after `select`). [Always-on rules](/docs/always-on-rules.md) cannot be listed here. |
 | `returns_none` | `"required"` | Policy for `Returns: None` on `-> None` functions. Not applied when `returns_section = "forbidden"`. |
@@ -80,6 +81,33 @@ See the Available keys section below for the complete list of options.
 Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five section policies, `"optional"` means the section is not required, but what the docstring does declare is still checked by the matching rule (`args_match`, `returns_match`, `yields_match`, `raises_match`, `attributes_match`). The two `exclude_empty_init_*` options only lift `docstring_exists`: a docstring that is present is always checked.
 
 `docstring-linter --list-rules` prints the rules, the policies, and the options that change what gets checked, each with the value it has in the current config.
+
+### Conventions
+
+`convention` picks the defaults every other key starts from. Keys written in the config file always win over the convention, `select` and `ignore` included.
+
+| Setting | `"strict"` (default) | `"google"` |
+|---|---|---|
+| `returns_none` | `"required"` | `"optional"` |
+| `init_returns_none` | `"forbidden"` | `"optional"` |
+| `documented_types` | `"required"` | `"optional"` |
+| `raises_section` | `"required"` | `"optional"` |
+| `attributes_section` | `"required"` | `"optional"` |
+| `blank_lines_before_closing_quotes` | `1` | `0` |
+| `imperative_mood` rule | enabled | disabled |
+| `return_type_annotation` rule | enabled | disabled |
+
+`"strict"` enforces a complete house style: every type repeated in the docstring, `Returns: None` on `-> None` functions, every exception and attribute documented, a blank line before the closing quotes.
+
+`"google"` follows the layout of the Google Python Style Guide: types live in the signature, a function returning `None` has no `Returns:` section, the summary may be descriptive (`Fetches rows.`) or imperative, and the closing quotes follow the last line. What the docstring declares is still checked: a documented type must match the signature, a documented exception must be raised.
+
+```toml
+[tool.docstring-linter]
+convention = "google"
+raises_section = "required"   # stricter than the convention on this point
+```
+
+`convention` applies to the whole run and cannot be set in an override.
 
 ### Per-path overrides
 
