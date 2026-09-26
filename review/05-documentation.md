@@ -28,7 +28,7 @@ Points forts : la référence des règles est riche, avec des exemples "Bad / Go
 | DOC-05 | Moyenne | Pas de CHANGELOG, CONTRIBUTING, guide "ajouter une règle" | Reporté |
 | DOC-06 | Basse | Liens absolus `/docs/...` | Reporté |
 | DOC-07 | Moyenne | Limitations connues non documentées | Corrigé |
-| DOC-08 | Moyenne | Sémantique de `exclude` fausse dans la doc | Partiel |
+| DOC-08 | Moyenne | Sémantique de `exclude` fausse dans la doc | Corrigé |
 | DOC-09 | Basse | Descriptions internes incohérentes | Corrigé |
 | DOC-10 | Basse | Documentation non générée depuis les registres | Écarté |
 
@@ -119,7 +119,7 @@ Tant que ces points ne sont pas corrigés, une section "Known limitations" évit
 
 ### DOC-08 - `exclude` [Vérifié] - Moyenne
 
-**Statut : Partiel.** `b6ad01e`. Sémantique unifiée (BUG-07) et documentée dans `docs/style-policies.md` ("Exclusion Patterns"). La section n'a pas été déplacée dans `docs/configuration.md`.
+**Statut : Corrigé.** Sémantique unifiée (BUG-07, `b6ad01e`). `b9dc74a` : section déplacée dans `docs/configuration.md` ("Exclusion patterns", ancre sur la même page), retirée de `style-policies.md` ; précise qu'`exclude` remplace la liste par défaut (`exclude = ["migrations"]` donne `['migrations']` [Vérifié]) avec un exemple qui la conserve.
 
 `docs/configuration.md` et `--help` parlent de "Glob patterns". Les globs récursifs ne fonctionnent pas (BUG-07), et un motif littéral exclut un nom de répertoire à toute profondeur. La section "Default Exclusion Patterns" est placée dans `docs/style-policies.md:565-567`, alors qu'il ne s'agit pas d'une politique de style ; sa place est `docs/configuration.md`.
 
