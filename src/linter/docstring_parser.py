@@ -1,7 +1,6 @@
 """Docstring parser for the linter.
 
-Parse raw docstrings into structured data. Extensible via abstract
-base class for multiple styles (Google, NumPy, Sphinx, PEP 257).
+Parse raw Google style docstrings into structured data.
 """
 
 import re
@@ -356,12 +355,5 @@ def get_parser(style: DocstringStyle) -> BaseDocstringParser:
     Returns:
         BaseDocstringParser: Parser instance for the requested style.
 
-    Raises:
-        ValueError: If the style is not supported.
-
     """
-    parser_cls = PARSERS.get(style)
-    if parser_cls is None:
-        msg = f"Unsupported docstring style: {style.value}"
-        raise ValueError(msg)
-    return parser_cls()
+    return PARSERS[style]()

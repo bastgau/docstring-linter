@@ -111,8 +111,14 @@ def test_parse_style_google() -> None:
 
 def test_parse_style_unknown() -> None:
     """Style = 'unknown': raises ValueError listing the accepted styles."""
-    with pytest.raises(ValueError, match="'style': invalid value 'unknown', expected one of google, numpy, sphinx, pep257"):
+    with pytest.raises(ValueError, match=r"'style': invalid value 'unknown', expected one of google\."):
         _parse_toml_config({"style": "unknown"})
+
+
+def test_parse_style_without_parser() -> None:
+    """Style = 'numpy': rejected at load time, no parser implements it."""
+    with pytest.raises(ValueError, match="'style': invalid value 'numpy'"):
+        _parse_toml_config({"style": "numpy"})
 
 
 # ---------------------------------------------------------------------------
@@ -402,21 +408,24 @@ def test_for_path_select_replaces_inherited_rules() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_load_config_no_file_returns_default(tmp_path: Path) -> None:
-    """Explicit path that does not exist: returns default LinterConfig."""
-    config, config_file = load_config(str(tmp_path / "nonexistent.toml"))
-    assert config.style == DocstringStyle.GOOGLE
-    assert config.enabled_rules == LinterConfig().enabled_rules
-    assert config_file is None
+def test_load_config_missing_explicit_file(tmp_path: Path) -> None:
+    """Explicit path that does not exist: raises ValueError naming the path."""
+    with pytest.raises(ValueError, match=r"config file not found: .*nonexistent\.toml"):
+        load_config(str(tmp_path / "nonexistent.toml"))
 
 
-def test_load_config_toml_without_section_returns_default(tmp_path: Path) -> None:
-    """pyproject.toml with no [tool.docstring-linter] section: returns default config."""
+def test_load_config_explicit_directory(tmp_path: Path) -> None:
+    """Explicit path that is a directory: raises ValueError."""
+    with pytest.raises(ValueError, match="config file not found"):
+        load_config(str(tmp_path))
+
+
+def test_load_config_toml_without_section(tmp_path: Path) -> None:
+    """Explicit pyproject.toml with no [tool.docstring-linter] section: raises ValueError."""
     f = tmp_path / "pyproject.toml"
     f.write_text("[tool.ruff]\nline-length = 100\n", encoding="utf-8")
-    config, config_file = load_config(str(f))
-    assert config.style == DocstringStyle.GOOGLE
-    assert config_file is None
+    with pytest.raises(ValueError, match=r"no \[tool.docstring-linter\] section"):
+        load_config(str(f))
 
 
 def test_load_config_auto_discover(tmp_path: Path) -> None:

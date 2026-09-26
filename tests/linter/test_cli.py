@@ -199,11 +199,55 @@ def test_run_invalid_file_returns_one(tmp_path: Path) -> None:
     assert run([str(f)], LinterConfig()) == 1
 
 
-def test_run_syntax_error_returns_zero(tmp_path: Path) -> None:
-    """File with SyntaxError: error is caught, run returns 0 (no lint errors)."""
+def test_run_syntax_error_returns_two(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """File with SyntaxError: reported on stderr, run returns 2."""
     f = tmp_path / "bad.py"
     f.write_text(_SYNTAX_ERROR_SOURCE, encoding="utf-8")
-    assert run([str(f)], LinterConfig()) == 0
+    assert run([str(f)], LinterConfig()) == 2
+    captured = capsys.readouterr()
+    assert "Syntax error in" in captured.err
+    assert "Syntax error in" not in captured.out
+
+
+def test_run_syntax_error_keeps_json_valid(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """File with SyntaxError under --format json: stdout stays valid JSON, run returns 2."""
+    f = tmp_path / "bad.py"
+    f.write_text(_SYNTAX_ERROR_SOURCE, encoding="utf-8")
+    config = LinterConfig()
+    config.output_format = "json"
+    assert run([str(f)], config) == 2
+    report = json.loads(capsys.readouterr().out)
+    assert report["summary"]["files_checked"] == 1
+
+
+def test_run_undecodable_file_returns_two(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """File that is not valid UTF-8: reported as unreadable on stderr, run returns 2."""
+    f = tmp_path / "latin.py"
+    f.write_bytes(b"\xff\xfe bad")
+    assert run([str(f)], LinterConfig()) == 2
+    assert "Cannot read" in capsys.readouterr().err
+
+
+def test_run_failure_wins_over_lint_errors(tmp_path: Path) -> None:
+    """One unparsable file and one file with lint errors: run returns 2."""
+    (tmp_path / "bad.py").write_text(_SYNTAX_ERROR_SOURCE, encoding="utf-8")
+    (tmp_path / "errors.py").write_text('"""Module."""\n\ndef foo() -> int:\n    pass\n', encoding="utf-8")
+    assert run([str(tmp_path)], LinterConfig()) == 2
+
+
+def test_run_missing_path_returns_two(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Path that does not exist: reported on stderr, run returns 2 without linting."""
+    assert run([str(tmp_path / "missing")], LinterConfig()) == 2
+    assert "Path not found" in capsys.readouterr().err
+
+
+def test_run_parallel_workers(tmp_path: Path) -> None:
+    """Two workers on two files: errors from every file are collected."""
+    (tmp_path / "valid.py").write_text(_VALID_SOURCE, encoding="utf-8")
+    (tmp_path / "errors.py").write_text('"""Module."""\n\ndef foo() -> int:\n    pass\n', encoding="utf-8")
+    config = LinterConfig()
+    config.workers = 2
+    assert run([str(tmp_path)], config) == 1
 
 
 def test_run_with_json_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -245,3 +289,14 @@ def test_main_invalid_config_value(tmp_path: Path, capsys: pytest.CaptureFixture
 
     assert exc.value.code == 2
     assert "Configuration error" in capsys.readouterr().err
+
+
+def test_main_missing_config_file(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """--config pointing to a missing file: prints a configuration error and exits with 2."""
+    monkeypatch.setattr(sys, "argv", ["docstring-linter", "--config", str(tmp_path / "missing.toml"), str(tmp_path)])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 2
+    assert "config file not found" in capsys.readouterr().err

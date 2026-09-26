@@ -64,6 +64,14 @@ docstring-linter src/ && echo "OK" || echo "FAIL"
 
 Command-line options always override configuration file values.
 
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | No error found. |
+| `1` | Lint errors found. |
+| `2` | Invalid configuration, missing path, or a file that could not be read or parsed. Details are printed on stderr. |
+
 ## Output formats
 
 `traceback` is the default. It prints one location header per entity, in the same shape as a Python traceback, which editors turn into a clickable link:

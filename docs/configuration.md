@@ -4,7 +4,7 @@
 
 Configuration is loaded in this order (first match wins):
 
-1. Explicit `--config path/to/file.toml`
+1. Explicit `--config path/to/file.toml`. A missing file, or a `pyproject.toml` without a `[tool.docstring-linter]` section, is a configuration error.
 2. Auto-discovery. Starting from the current directory and walking upward one directory at a time, `pyproject.toml` (with a `[tool.docstring-linter]` section) is checked before `.docstring-linter.toml` in each directory. The first match stops the search.
 3. Built-in defaults
 

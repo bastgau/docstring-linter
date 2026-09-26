@@ -5,9 +5,10 @@ directory scanning, config loading, and output options.
 """
 
 import argparse
+import itertools
 import os
 import sys
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from linter.ast_parser import parse_file
@@ -124,23 +125,23 @@ def merge_cli_into_config(config: LinterConfig, args: argparse.Namespace) -> Lin
     return config
 
 
-def _lint_file_safe(filepath: str, config: LinterConfig) -> tuple[str, list[LintError], str | None]:
-    """Lint a file and catch errors for safe parallel execution.
+def _lint_file_safe(filepath: str, config: LinterConfig) -> tuple[list[LintError], str | None]:
+    """Lint a file, turning an unreadable or unparsable file into a failure message.
 
     Args:
         filepath (str): Path to the Python file.
         config (LinterConfig): Linter configuration.
 
     Returns:
-        tuple[str, list[LintError], str | None]: Filepath, errors, and optional error message.
+        tuple[list[LintError], str | None]: Errors, and the failure message if the file could not be analysed.
 
     """
     try:
-        return filepath, lint_file(filepath, config), None
+        return lint_file(filepath, config), None
     except SyntaxError as e:
-        return filepath, [], f"Syntax error in {filepath}: {e}"
-    except ValueError as e:
-        return filepath, [], f"Configuration error for {filepath}: {e}"
+        return [], f"Syntax error in {filepath}: {e}"
+    except (UnicodeDecodeError, OSError) as e:
+        return [], f"Cannot read {filepath}: {e}"
 
 
 def _resolve_workers(workers: int) -> int:
@@ -166,31 +167,33 @@ def run(paths: list[str], config: LinterConfig) -> int:
         config (LinterConfig): Linter configuration.
 
     Returns:
-        int: Exit code -- 0 if no errors, 1 otherwise.
+        int: Exit code -- 0 if no errors, 1 on lint errors, 2 if a path is missing or a file could not be analysed.
 
     """
+    missing = [path for path in paths if not Path(path).exists()]
+    if missing:
+        for path in missing:
+            print(f"Path not found: {path}", file=sys.stderr)
+        return 2
+
     files = collect_python_files(paths, config.exclude_patterns)
     if not files:
         print("No Python files found.")
         return 0
 
-    all_errors: list[LintError] = []
     workers = _resolve_workers(config.workers)
 
     if workers <= 1 or len(files) == 1:
-        for filepath in files:
-            _, errors, err_msg = _lint_file_safe(filepath, config)
-            if err_msg:
-                print(err_msg)
-            all_errors.extend(errors)
+        results = [_lint_file_safe(filepath, config) for filepath in files]
     else:
         with ProcessPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(_lint_file_safe, fp, config): fp for fp in files}
-            for future in as_completed(futures):
-                _, errors, err_msg = future.result()
-                if err_msg:
-                    print(err_msg)
-                all_errors.extend(errors)
+            results = list(pool.map(_lint_file_safe, files, itertools.repeat(config)))
+
+    failures = [message for _, message in results if message]
+    for message in failures:
+        print(message, file=sys.stderr)
+
+    all_errors = [error for errors, _ in results for error in errors]
 
     if config.output_format == "json":
         report_json(all_errors, len(files))
@@ -201,6 +204,8 @@ def run(paths: list[str], config: LinterConfig) -> int:
     else:
         report_traceback(all_errors, len(files))
 
+    if failures:
+        return 2
     return 1 if all_errors else 0
 
 

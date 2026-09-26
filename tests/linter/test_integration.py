@@ -180,7 +180,7 @@ def test_cli_invalid_file_exit_one(tmp_path: Path) -> None:
 
 
 def test_cli_syntax_error_no_crash(tmp_path: Path) -> None:
-    """CLI on file with SyntaxError: does not crash, prints error message, exits 0."""
+    """CLI on file with SyntaxError: does not crash, prints error message on stderr, exits 2."""
     f = tmp_path / "bad.py"
     f.write_text(_SYNTAX_ERROR_SOURCE, encoding="utf-8")
     result = subprocess.run(  # noqa: S603
@@ -191,8 +191,8 @@ def test_cli_syntax_error_no_crash(tmp_path: Path) -> None:
         env=_ENV,
         cwd=tmp_path,
     )
-    assert result.returncode == 0
-    assert "Syntax error" in result.stdout or "Syntax error" in result.stderr
+    assert result.returncode == 2
+    assert "Syntax error" in result.stderr
 
 
 # ---------------------------------------------------------------------------

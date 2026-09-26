@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 369 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 379 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -48,7 +48,6 @@ This file lists the 369 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `test_docstring_parser.py` | `test_get_parser_google` | get_parser(GOOGLE): returns a GoogleStyleParser instance. |
-| `test_docstring_parser.py` | `test_get_parser_unsupported` | get_parser with unsupported style: raises ValueError with style name. |
 
 ---
 
@@ -481,7 +480,12 @@ This file lists the 369 tests of the `docstring-linter` project. Each entry show
 | `test_cli.py` | `test_run_no_files_returns_zero` | No .py files found: run returns 0. |
 | `test_cli.py` | `test_run_valid_file_returns_zero` | Valid file with no errors: run returns 0. |
 | `test_cli.py` | `test_run_invalid_file_returns_one` | File with lint errors: run returns 1. |
-| `test_cli.py` | `test_run_syntax_error_returns_zero` | File with SyntaxError: error is caught, run returns 0 (no lint errors). |
+| `test_cli.py` | `test_run_syntax_error_returns_two` | File with SyntaxError: reported on stderr, run returns 2. |
+| `test_cli.py` | `test_run_syntax_error_keeps_json_valid` | File with SyntaxError under --format json: stdout stays valid JSON, run returns 2. |
+| `test_cli.py` | `test_run_undecodable_file_returns_two` | File that is not valid UTF-8: reported as unreadable on stderr, run returns 2. |
+| `test_cli.py` | `test_run_failure_wins_over_lint_errors` | One unparsable file and one file with lint errors: run returns 2. |
+| `test_cli.py` | `test_run_missing_path_returns_two` | Path that does not exist: reported on stderr, run returns 2 without linting. |
+| `test_cli.py` | `test_run_parallel_workers` | Two workers on two files: errors from every file are collected. |
 | `test_cli.py` | `test_run_with_json_output` | Run with output_format=json: JSON report is printed to stdout. |
 
 ### main / --list-rules
@@ -489,6 +493,7 @@ This file lists the 369 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `test_cli.py` | `test_main_invalid_config_value` | Invalid value in the config file: prints a configuration error and exits with 2. |
+| `test_cli.py` | `test_main_missing_config_file` | --config pointing to a missing file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_list_rules_output` | --list-rules: configurable rules appear grouped by category, always-on rules do not. |
 
 ---
@@ -583,6 +588,7 @@ This file lists the 369 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_parse_no_select_no_ignore` | Empty data: enabled_rules matches default config. |
 | `test_config.py` | `test_parse_style_google` | Style = 'google': config.style is DocstringStyle.GOOGLE. |
 | `test_config.py` | `test_parse_style_unknown` | Style = 'unknown': raises ValueError listing the accepted styles. |
+| `test_config.py` | `test_parse_style_without_parser` | Style = 'numpy': rejected at load time, no parser implements it. |
 | `test_config.py` | `test_parse_exclude_empty_init_method_false` | exclude_empty_init_method = false: config.exclude_empty_init_method is False. |
 | `test_config.py` | `test_parse_exclude_empty_init_module_false` | exclude_empty_init_module = false: config.exclude_empty_init_module is False. |
 | `test_config.py` | `test_parse_workers` | Workers = 4: config.workers is 4. |
@@ -635,9 +641,10 @@ This file lists the 369 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `test_config.py` | `test_load_config_toml_without_section_returns_default` | pyproject.toml with no [tool.docstring-linter] section: returns default config. |
+| `test_config.py` | `test_load_config_toml_without_section` | Explicit pyproject.toml with no [tool.docstring-linter] section: raises ValueError. |
 | `test_config.py` | `test_load_config_toml_with_section` | pyproject.toml with [tool.docstring-linter] section: config is populated. |
-| `test_config.py` | `test_load_config_no_file_returns_default` | Explicit path that does not exist: returns default LinterConfig. |
+| `test_config.py` | `test_load_config_missing_explicit_file` | Explicit path that does not exist: raises ValueError naming the path. |
+| `test_config.py` | `test_load_config_explicit_directory` | Explicit path that is a directory: raises ValueError. |
 | `test_config.py` | `test_load_config_auto_discover` | No explicit path: load_config walks up directories to find pyproject.toml. |
 | `test_config.py` | `test_load_config_standalone_toml` | .docstring-linter.toml with flat config: parsed directly without [tool.docstring-linter]. |
 | `test_config.py` | `test_load_config_custom_named_toml` | Explicitly passed non-pyproject.toml file: parsed directly regardless of name. |
@@ -673,7 +680,7 @@ This file lists the 369 tests of the `docstring-linter` project. Each entry show
 | `test_integration.py` | `test_collect_python_files_finds_all_py` | Directory with multiple .py files: collect_python_files returns all of them. |
 | `test_integration.py` | `test_collect_python_files_exclude_pattern` | Directory with exclusion pattern: matching files are not collected. |
 | `test_integration.py` | `test_cli_list_rules_exit_zero` | --list-rules: exits with code 0 and prints rule names. |
-| `test_integration.py` | `test_cli_syntax_error_no_crash` | CLI on file with SyntaxError: does not crash, prints error message, exits 0. |
+| `test_integration.py` | `test_cli_syntax_error_no_crash` | CLI on file with SyntaxError: does not crash, prints error message on stderr, exits 2. |
 | `test_integration.py` | `test_cli_json_output_valid_file` | --format json on valid file: JSON report printed to stdout with 0 errors. |
 | `test_integration.py` | `test_cli_json_output_invalid_file` | --format json on file with errors: JSON report on stdout with errors. |
 | `test_integration.py` | `test_cli_github_annotations_valid_file` | --format github-annotations on valid file: no output, exit 0. |

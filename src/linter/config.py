@@ -17,16 +17,10 @@ class DocstringStyle(Enum):
 
     Attributes:
         GOOGLE (str): Google style docstrings.
-        NUMPY (str): NumPy style docstrings.
-        SPHINX (str): Sphinx/RST style docstrings.
-        PEP257 (str): PEP 257 generic style.
 
     """
 
     GOOGLE = "google"
-    NUMPY = "numpy"
-    SPHINX = "sphinx"
-    PEP257 = "pep257"
 
 
 class Policy(Enum):
@@ -391,6 +385,9 @@ def load_config(config_path: str | None = None) -> tuple[LinterConfig, Path | No
     Returns:
         tuple[LinterConfig, Path | None]: Parsed config and the config file path, or None.
 
+    Raises:
+        ValueError: If an explicit pyproject.toml has no [tool.docstring-linter] section.
+
     """
     toml_path = _find_config(config_path)
     if toml_path is None:
@@ -404,7 +401,9 @@ def load_config(config_path: str | None = None) -> tuple[LinterConfig, Path | No
 
     tool_config = data.get("tool", {}).get("docstring-linter", {})
     if not tool_config:
-        return LinterConfig(), None
+        # discovery only returns a pyproject.toml carrying the section, so this is an explicit path
+        msg = f"{toml_path}: no [tool.docstring-linter] section."
+        raise ValueError(msg)
 
     return _parse_toml_config(tool_config), toml_path
 
@@ -421,12 +420,16 @@ def _find_config(explicit_path: str | None = None) -> Path | None:
     Returns:
         Path | None: Path to config file, or None if not found.
 
+    Raises:
+        ValueError: If the explicit path is not an existing file.
+
     """
     if explicit_path:
         path = Path(explicit_path)
-        if path.exists():
-            return path
-        return None
+        if not path.is_file():
+            msg = f"config file not found: {explicit_path}"
+            raise ValueError(msg)
+        return path
 
     current = Path.cwd()
     for directory in [current, *current.parents]:

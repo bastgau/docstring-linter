@@ -1,6 +1,5 @@
 """Tests for docstring_parser module."""
 
-import pytest
 from linter.config import DocstringStyle
 from linter.docstring_parser import GoogleStyleParser, get_parser
 
@@ -240,12 +239,6 @@ def test_get_parser_google() -> None:
     """get_parser(GOOGLE): returns a GoogleStyleParser instance."""
     parser = get_parser(DocstringStyle.GOOGLE)
     assert isinstance(parser, GoogleStyleParser)
-
-
-def test_get_parser_unsupported() -> None:
-    """get_parser with unsupported style: raises ValueError with style name."""
-    with pytest.raises(ValueError, match="numpy"):
-        get_parser(DocstringStyle.NUMPY)
 
 
 # ---------------------------------------------------------------------------
