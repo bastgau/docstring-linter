@@ -142,7 +142,7 @@ RULES_REGISTRY = {
     "blank_lines": "Blank line counts must match blank_lines_before_section and blank_lines_before_closing_quotes",
 }
 
-# Rules disabled by default; users opt in via pyproject.toml or --select
+# Rules disabled by default; users opt in with select in the config file
 OFF_BY_DEFAULT: frozenset[str] = frozenset()
 
 # Rules that report an outright docstring defect; select / ignore do not apply to them
