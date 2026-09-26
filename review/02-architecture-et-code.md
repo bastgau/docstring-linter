@@ -48,7 +48,7 @@ cli.main
 | ARCH-06 | Haute | Always-on sans échappatoire | Reporté |
 | ARCH-07 | Moyenne | Modèle `CodeEntity` trop pauvre | Partiel |
 | ARCH-08 | Haute | `ValueError` comme fourre-tout au niveau fichier | Partiel |
-| ARCH-09 | Basse | Code mort ou trompeur | Partiel |
+| ARCH-09 | Basse | Code mort ou trompeur | Corrigé |
 | ARCH-10 | Moyenne | Tests unitaires qui contournent l'AST | Partiel |
 
 ### ARCH-01 - Extraction AST superficielle [Vérifié] - Moyenne
@@ -234,7 +234,7 @@ Proposition : erreurs de configuration validées une fois dans `main()` ; au niv
 
 ### ARCH-09 - Code mort ou trompeur [Vérifié] - Basse
 
-**Statut : Partiel.** Les constantes `quantity` ont disparu avec la réécriture des règles (`6f95960`). Restent : `OFF_BY_DEFAULT` vide, `ParsedDocstring.examples` jamais lu, `.vulture` avec `YELLOW`/`GREEN` et des numéros de ligne périmés.
+**Statut : Corrigé.** Constantes `quantity` disparues (`6f95960`). `183aa75` : `OFF_BY_DEFAULT` supprimé, `--list-rules` compte et étiquette les règles coupées par la convention active (3 en `google`, 0 en `strict`) [Vérifié] ; `ParsedDocstring.examples` supprimé ; `.vulture` supprimé avec ses 3 références, vulture ne signale rien sans lui [Vérifié].
 
 - `OFF_BY_DEFAULT` est vide ; la mécanique (affichage "disabled by default", filtrages) existe sans cas d'usage.
 - `ParsedDocstring.examples` jamais lu par une règle.
@@ -243,7 +243,7 @@ Proposition : erreurs de configuration validées une fois dans `main()` ; au niv
 
 ### ARCH-10 - Tests [Vérifié] - Moyenne
 
-**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 590 tests, couverture branches 96 %. Tests de cohérence des registres ajoutés (`6bfff7a`, voir ARCH-02). Restent : seuil de couverture à 85, pas de test de corpus.
+**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 589 tests, couverture branches 96 %. Tests de cohérence des registres ajoutés (`6bfff7a`, voir ARCH-02). Restent : seuil de couverture à 85, pas de test de corpus.
 
 État : 372 tests, 1,45 s, 94,39 % de couverture branches, seuil CI 85 %.
 
