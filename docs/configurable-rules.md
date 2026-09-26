@@ -229,7 +229,7 @@ def process(x: int) -> int:
     """
 ```
 
-Recognized sections: `Args`, `Returns`, `Yields`, `Raises`, `Attributes`, `Example`, `Examples`, `Note`, `Notes`, `Todo`.
+Every recognized section is covered, Napoleon ones included: see the list under [unknown_section](#unknown_section).
 
 ---
 
@@ -259,7 +259,7 @@ Turn it off with `ignore = ["section_alias"]` to accept `Arguments:`, `Parameter
 
 Sections must appear in the expected order.
 
-Expected order: `Attributes` -> `Args` -> `Keyword Args` -> `Other Parameters` -> `Returns` -> `Yields` -> `Raises` -> `Example`/`Examples` -> `Note`/`Notes` -> `Todo`
+Expected order: `Attributes` -> `Args` -> `Keyword Args` -> `Other Parameters` -> `Returns` -> `Yields` -> `Raises` -> `Examples` -> `Note`/`Notes` -> `Todo`
 
 An alias takes the place of its canonical section (`Parameters` sits where `Args` does). Free-text sections such as `Warning` or `See Also` may appear anywhere.
 
@@ -303,8 +303,12 @@ Recognized sections, the Napoleon ones included:
 | Kind | Sections |
 |---|---|
 | Checked content | `Args`, `Keyword Args`, `Other Parameters`, `Returns`, `Yields`, `Raises`, `Attributes` |
-| Free text | `Example`, `Examples`, `Note`, `Notes`, `Todo`, `Attention`, `Caution`, `Danger`, `Error`, `Hint`, `Important`, `Methods`, `Receive`, `Receives`, `References`, `See Also`, `Tip`, `Warn`, `Warning`, `Warnings`, `Warns` |
-| Aliases, read as their canonical section and reported by `section_alias` | `Arguments`, `Parameters` (`Args`), `Keyword Arguments` (`Keyword Args`), `Return` (`Returns`), `Yield` (`Yields`), `Raise`, `Exceptions` (`Raises`) |
+| Free text | `Examples`, `Note`, `Notes`, `Todo`, `Attention`, `Caution`, `Danger`, `Error`, `Hint`, `Important`, `Methods`, `Receive`, `Receives`, `References`, `See Also`, `Tip`, `Warn`, `Warning`, `Warnings`, `Warns` |
+| Aliases, read as their canonical section and reported by `section_alias` | `Example` (`Examples`), `Arguments`, `Parameters` (`Args`), `Keyword Arguments` (`Keyword Args`), `Return` (`Returns`), `Yield` (`Yields`), `Raise` (`Raises`) |
+
+`Note` and `Notes` are two distinct sections: Napoleon renders `Note` as an admonition box and `Notes` as a plain section.
+
+In Napoleon, `Warn` and `Warns` list the warnings a function issues, the way `Raises` lists exceptions. They are accepted here, but their entries are not checked yet.
 
 `Other Parameters` entries are checked like `Args` entries. `Keyword Args` documents the keys of `**kwargs`: its presence counts as documenting the `**kwargs` parameter, and its entries are not compared with the signature, only their description is required.
 

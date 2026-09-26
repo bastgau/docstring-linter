@@ -101,9 +101,8 @@ class GoogleStyleParser(BaseDocstringParser):
         result.raises = self._parse_raises(sections.get("Raises", ""))
         result.attributes = self._parse_attributes(sections.get("Attributes", ""))
 
-        for name in ("Example", "Examples"):
-            if name in sections:
-                result.examples = [sections[name]]
+        if "Examples" in sections:
+            result.examples = [sections["Examples"]]
 
         result.unknown_sections = [name for name in sections.get("_unknown_sections", "").split(",") if name]
 

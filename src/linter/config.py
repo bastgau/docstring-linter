@@ -50,7 +50,7 @@ POLICIES_REGISTRY = {
     "raises_section": "Raises section documenting every exception raised",
     "attributes_section": "Attributes section documenting every class attribute",
     "description_section": "Description paragraph below the summary",
-    "examples_section": "Example section",
+    "examples_section": "Examples section",
     "notes_section": "Note section",
     "todo_section": "Todo section",
     "documented_types": "Type in Args and Attributes entries and on the Returns and Yields lines",
@@ -126,7 +126,7 @@ RULES_REGISTRY = {
     "summary_too_long": "Summary line must not exceed the configured maximum length",
     "section_capitalization": "Section names must be capitalized (Args, not args)",
     "section_alias": "Section names must use the canonical spelling (Args, not Parameters)",
-    "section_order": "Sections must follow order: Attributes, Args, Keyword Args, Other Parameters, Returns, Yields, Raises, Example(s), Note(s), Todo",
+    "section_order": "Sections must follow order: Attributes, Args, Keyword Args, Other Parameters, Returns, Yields, Raises, Examples, Note(s), Todo",
     "unknown_section": "Section name is not recognized (e.g. 'Arguments:' instead of 'Args:')",
     "empty_section": "Section must not be empty",
     "imperative_mood": "Summary should start with imperative verb (e.g. 'Process' not 'Processes')",
@@ -338,7 +338,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         raises_section (Policy): Policy for the presence of the Raises section.
         attributes_section (Policy): Policy for the presence of the Attributes section.
         description_section (Policy): Policy for the presence of the description paragraph.
-        examples_section (Policy): Policy for the presence of the Example section.
+        examples_section (Policy): Policy for the presence of the Examples section.
         notes_section (Policy): Policy for the presence of the Note section.
         todo_section (Policy): Policy for the presence of the Todo section.
         documented_types (Policy): Policy for the type in Args, Attributes, Returns and Yields.

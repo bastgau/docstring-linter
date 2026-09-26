@@ -389,7 +389,7 @@ def process(x: int, y: int) -> int:
     """
 ```
 
-`Example`/`Examples` sections are exempt (code examples often contain blank lines).
+`Examples` sections (and their `Example` alias) are exempt (code examples often contain blank lines).
 
 ### Syntax / Structure
 

@@ -93,7 +93,7 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
 
     errors.extend(check_description_section(entity, parsed_doc, config.description_section))
 
-    errors.extend(check_named_section(entity, ("Example", "Examples"), config.examples_section, "examples_section"))
+    errors.extend(check_named_section(entity, ("Examples", "Example"), config.examples_section, "examples_section"))
     errors.extend(check_named_section(entity, ("Note", "Notes"), config.notes_section, "notes_section"))
     errors.extend(check_named_section(entity, ("Todo",), config.todo_section, "todo_section"))
 

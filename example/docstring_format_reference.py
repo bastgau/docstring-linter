@@ -47,7 +47,7 @@ class MyClass:
         Raises:
             ValueError: When this exception is raised.
 
-        Example:
+        Examples:
             >>> obj = MyClass("test")
             >>> obj.process(42)
             {'result': 42}

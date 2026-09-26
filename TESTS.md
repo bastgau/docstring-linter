@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 515 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 518 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -42,6 +42,8 @@ This file lists the 515 tests of the `docstring-linter` project. Each entry show
 | `test_docstring_parser.py` | `test_parse_args_and_other_parameters_joined` | Args and Other Parameters sections: entries of both end up in args. |
 | `test_docstring_parser.py` | `test_parse_keyword_args` | Keyword Arguments: entries parsed into keyword_args, not into args. |
 | `test_docstring_parser.py` | `test_parse_free_text_sections` | Warning and See Also: known sections, neither unknown nor merged into the description. |
+| `test_docstring_parser.py` | `test_parse_note_and_notes_distinct` | Note and Notes: two known sections, neither is an alias nor unknown. |
+| `test_docstring_parser.py` | `test_parse_exceptions_is_unknown` | Exceptions: not a Napoleon section, reported as unknown and not read as Raises. |
 | `test_docstring_parser.py` | `test_parse_lowercase_section_not_recognized` | Lowercase section name (args: instead of Args:): not recognized, no args parsed. |
 
 ### style
@@ -367,7 +369,7 @@ This file lists the 515 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_structure.py` | `test_section_alias_reported` | Napoleon alias used as a header: returns section_alias error naming the canonical spelling (4 cases). |
+| `rules/test_rules_structure.py` | `test_section_alias_reported` | Napoleon alias used as a header: returns section_alias error naming the canonical spelling (5 cases). |
 | `rules/test_rules_structure.py` | `test_section_alias_disabled` | Alias used, rule off: no section_alias error. |
 | `rules/test_rules_structure.py` | `test_section_capitalization_wrong` | Lowercase section header 'args:': returns section_capitalization error. |
 
@@ -497,7 +499,7 @@ This file lists the 515 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `rules/test_rules_structure.py` | `test_examples_section_required_missing` | Policy required, no Example section: returns examples_section error. |
+| `rules/test_rules_structure.py` | `test_examples_section_required_missing` | Policy required, no Examples section: returns examples_section error. |
 | `rules/test_rules_structure.py` | `test_examples_section_required_present_plural` | Policy required, an Examples section: the plural spelling is accepted. |
 | `rules/test_rules_structure.py` | `test_examples_section_forbidden_present` | Policy forbidden, an Example section: returns examples_section error. |
 | `rules/test_rules_structure.py` | `test_notes_section_forbidden_present` | Policy forbidden, a Note section: returns notes_section error. |

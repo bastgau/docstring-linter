@@ -60,7 +60,7 @@ See the Available keys section below for the complete list of options.
 | `raises_section` | `"required"` | Policy for documenting every exception raised. |
 | `attributes_section` | `"required"` | Policy for documenting every class attribute. |
 | `description_section` | `"optional"` | Policy for the description paragraph below the summary. |
-| `examples_section` | `"optional"` | Policy for the `Example:` section. |
+| `examples_section` | `"optional"` | Policy for the `Examples:` section (`Example:` accepted as an alias). |
 | `notes_section` | `"optional"` | Policy for the `Note:` section. |
 | `todo_section` | `"optional"` | Policy for the `Todo:` section. |
 | `documented_types` | `"required"` | Policy for the type in `Args:` and `Attributes:` entries and on the `Returns:` and `Yields:` lines. |

@@ -15,25 +15,26 @@ SECTION_ORDER = [
     "Returns",
     "Yields",
     "Raises",
-    "Example",
     "Examples",
     "Note",
     "Notes",
     "Todo",
 ]
 
-# Napoleon spellings read as a canonical section and reported by section_alias
+# Napoleon spellings read as a canonical section and reported by section_alias.
+# Note and Notes stay distinct: Napoleon renders the first as an admonition.
 SECTION_ALIASES = {
+    "Example": "Examples",
     "Arguments": "Args",
     "Parameters": "Args",
     "Keyword Arguments": "Keyword Args",
     "Return": "Returns",
     "Yield": "Yields",
     "Raise": "Raises",
-    "Exceptions": "Raises",
 }
 
-# Free-text sections: accepted, content not checked, outside section_order
+# Free-text sections: accepted, content not checked, outside section_order.
+# Napoleon reads Warn and Warns like Raises, for warnings: their entries are not checked yet.
 FREE_TEXT_SECTIONS = frozenset(
     {
         "Attention",

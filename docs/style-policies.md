@@ -32,7 +32,7 @@ Four more sections carry no content rule, only a presence policy. They default t
 | Policy | Default | Applies to |
 |---|---|---|
 | `description_section` | `"optional"` | Description paragraph below the summary |
-| `examples_section` | `"optional"` | `Example:` or `Examples:` |
+| `examples_section` | `"optional"` | `Examples:` (`Example:` accepted as an alias) |
 | `notes_section` | `"optional"` | `Note:` or `Notes:` |
 | `todo_section` | `"optional"` | `Todo:` |
 
@@ -387,7 +387,7 @@ Setting it to `"required"` makes every one-liner docstring invalid, including on
 
 ### examples_section, notes_section, todo_section
 
-Same three values, applied to the corresponding section header. Both spellings are accepted where they exist: `Example:` and `Examples:`, `Note:` and `Notes:`.
+Same three values, applied to the corresponding section header. `Example:` counts as `Examples:`, and is reported by `section_alias`. `Note:` and `Notes:` are two distinct sections, either one satisfies `notes_section`.
 
 ```toml
 [tool.docstring-linter]

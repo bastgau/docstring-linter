@@ -92,7 +92,7 @@ def test_section_capitalization_multi_word() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(("alias", "canonical"), [("Parameters", "Args"), ("Arguments", "Args"), ("Return", "Returns"), ("Keyword Arguments", "Keyword Args")])
+@pytest.mark.parametrize(("alias", "canonical"), [("Parameters", "Args"), ("Arguments", "Args"), ("Return", "Returns"), ("Keyword Arguments", "Keyword Args"), ("Example", "Examples")])
 def test_section_alias_reported(alias: str, canonical: str) -> None:
     """Napoleon alias used as a header: returns section_alias error naming the canonical spelling."""
     raw = f"Summary.\n\n{alias}:\n    x (int): Value.\n"
@@ -522,11 +522,11 @@ def _with_section(header: str) -> str:
 
 
 def test_examples_section_required_missing() -> None:
-    """Policy required, no Example section: returns examples_section error."""
+    """Policy required, no Examples section: returns examples_section error."""
     raw = "Summary.\n\n"
     entity = _func(docstring=raw, raw_docstring=raw)
     errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _policy_only("examples_section", Policy.REQUIRED))
-    assert any(e.rule == "examples_section" and "Missing 'Example:'" in e.message for e in errors)
+    assert any(e.rule == "examples_section" and "Missing 'Examples:'" in e.message for e in errors)
 
 
 def test_examples_section_required_present_plural() -> None:

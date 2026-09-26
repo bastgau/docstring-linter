@@ -166,7 +166,7 @@ class ParsedDocstring:  # pylint: disable=too-many-instance-attributes
         yields (DocstringReturn | None): Parsed Yields section.
         raises (list[DocstringRaise]): Parsed Raises section.
         attributes (list[DocstringAttribute]): Parsed Attributes section.
-        examples (list[str]): Parsed Example section content.
+        examples (list[str]): Parsed Examples section content.
         unknown_sections (list[str]): Section names not recognized by the parser.
 
     """

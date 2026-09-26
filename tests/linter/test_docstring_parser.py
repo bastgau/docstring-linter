@@ -322,3 +322,16 @@ def test_parse_free_text_sections() -> None:
     result = PARSER.parse("Do something.\n\nMore details.\n\nWarning:\n    Experimental.\n\nSee Also:\n    other().\n")
     assert not result.unknown_sections
     assert result.description == "More details."
+
+
+def test_parse_note_and_notes_distinct() -> None:
+    """Note and Notes: two known sections, neither is an alias nor unknown."""
+    result = PARSER.parse("Do something.\n\nNote:\n    One.\n\nNotes:\n    Two.\n")
+    assert not result.unknown_sections
+
+
+def test_parse_exceptions_is_unknown() -> None:
+    """Exceptions: not a Napoleon section, reported as unknown and not read as Raises."""
+    result = PARSER.parse("Do something.\n\nExceptions:\n    ValueError: Bad.\n")
+    assert result.unknown_sections == ["Exceptions"]
+    assert not result.raises
