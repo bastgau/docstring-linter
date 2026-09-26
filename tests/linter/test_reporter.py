@@ -260,12 +260,16 @@ def test_report_rules_disabled_rule_shows_cross(capsys: pytest.CaptureFixture[st
     assert "✘" in matching[0]
 
 
-def test_report_rules_always_on_hidden(capsys: pytest.CaptureFixture[str]) -> None:
-    """Rule in always_on is not listed and is not counted in the header."""
+def test_report_rules_always_on_listed_separately(capsys: pytest.CaptureFixture[str]) -> None:
+    """Rule in always_on: listed after the categories, not counted as configurable."""
     report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, _ALWAYS_ON, frozenset())
-    out = capsys.readouterr().out
-    assert "rule_c" not in out
-    assert "2 configurable rules" in out
+    lines = capsys.readouterr().out.splitlines()
+    assert "2 configurable rules" in lines[1]
+    header = next(i for i, line in enumerate(lines) if "Always on" in line)
+    assert "cannot be disabled" in lines[header]
+    assert "rule_c" in lines[header + 1]
+    assert "✔" in lines[header + 1]
+    assert all("rule_c" not in line for line in lines[:header])
 
 
 def test_report_rules_off_by_default_label(capsys: pytest.CaptureFixture[str]) -> None:

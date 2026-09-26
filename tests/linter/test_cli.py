@@ -281,7 +281,7 @@ def test_run_with_json_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]
 
 
 def test_list_rules_output(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
-    """--list-rules: configurable rules appear grouped by category, always-on rules do not."""
+    """--list-rules: every rule appears, always-on rules in their own section after the categories."""
     monkeypatch.setattr(sys, "argv", ["docstring-linter", "--list-rules"])
     with pytest.raises(SystemExit) as exc:
         main()
@@ -290,11 +290,13 @@ def test_list_rules_output(capsys: pytest.CaptureFixture[str], monkeypatch: pyte
     out = capsys.readouterr().out
     for category in RULES_CATEGORIES:
         assert category in out
+    configurable, always_on = out.split("Always on", 1)
     for rule in RULES_REGISTRY:
         if rule in ALWAYS_ON:
-            assert f"{rule} " not in out
+            assert f"{rule} " in always_on
+            assert f"{rule} " not in configurable
         else:
-            assert rule in out
+            assert f"{rule} " in configurable
 
 
 def test_main_invalid_config_value(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:

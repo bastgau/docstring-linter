@@ -602,7 +602,7 @@ This file lists the 565 tests of the `docstring-linter` project. Each entry show
 | `test_cli.py` | `test_main_invalid_config_value` | Invalid value in the config file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_missing_config_file` | --config pointing to a missing file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_statistics_rejected_with_json` | --statistics with a machine-readable format: error on stderr and exit 2. |
-| `test_cli.py` | `test_list_rules_output` | --list-rules: configurable rules appear grouped by category, always-on rules do not. |
+| `test_cli.py` | `test_list_rules_output` | --list-rules: every rule appears, always-on rules in their own section after the categories. |
 
 ---
 
@@ -665,7 +665,7 @@ This file lists the 565 tests of the `docstring-linter` project. Each entry show
 | `test_reporter.py` | `test_report_rules_enabled_rule_shows_checkmark` | Enabled rule shows checkmark marker. |
 | `test_reporter.py` | `test_report_rules_disabled_rule_shows_cross` | Disabled rule shows cross marker. |
 | `test_reporter.py` | `test_report_rules_off_by_default_label` | Rule in off_by_default shows '(disabled by default)' label. |
-| `test_reporter.py` | `test_report_rules_always_on_hidden` | Rule in always_on is not listed and is not counted in the header. |
+| `test_reporter.py` | `test_report_rules_always_on_listed_separately` | Rule in always_on: listed after the categories, not counted as configurable. |
 | `test_reporter.py` | `test_report_rules_category_hidden_when_all_rules_always_on` | Category whose rules are all always on: the category is not printed. |
 | `test_reporter.py` | `test_report_policies_all_policies_present` | All policy identifiers and their values appear in output. |
 | `test_reporter.py` | `test_report_policies_optional_value` | Policy set to optional shows its value on the matching line. |

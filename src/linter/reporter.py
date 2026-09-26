@@ -328,17 +328,36 @@ def report_overrides(overrides: list[ConfigOverride], base: dict[str, str]) -> N
         print()
 
 
+def _print_always_on(rules: list[str], registry: dict[str, str]) -> None:
+    """Print the rules that cannot be disabled, after the configurable ones.
+
+    Args:
+        rules (list[str]): Always-on rule identifiers, in category order.
+        registry (dict[str, str]): Rule identifier to description.
+
+    Returns:
+        None
+
+    """
+    if not rules:
+        return
+    print(f"  {Colors.BOLD}{Colors.CYAN}Always on{Colors.RESET}  {Colors.DIM}cannot be disabled{Colors.RESET}")
+    for rule in rules:
+        print(f"    {Colors.GREEN}✔{Colors.RESET} {Colors.BOLD}{rule:<35}{Colors.RESET} {Colors.DIM}{registry[rule]}{Colors.RESET}")
+    print()
+
+
 def report_rules(categories: dict[str, list[str]], registry: dict[str, str], off_by_default: frozenset[str], always_on: frozenset[str], enabled: frozenset[str]) -> None:
     """Print the configurable rules grouped by category, with their enabled status.
 
-    Rules that cannot be disabled are omitted: nothing can be done about them
-    from the configuration file.
+    Rules that cannot be disabled follow in a section of their own, since they
+    show up in the reports as well.
 
     Args:
         categories (dict[str, list[str]]): Category name to rule identifiers.
         registry (dict[str, str]): Rule identifier to description.
         off_by_default (frozenset[str]): Rules disabled by default.
-        always_on (frozenset[str]): Rules that cannot be disabled, hidden from the listing.
+        always_on (frozenset[str]): Rules that cannot be disabled, listed after the categories.
         enabled (frozenset[str]): Rules enabled in the current config.
 
     Returns:
@@ -360,3 +379,5 @@ def report_rules(categories: dict[str, list[str]], registry: dict[str, str], off
             name_style = Colors.BOLD if is_enabled else Colors.DIM
             print(f"    {status} {name_style}{rule:<35}{Colors.RESET} {Colors.DIM}{registry[rule]}{Colors.RESET}{opt_in}")
         print()
+
+    _print_always_on([rule for rules in categories.values() for rule in rules if rule in always_on], registry)

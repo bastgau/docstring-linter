@@ -2,7 +2,7 @@
 
 ## Always-On Rule Reference
 
-These rules are always enabled, cannot be added to `ignore` and are therefore not listed by `docstring-linter --list-rules`.
+These rules are always enabled and cannot be added to `ignore`. `docstring-linter --list-rules` shows them in an "Always on" section, after the configurable rules.
 
 ### Content
 
