@@ -5,9 +5,7 @@ Parse raw Google style docstrings into structured data.
 
 import ast
 import re
-from abc import ABC, abstractmethod
 
-from linter.config import DocstringStyle
 from linter.models import (
     DocstringArg,
     DocstringAttribute,
@@ -18,33 +16,7 @@ from linter.models import (
 from linter.sections import canonical_section, section_header
 
 
-class BaseDocstringParser(ABC):
-    """Define abstract interface for docstring parsers."""
-
-    @abstractmethod
-    def parse(self, docstring: str) -> ParsedDocstring:
-        """Parse a raw docstring into structured data.
-
-        Args:
-            docstring (str): Raw docstring text.
-
-        Returns:
-            ParsedDocstring: Parsed docstring structure.
-
-        """
-
-    @property
-    @abstractmethod
-    def style(self) -> DocstringStyle:
-        """Return the style this parser handles.
-
-        Returns:
-            DocstringStyle: Parser style identifier.
-
-        """
-
-
-class GoogleStyleParser(BaseDocstringParser):
+class GoogleStyleParser:
     """Parse Google style docstrings.
 
     Attributes:
@@ -63,16 +35,6 @@ class GoogleStyleParser(BaseDocstringParser):
     ARG_NO_COLON_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*\(([^)]+)\)\s*$")
     RETURN_PATTERN = re.compile(r"^\s{4}([^:]+?)\s*:\s*(.*)$")
     RAISE_PATTERN = re.compile(r"^\s{4}([\w.]+)\s*:\s*(.*)$")
-
-    @property
-    def style(self) -> DocstringStyle:
-        """Return Google style identifier.
-
-        Returns:
-            DocstringStyle: GOOGLE enum value.
-
-        """
-        return DocstringStyle.GOOGLE
 
     def parse(self, docstring: str) -> ParsedDocstring:
         """Parse a Google style docstring into structured data.
@@ -371,21 +333,3 @@ def _is_expression(text: str) -> bool:
     except SyntaxError:
         return False
     return True
-
-
-PARSERS = {
-    DocstringStyle.GOOGLE: GoogleStyleParser,
-}
-
-
-def get_parser(style: DocstringStyle) -> BaseDocstringParser:
-    """Get the appropriate parser for the given style.
-
-    Args:
-        style (DocstringStyle): Docstring style to use.
-
-    Returns:
-        BaseDocstringParser: Parser instance for the requested style.
-
-    """
-    return PARSERS[style]()

@@ -9,7 +9,6 @@ from linter.config import (
     ALWAYS_ON,
     OPTIONS_REGISTRY,
     RULES_REGISTRY,
-    DocstringStyle,
     LinterConfig,
     Policy,
     _parse_toml_config,  # pyright: ignore[reportPrivateUsage]
@@ -19,11 +18,6 @@ from linter.config import (
 # ---------------------------------------------------------------------------
 # LinterConfig defaults
 # ---------------------------------------------------------------------------
-
-
-def test_default_config_style() -> None:
-    """Default config: style is GOOGLE."""
-    assert LinterConfig().style == DocstringStyle.GOOGLE
 
 
 def test_default_config_all_rules_enabled() -> None:
@@ -93,22 +87,10 @@ def test_parse_no_select_no_ignore() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_parse_style_google() -> None:
-    """Style = 'google': config.style is DocstringStyle.GOOGLE."""
-    config = _parse_toml_config({"style": "google"})
-    assert config.style == DocstringStyle.GOOGLE
-
-
-def test_parse_style_unknown() -> None:
-    """Style = 'unknown': raises ValueError listing the accepted styles."""
-    with pytest.raises(ValueError, match=r"'style': invalid value 'unknown', expected one of google\."):
-        _parse_toml_config({"style": "unknown"})
-
-
-def test_parse_style_without_parser() -> None:
-    """Style = 'numpy': rejected at load time, no parser implements it."""
-    with pytest.raises(ValueError, match="'style': invalid value 'numpy'"):
-        _parse_toml_config({"style": "numpy"})
+def test_parse_style_key_removed() -> None:
+    """Style key, removed since Google is the only style: rejected as an unknown key."""
+    with pytest.raises(ValueError, match="unknown configuration key 'style'"):
+        _parse_toml_config({"style": "google"})
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +209,6 @@ def test_option_values_reflect_config() -> None:
     assert values["exclude_empty_init_method"] == "false"
     assert values["summary_max_length"] == "72"
     assert values["scope.modules"] == "false"
-    assert values["style"] == "google"
 
 
 def test_always_on_rule_stays_enabled_when_not_selected() -> None:

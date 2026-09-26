@@ -45,18 +45,6 @@ This file lists the test functions of the `docstring-linter` project, a parametr
 | `test_docstring_parser.py` | `test_parse_exceptions_is_unknown` | Exceptions: not a Napoleon section, reported as unknown and not read as Raises. |
 | `test_docstring_parser.py` | `test_parse_lowercase_section_not_recognized` | Lowercase section name (args: instead of Args:): not recognized, no args parsed. |
 
-### style
-
-| Fichier | Fonction | Description |
-|---|---|---|
-| `test_docstring_parser.py` | `test_parser_style_property` | Style property: returns DocstringStyle.GOOGLE. |
-
-### get_parser
-
-| Fichier | Fonction | Description |
-|---|---|---|
-| `test_docstring_parser.py` | `test_get_parser_google` | get_parser(GOOGLE): returns a GoogleStyleParser instance. |
-
 ---
 
 ## test_ast_parser.py -- ast_parser
@@ -582,7 +570,6 @@ This file lists the test functions of the `docstring-linter` project, a parametr
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `test_cli.py` | `test_merge_style_override` | --style google: overrides config.style. |
 | `test_cli.py` | `test_merge_exclude_override` | --exclude test_*: overrides config.exclude_patterns. |
 | `test_cli.py` | `test_merge_format_json` | --format json: sets output_format to json. |
 | `test_cli.py` | `test_merge_format_github_annotations` | --format github-annotations: sets output_format to github-annotations. |
@@ -703,7 +690,6 @@ This file lists the test functions of the `docstring-linter` project, a parametr
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `test_config.py` | `test_default_config_style` | Default config: style is GOOGLE. |
 | `test_config.py` | `test_default_config_all_rules_enabled` | Default config, strict convention: every rule is enabled. |
 | `test_config.py` | `test_default_config_exclude_patterns_include_common_dirs` | Default config: exclude_patterns includes .venv, .git, __pycache__, .tox. |
 
@@ -723,9 +709,7 @@ This file lists the test functions of the `docstring-linter` project, a parametr
 | `test_config.py` | `test_parse_select_explicit_list` | Select = ['docstring_exists', 'args_match']: only those two rules enabled. |
 | `test_config.py` | `test_parse_ignore_only` | Ignore only (no select): starts from default set minus ignored rules. |
 | `test_config.py` | `test_parse_no_select_no_ignore` | Empty data: enabled_rules matches default config. |
-| `test_config.py` | `test_parse_style_google` | Style = 'google': config.style is DocstringStyle.GOOGLE. |
-| `test_config.py` | `test_parse_style_unknown` | Style = 'unknown': raises ValueError listing the accepted styles. |
-| `test_config.py` | `test_parse_style_without_parser` | Style = 'numpy': rejected at load time, no parser implements it. |
+| `test_config.py` | `test_parse_style_key_removed` | Style key, removed since Google is the only style: rejected as an unknown key. |
 | `test_config.py` | `test_parse_exclude_empty_init_method_false` | exclude_empty_init_method = false: config.exclude_empty_init_method is False. |
 | `test_config.py` | `test_parse_exclude_empty_init_module_false` | exclude_empty_init_module = false: config.exclude_empty_init_module is False. |
 | `test_config.py` | `test_parse_workers` | Workers = 4: config.workers is 4. |

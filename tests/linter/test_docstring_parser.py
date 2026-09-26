@@ -1,7 +1,6 @@
 """Tests for docstring_parser module."""
 
-from linter.config import DocstringStyle
-from linter.docstring_parser import GoogleStyleParser, get_parser
+from linter.docstring_parser import GoogleStyleParser
 
 PARSER = GoogleStyleParser()
 
@@ -237,27 +236,6 @@ def test_parse_lowercase_section_not_recognized() -> None:
     """Lowercase section name (args: instead of Args:): not recognized, no args parsed."""
     result = PARSER.parse("Do something.\n\nargs:\n    x (int): Input.\n")
     assert not result.args
-
-
-# ---------------------------------------------------------------------------
-# style property
-# ---------------------------------------------------------------------------
-
-
-def test_parser_style_property() -> None:
-    """Style property: returns DocstringStyle.GOOGLE."""
-    assert PARSER.style == DocstringStyle.GOOGLE
-
-
-# ---------------------------------------------------------------------------
-# get_parser
-# ---------------------------------------------------------------------------
-
-
-def test_get_parser_google() -> None:
-    """get_parser(GOOGLE): returns a GoogleStyleParser instance."""
-    parser = get_parser(DocstringStyle.GOOGLE)
-    assert isinstance(parser, GoogleStyleParser)
 
 
 # ---------------------------------------------------------------------------

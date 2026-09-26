@@ -12,17 +12,6 @@ from pathlib import Path, PurePath
 from typing import cast
 
 
-class DocstringStyle(Enum):
-    """Enumerate supported docstring styles.
-
-    Attributes:
-        GOOGLE (str): Google style docstrings.
-
-    """
-
-    GOOGLE = "google"
-
-
 class Policy(Enum):
     """Enumerate the directions a style policy can take.
 
@@ -62,7 +51,6 @@ POLICIES_REGISTRY = {
 # Settings that change what gets checked, reported by --list-rules
 OPTIONS_REGISTRY = {
     "convention": "Convention providing the defaults of policies, options and rules",
-    "style": "Docstring style enforced",
     "exclude_empty_init_method": "Docstring optional on __init__ methods with no parameter and an empty body",
     "exclude_empty_init_module": "Docstring optional on __init__.py modules with an empty body",
     "ignore_placeholder_docstrings": "Skip docstrings containing only '...'",
@@ -205,7 +193,6 @@ CONVENTIONS: dict[str, Convention] = {
 SETTING_KEYS: frozenset[str] = frozenset(
     {
         "convention",
-        "style",
         "scope",
         "select",
         "ignore",
@@ -341,7 +328,6 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
 
     Attributes:
         convention (str): Convention the defaults come from, a key of CONVENTIONS.
-        style (DocstringStyle): Docstring style to enforce.
         check_modules (bool): Whether to check module docstrings.
         check_classes (bool): Whether to check class docstrings.
         check_functions (bool): Whether to check function docstrings.
@@ -385,7 +371,6 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     """
 
     convention: str = "strict"
-    style: DocstringStyle = DocstringStyle.GOOGLE
     check_modules: bool = True
     check_classes: bool = True
     check_functions: bool = True
@@ -470,7 +455,6 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         """
         return {
             "convention": self.convention,
-            "style": self.style.value,
             "exclude_empty_init_method": str(self.exclude_empty_init_method).lower(),
             "exclude_empty_init_module": str(self.exclude_empty_init_module).lower(),
             "ignore_placeholder_docstrings": str(self.ignore_placeholder_docstrings).lower(),
@@ -641,26 +625,6 @@ def _parse_convention(value: object) -> str:
         return value
     msg = f"'convention': invalid value {value!r}, expected one of {', '.join(CONVENTIONS)}."
     raise ValueError(msg)
-
-
-def _parse_style(value: object) -> DocstringStyle:
-    """Convert a configured value into a DocstringStyle.
-
-    Args:
-        value (object): Value read from the config file.
-
-    Returns:
-        DocstringStyle: Matching style.
-
-    Raises:
-        ValueError: If the value is not a style name.
-
-    """
-    try:
-        return DocstringStyle(value)
-    except ValueError:
-        msg = f"'style': invalid value {value!r}, expected one of {', '.join(style.value for style in DocstringStyle)}."
-        raise ValueError(msg) from None
 
 
 def _parse_str_list(key: str, value: object, location: str = "") -> list[str]:
@@ -885,9 +849,6 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:
     for key, value in convention.values.items():
         setattr(config, key, value)
     config.enabled_rules = [rule for rule in config.enabled_rules if rule not in convention.disabled_rules]
-
-    if "style" in data:
-        config.style = _parse_style(data["style"])
 
     for key, value in _parse_scope(data.get("scope", {})).items():
         setattr(config, f"check_{key}", value)

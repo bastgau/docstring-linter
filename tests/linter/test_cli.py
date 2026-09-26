@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from linter.cli import _resolve_workers, collect_python_files, lint_file, main, merge_cli_into_config, run  # pyright: ignore[reportPrivateUsage]
-from linter.config import ALWAYS_ON, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig
+from linter.config import ALWAYS_ON, RULES_CATEGORIES, RULES_REGISTRY, LinterConfig
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -179,54 +179,46 @@ def test_lint_file_syntax_error_raises(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_merge_style_override() -> None:
-    """--style google: overrides config.style."""
-    args = argparse.Namespace(style="google", exclude=None, format=None, workers=None)
-    config = merge_cli_into_config(LinterConfig(), args)
-    assert config.style == DocstringStyle.GOOGLE
-
-
 def test_merge_exclude_override() -> None:
     """--exclude test_*: overrides config.exclude_patterns."""
-    args = argparse.Namespace(style=None, exclude=["test_*"], format=None, workers=None)
+    args = argparse.Namespace(exclude=["test_*"], format=None, workers=None)
     config = merge_cli_into_config(LinterConfig(), args)
     assert config.exclude_patterns == ["test_*"]
 
 
 def test_merge_format_json() -> None:
     """--format json: sets output_format to json."""
-    args = argparse.Namespace(style=None, exclude=None, format="json", workers=None)
+    args = argparse.Namespace(exclude=None, format="json", workers=None)
     config = merge_cli_into_config(LinterConfig(), args)
     assert config.output_format == "json"
 
 
 def test_merge_format_github_annotations() -> None:
     """--format github-annotations: sets output_format to github-annotations."""
-    args = argparse.Namespace(style=None, exclude=None, format="github-annotations", workers=None)
+    args = argparse.Namespace(exclude=None, format="github-annotations", workers=None)
     config = merge_cli_into_config(LinterConfig(), args)
     assert config.output_format == "github-annotations"
 
 
 def test_merge_workers_override() -> None:
     """--workers 4: sets config.workers to 4."""
-    args = argparse.Namespace(style=None, exclude=None, format=None, workers=4)
+    args = argparse.Namespace(exclude=None, format=None, workers=4)
     config = merge_cli_into_config(LinterConfig(), args)
     assert config.workers == 4
 
 
 def test_merge_workers_negative_clamped_to_zero() -> None:
     """--workers -1: clamped to 0 (auto-detect)."""
-    args = argparse.Namespace(style=None, exclude=None, format=None, workers=-1)
+    args = argparse.Namespace(exclude=None, format=None, workers=-1)
     config = merge_cli_into_config(LinterConfig(), args)
     assert config.workers == 0
 
 
 def test_merge_no_overrides_leaves_defaults() -> None:
     """No CLI overrides: config unchanged from defaults."""
-    args = argparse.Namespace(style=None, exclude=None, format=None, workers=None)
+    args = argparse.Namespace(exclude=None, format=None, workers=None)
     defaults = LinterConfig()
     config = merge_cli_into_config(LinterConfig(), args)
-    assert config.style == defaults.style
     assert config.exclude_patterns == defaults.exclude_patterns
 
 

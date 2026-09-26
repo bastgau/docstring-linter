@@ -12,8 +12,8 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from linter.ast_parser import parse_file
-from linter.config import ALWAYS_ON, CONVENTIONS, OPTIONS_REGISTRY, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig, load_config, path_matches
-from linter.docstring_parser import get_parser
+from linter.config import ALWAYS_ON, CONVENTIONS, OPTIONS_REGISTRY, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, LinterConfig, load_config, path_matches
+from linter.docstring_parser import GoogleStyleParser
 from linter.models import LintError, NodeType
 from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_statistics, report_traceback
 from linter.rules import validate_entity
@@ -91,7 +91,7 @@ def lint_file(filepath: str, config: LinterConfig) -> list[LintError]:
 
     """
     config = config.for_path(filepath)
-    parser = get_parser(config.style)
+    parser = GoogleStyleParser()
     entities = parse_file(filepath)
     errors: list[LintError] = []
 
@@ -126,9 +126,6 @@ def merge_cli_into_config(config: LinterConfig, args: argparse.Namespace) -> Lin
         LinterConfig: Updated configuration object.
 
     """
-    if args.style:
-        config.style = DocstringStyle(args.style)
-
     if args.exclude is not None:
         config.exclude_patterns = args.exclude
 
@@ -266,7 +263,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("paths", nargs="*", help="Files or directories to lint.")
     parser.add_argument("--list-rules", action="store_true", help="List all available rules and exit.")
     parser.add_argument("--config", default=None, help="Path to pyproject.toml (default: auto-detect).")
-    parser.add_argument("--style", choices=[s.value for s in DocstringStyle], default=None, help=argparse.SUPPRESS)
     parser.add_argument("--format", choices=["traceback", "text", "json", "github-annotations"], default=None, help="Output format (default: traceback).")
     parser.add_argument("--exclude", nargs="*", default=None, help="Glob patterns to exclude (overrides pyproject.toml).")
     parser.add_argument("--force-exclude", action="store_true", help="Apply the exclusions to files given explicitly too, as pre-commit does.")
