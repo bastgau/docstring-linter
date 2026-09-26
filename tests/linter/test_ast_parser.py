@@ -580,3 +580,15 @@ def test_parse_file_records_decorators(tmp_path: Path) -> None:
     f.write_text(source, encoding="utf-8")
     decorators = [(e.name, e.decorators) for e in parse_file(str(f)) if e.name.startswith("A.")]
     assert decorators == [("A.size", ["property"]), ("A.size", ["setter"]), ("A.m", ["cache", "staticmethod"])]
+
+
+def test_parse_file_links_class_and_init(tmp_path: Path) -> None:
+    """Class with __init__: the class carries the __init__ parameters, __init__ carries the class docstring."""
+    source = 'class A:\n    """Store.\n\n    Args:\n        x (int): Value.\n    """\n\n    def __init__(self, x: int):\n        self.x = x\n\n\nclass B:\n    pass\n'
+    f = tmp_path / "sample.py"
+    f.write_text(source, encoding="utf-8")
+    entities = {e.name: e for e in parse_file(str(f))}
+    assert entities["A"].init_args is not None
+    assert [a.name for a in entities["A"].init_args] == ["x"]
+    assert entities["A.__init__"].class_docstring == entities["A"].docstring
+    assert entities["B"].init_args is None

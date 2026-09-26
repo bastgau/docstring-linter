@@ -4,11 +4,12 @@ Cross-reference AST entities with parsed docstrings to detect
 missing, incomplete, or incorrectly formatted documentation.
 """
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from linter.config import Policy
 from linter.models import CodeEntity, LintError, NodeType, ParsedDocstring
-from linter.rules._base import is_placeholder, make_error
+from linter.rules._base import has_args_section, is_placeholder, make_error
 from linter.rules.args import (
     check_args_match,
     check_args_order,
@@ -89,6 +90,59 @@ def _is_docstring_optional(entity: CodeEntity, config: LinterConfig) -> bool:
     )
 
 
+def _init_args_expected_in_class(class_docstring: str | None, config: LinterConfig) -> bool:
+    """Check whether the __init__ parameters belong to the class docstring.
+
+    Args:
+        class_docstring (str | None): Docstring of the class.
+        config (LinterConfig): Linter configuration.
+
+    Returns:
+        bool: True under init_args_location 'class', or 'either' when the class has an Args section.
+
+    """
+    if config.args_section is Policy.FORBIDDEN or config.init_args_location == "init":
+        return False
+    return config.init_args_location == "class" or has_args_section(class_docstring)
+
+
+def _init_args_in_class(entity: CodeEntity, config: LinterConfig) -> bool:
+    """Check whether an entity is an __init__ documented by its class docstring.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        config (LinterConfig): Linter configuration.
+
+    Returns:
+        bool: True if the __init__ docstring is optional and its parameters are checked on the class.
+
+    """
+    if entity.node_type is not NodeType.METHOD or not entity.name.endswith(".__init__"):
+        return False
+    return _init_args_expected_in_class(entity.class_docstring, config)
+
+
+def _check_args(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig) -> list[LintError]:
+    """Run the rules comparing the Args section with the signature.
+
+    Args:
+        entity (CodeEntity): Entity carrying the signature parameters.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+        config (LinterConfig): Linter configuration.
+
+    Returns:
+        list[LintError]: Errors of args_section, args_match, duplicate_arg and args_order.
+
+    """
+    errors = check_args_section(entity, parsed_doc, config.args_section)
+    if config.args_section is not Policy.FORBIDDEN:
+        errors.extend(check_args_match(entity, parsed_doc, config.documented_types, config.type_matching))
+    errors.extend(check_duplicate_arg(entity, parsed_doc))
+    if config.is_rule_enabled("args_order"):
+        errors.extend(check_args_order(entity, parsed_doc))
+    return errors
+
+
 def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-branches,too-many-statements
     entity: CodeEntity,
     parsed_doc: ParsedDocstring | None,
@@ -113,7 +167,9 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
 
     is_getter = config.properties_as_attributes and not _PROPERTY_GETTERS.isdisjoint(entity.decorators)
 
-    if config.is_rule_enabled("docstring_exists") and not _is_docstring_optional(entity, config):
+    init_in_class = _init_args_in_class(entity, config)
+
+    if config.is_rule_enabled("docstring_exists") and not (_is_docstring_optional(entity, config) or init_in_class):
         errors.extend(check_docstring_exists(entity))
 
     if not entity.docstring or not entity.docstring.strip():
@@ -141,15 +197,11 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
         if config.is_rule_enabled("return_type_annotation"):
             errors.extend(check_return_type_annotation(entity))
 
-        errors.extend(check_args_section(entity, parsed_doc, config.args_section))
-
-        if config.args_section is not Policy.FORBIDDEN:
-            errors.extend(check_args_match(entity, parsed_doc, config.documented_types, config.type_matching))
-
-        errors.extend(check_duplicate_arg(entity, parsed_doc))
-
-        if config.is_rule_enabled("args_order"):
-            errors.extend(check_args_order(entity, parsed_doc))
+        if not init_in_class:
+            errors.extend(_check_args(entity, parsed_doc, config))
+        elif has_args_section(entity.docstring):
+            where = "must be documented in the class docstring, not in '__init__'" if config.init_args_location == "class" else "are documented both in the class docstring and in '__init__'"
+            errors.append(make_error(entity, "args_section", f"Parameters of __init__ {where}."))
 
         # a property getter is documented like an attribute, without Returns section
         if not is_getter:
@@ -174,6 +226,10 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
             errors.extend(check_yields_match(entity, parsed_doc, config.returns_descriptions, config.documented_types))
 
     if entity.node_type == NodeType.CLASS:
+        # the parameters of __init__, when the class docstring documents them
+        if entity.init_args is not None and _init_args_expected_in_class(entity.docstring, config):
+            errors.extend(_check_args(replace(entity, args=entity.init_args), parsed_doc, config))
+
         errors.extend(check_attributes_section(entity, parsed_doc, config.attributes_section))
 
         if config.attributes_section is not Policy.FORBIDDEN:

@@ -76,6 +76,8 @@ class CodeEntity:  # pylint: disable=too-many-instance-attributes
         is_generator (bool): Whether the function contains a yield statement.
         class_attributes (list[str]): Attribute names declared on a class.
         decorators (list[str]): Last name segment of each decorator, 'setter' for @size.setter.
+        init_args (list[ArgInfo] | None): Parameters of the __init__ of a class, None without __init__.
+        class_docstring (str | None): Docstring of the enclosing class, on __init__ methods only.
 
     """
 
@@ -93,6 +95,8 @@ class CodeEntity:  # pylint: disable=too-many-instance-attributes
     is_generator: bool = False
     class_attributes: list[str] = field(default_factory=lambda: [])
     decorators: list[str] = field(default_factory=lambda: [])
+    init_args: list[ArgInfo] | None = None
+    class_docstring: str | None = None
 
 
 @dataclass

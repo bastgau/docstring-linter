@@ -48,7 +48,7 @@ def parse_file(filepath: str) -> list[CodeEntity]:
         )
     )
 
-    _walk_body(tree.body, filepath, entities, parent_class=None)
+    _walk_body(tree.body, filepath, entities, parent=None)
     return entities
 
 
@@ -56,7 +56,7 @@ def _walk_body(
     body: list[ast.stmt],
     filepath: str,
     entities: list[CodeEntity],
-    parent_class: str | None,
+    parent: CodeEntity | None,
 ) -> None:
     """Walk AST body recursively to extract classes and functions.
 
@@ -64,7 +64,7 @@ def _walk_body(
         body (list[ast.stmt]): AST body node list.
         filepath (str): Source file path.
         entities (list[CodeEntity]): Accumulator for extracted entities.
-        parent_class (str | None): Parent class name, or None for top-level.
+        parent (CodeEntity | None): Enclosing class entity, or None for top-level.
 
     Returns:
         None
@@ -72,18 +72,19 @@ def _walk_body(
     """
     for node in body:
         if isinstance(node, ast.ClassDef):
-            entities.append(_parse_class(node, filepath))
-            _walk_body(node.body, filepath, entities, parent_class=node.name)
+            entity = _parse_class(node, filepath)
+            entities.append(entity)
+            _walk_body(node.body, filepath, entities, parent=entity)
 
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             if "overload" not in _decorator_names(node):
-                entities.append(_parse_function(node, filepath, parent_class))
+                entities.append(_parse_function(node, filepath, parent))
 
         elif isinstance(node, _COMPOUND_STATEMENTS):
             # the body of a main guard only runs as a script, its else branch runs on import
             blocks = [node.orelse] if _is_main_guard(node) else _statement_blocks(node)
             for block in blocks:
-                _walk_body(block, filepath, entities, parent_class)
+                _walk_body(block, filepath, entities, parent)
 
 
 def _is_main_guard(node: ast.stmt) -> TypeGuard[ast.If]:
@@ -170,6 +171,7 @@ def _parse_class(node: ast.ClassDef, filepath: str) -> CodeEntity:
         CodeEntity: Parsed class entity.
 
     """
+    init = next((stmt for stmt in node.body if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and stmt.name == "__init__"), None)
     return CodeEntity(
         name=node.name,
         node_type=NodeType.CLASS,
@@ -178,6 +180,7 @@ def _parse_class(node: ast.ClassDef, filepath: str) -> CodeEntity:
         docstring=ast.get_docstring(node),
         raw_docstring=ast.get_docstring(node, clean=False),
         class_attributes=_extract_class_attributes(node),
+        init_args=_extract_args(init.args, skip_first=True) if init else None,
     )
 
 
@@ -252,22 +255,22 @@ def _is_self_attr(target: ast.expr) -> TypeGuard[ast.Attribute]:
 def _parse_function(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     filepath: str,
-    parent_class: str | None,
+    parent: CodeEntity | None,
 ) -> CodeEntity:
     """Extract function or method information from AST node.
 
     Args:
         node (ast.FunctionDef | ast.AsyncFunctionDef): AST function node.
         filepath (str): Source file path.
-        parent_class (str | None): Parent class name, or None for functions.
+        parent (CodeEntity | None): Enclosing class entity, or None for functions.
 
     Returns:
         CodeEntity: Parsed function or method entity.
 
     """
-    is_method = parent_class is not None
+    is_method = parent is not None
     node_type = NodeType.METHOD if is_method else NodeType.FUNCTION
-    name = f"{parent_class}.{node.name}" if parent_class else node.name
+    name = f"{parent.name}.{node.name}" if parent else node.name
 
     args = _extract_args(node.args, skip_first=is_method and "staticmethod" not in _decorator_names(node))
     return_type = ast.unparse(node.returns) if node.returns else None
@@ -290,6 +293,7 @@ def _parse_function(
         is_empty_init=is_empty_init,
         is_generator=is_generator,
         decorators=sorted(_decorator_names(node)),
+        class_docstring=parent.docstring if parent and node.name == "__init__" else None,
     )
 
 

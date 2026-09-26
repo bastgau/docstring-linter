@@ -73,6 +73,7 @@ OPTIONS_REGISTRY = {
     "blank_lines_before_section": "Blank lines expected before a section header",
     "blank_lines_before_closing_quotes": "Blank lines expected before the closing triple quotes",
     "type_matching": "How closely a documented type must match the signature",
+    "init_args_location": "Docstring documenting the __init__ parameters: init, class or either",
     "scope.modules": "Check module docstrings",
     "scope.classes": "Check class docstrings",
     "scope.functions": "Check function docstrings",
@@ -192,6 +193,7 @@ CONVENTIONS: dict[str, Convention] = {
             "exclude_private": True,
             "exclude_overridden": True,
             "properties_as_attributes": True,
+            "init_args_location": "either",
         },
         disabled_rules=frozenset({"imperative_mood", "return_type_annotation", "raises_extraneous"}),
     ),
@@ -220,6 +222,7 @@ SETTING_KEYS: frozenset[str] = frozenset(
         "blank_lines_before_section",
         "blank_lines_before_closing_quotes",
         "type_matching",
+        "init_args_location",
     }
 )
 
@@ -242,12 +245,14 @@ OVERRIDABLE_OPTIONS: frozenset[str] = frozenset(
         "exclude_overridden",
         "properties_as_attributes",
         "type_matching",
+        "init_args_location",
     }
 )
 
 # Options taking one value among a fixed list
 CHOICE_OPTIONS: dict[str, tuple[str, ...]] = {
     "type_matching": ("strict", "equivalent", "lenient"),
+    "init_args_location": ("init", "class", "either"),
 }
 
 # Integer options with the minimum value they are clamped to
@@ -352,6 +357,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         blank_lines_before_section (int): Blank lines expected before a section header.
         blank_lines_before_closing_quotes (int): Blank lines expected before the closing quotes.
         type_matching (str): How closely a documented type must match the signature.
+        init_args_location (str): Docstring documenting the __init__ parameters: init, class or either.
         returns_none (Policy): Policy for 'Returns: None' on -> None functions.
         init_returns_none (Policy): Policy for 'Returns: None' on __init__ methods.
         summary_on_first_line (Policy): Policy for the summary on the opening quotes line.
@@ -392,6 +398,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     blank_lines_before_section: int = 1
     blank_lines_before_closing_quotes: int = 1
     type_matching: str = "strict"
+    init_args_location: str = "init"
     returns_none: Policy = Policy.REQUIRED
     init_returns_none: Policy = Policy.FORBIDDEN
     summary_on_first_line: Policy = Policy.REQUIRED
@@ -465,6 +472,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
             "blank_lines_before_section": str(self.blank_lines_before_section),
             "blank_lines_before_closing_quotes": str(self.blank_lines_before_closing_quotes),
             "type_matching": self.type_matching,
+            "init_args_location": self.init_args_location,
             "scope.modules": str(self.check_modules).lower(),
             "scope.classes": str(self.check_classes).lower(),
             "scope.functions": str(self.check_functions).lower(),

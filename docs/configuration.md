@@ -78,6 +78,7 @@ See the Available keys section below for the complete list of options.
 | `blank_lines_before_section` | `1` | Blank lines expected before a section header, checked by `blank_lines`. |
 | `blank_lines_before_closing_quotes` | `1` | Blank lines expected before the closing `"""`, checked by `blank_lines`. |
 | `type_matching` | `"strict"` | How closely a documented type must match the signature: `"strict"`, `"equivalent"` or `"lenient"`. See [Type matching](#type-matching). |
+| `init_args_location` | `"init"` | Docstring documenting the `__init__` parameters: `"init"`, `"class"` or `"either"`. See [`__init__` parameters](#__init__-parameters). |
 | `scope.modules` | `true` | Check module-level docstrings. |
 | `scope.classes` | `true` | Check class docstrings. |
 | `scope.functions` | `true` | Check function docstrings. |
@@ -104,6 +105,7 @@ Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five 
 | `return_type_annotation` rule | enabled | disabled |
 | `raises_extraneous` rule | enabled | disabled |
 | `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`, `properties_as_attributes` | `false` | `true` |
+| `init_args_location` | `"init"` | `"either"` |
 
 `"strict"` enforces a complete house style: every type repeated in the docstring, `Returns: None` on `-> None` functions, every exception and attribute documented, a blank line before the closing quotes.
 
@@ -130,6 +132,31 @@ When a docstring declares a type, `args_match` and `returns_match` compare it wi
 Differences that change the type are reported at every level: `int` vs `str`, `List[int]` vs `Iterable[int]`, `IO` vs `IO[str]`. A documented type that is not a Python expression (`list of int`) is compared as text.
 
 `type_matching` may be set in an override.
+
+### `__init__` parameters
+
+The parameters of a constructor are documented either in the `__init__` docstring or in the class docstring. `init_args_location` says where the linter looks for them.
+
+| Value | Where the parameters go | `__init__` docstring |
+|---|---|---|
+| `"init"` | `Args:` of `__init__` | Required, unless `exclude_empty_init_method` applies |
+| `"class"` | `Args:` of the class | Optional; an `Args:` section in it is reported |
+| `"either"` | `Args:` of the class when it has one, `Args:` of `__init__` otherwise | Optional when the class has `Args:`; documenting the parameters in both places is reported |
+
+When the class documents them, `args_section`, `args_match`, `duplicate_arg` and `args_order` compare the `Args:` section of the class with the `__init__` signature, and report on the class.
+
+```python
+# init_args_location = "either"
+class Cache:
+    """Store computed values.
+
+    Args:
+        size (int): Maximum number of values.
+    """
+
+    def __init__(self, size: int) -> None:
+        """Create the cache."""
+```
 
 ### Per-path overrides
 
@@ -172,7 +199,7 @@ select = ["docstring_exists"]
 - **A single block applies to a given file**: the last declared among those matching it. The other matching blocks are ignored, blocks never accumulate. Declare the general case first and the exceptions after it, and make each block self-contained.
 - The block that applies is resolved against the base configuration, so a setting it does not declare keeps its base value, not the linter default.
 - `ignore` removes rules from the inherited set, `select` replaces that set entirely. Same meaning as at the base level.
-- An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`, `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`, `properties_as_attributes`, `type_matching`.
+- An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`, `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`, `properties_as_attributes`, `type_matching`, `init_args_location`.
 - `exclude`, `workers` and `scope.*` apply to the whole run rather than individual files, so they are rejected inside an override.
 
 `docstring-linter --list-rules` prints the overrides after the base configuration, showing only what each one changes.

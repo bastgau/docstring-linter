@@ -2,9 +2,14 @@
 
 import textwrap
 from pathlib import Path  # noqa: TC003
+from typing import TYPE_CHECKING
 
+import pytest
 from linter.cli import lint_file
 from linter.config import LinterConfig, _parse_toml_config  # pyright: ignore[reportPrivateUsage]
+
+if TYPE_CHECKING:
+    from linter.models import LintError
 
 
 def _lint(tmp_path: Path, source: str, config: LinterConfig | None = None) -> list[tuple[str, str]]:
@@ -521,3 +526,75 @@ def test_exempted_docstring_still_checked(tmp_path: Path) -> None:
                 return 1
         '''
     assert _lint(tmp_path, source, _parse_toml_config({"exclude_dunder_methods": True})) == [("Box.__len__", "returns_section")]
+
+
+_CLASS_ARGS = '''\
+    """Module."""
+
+
+    class Cache:
+        """Store computed values.
+
+        Args:
+            size (int): Maximum number of values.
+
+        """
+
+        def __init__(self, size: int) -> None:
+            print(size)
+    '''
+
+
+def test_init_args_in_class_rejected_by_default(tmp_path: Path) -> None:
+    """Parameters documented in the class, init_args_location = 'init' (default): __init__ lacks a docstring."""
+    assert _lint(tmp_path, _CLASS_ARGS) == [("Cache.__init__", "docstring_exists")]
+
+
+@pytest.mark.parametrize("location", ["class", "either"])
+def test_init_args_in_class_accepted(tmp_path: Path, location: str) -> None:
+    """Parameters documented in the class, location class or either: no error."""
+    assert not _lint(tmp_path, _CLASS_ARGS, _parse_toml_config({"init_args_location": location}))
+
+
+def test_init_args_in_class_checked(tmp_path: Path) -> None:
+    """Class Args missing a parameter, location either: the parameter is reported on the class."""
+    source = _CLASS_ARGS.replace("self, size: int", "self, size: int, ttl: int")
+    assert _lint(tmp_path, source, _parse_toml_config({"init_args_location": "either"})) == [("Cache", "args_section")]
+
+
+def test_init_args_either_falls_back_to_init(tmp_path: Path) -> None:
+    """Class without Args, location either: __init__ is checked as usual and needs its docstring."""
+    source = _CLASS_ARGS.replace("        Args:\n            size (int): Maximum number of values.\n\n", "")
+    assert _lint(tmp_path, source, _parse_toml_config({"init_args_location": "either"})) == [("Cache.__init__", "docstring_exists")]
+
+
+def test_init_args_short_init_docstring(tmp_path: Path) -> None:
+    """__init__ with a docstring but no Args, class with Args, location either: no error."""
+    source = _CLASS_ARGS.replace("            print(size)", '            """Create the cache."""\n            print(size)')
+    assert not _lint(tmp_path, source, _parse_toml_config({"init_args_location": "either"}))
+
+
+def test_init_args_mixed(tmp_path: Path) -> None:
+    """Args in the class and in __init__, location either: reported as mixed on __init__."""
+    init_doc = '            """Create the cache.\n\n            Args:\n                size (int): Maximum.\n\n            """\n            print(size)'
+    source = _CLASS_ARGS.replace("            print(size)", init_doc)
+    errors = _lint_errors(tmp_path, source, _parse_toml_config({"init_args_location": "either"}))
+    assert [(e.entity_name, e.message) for e in errors] == [("Cache.__init__", "Parameters of __init__ are documented both in the class docstring and in '__init__'.")]
+
+
+def test_init_args_class_location_rejects_init_args(tmp_path: Path) -> None:
+    """Args only in __init__, location class: reported on __init__, and missing on the class."""
+    init_doc = '            """Create the cache.\n\n            Args:\n                size (int): Maximum.\n\n            """\n            print(size)'
+    source = _CLASS_ARGS.replace("        Args:\n            size (int): Maximum number of values.\n\n", "").replace("            print(size)", init_doc)
+    errors = _lint_errors(tmp_path, source, _parse_toml_config({"init_args_location": "class"}))
+    assert [(e.entity_name, e.rule, e.message) for e in errors] == [
+        ("Cache", "args_section", "Arg 'size' in signature but not documented."),
+        ("Cache.__init__", "args_section", "Parameters of __init__ must be documented in the class docstring, not in '__init__'."),
+    ]
+
+
+def _lint_errors(tmp_path: Path, source: str, config: LinterConfig) -> list[LintError]:
+    """Lint a source snippet and return the full errors, messages included."""
+    f = tmp_path / "sample.py"
+    f.write_text(textwrap.dedent(source), encoding="utf-8")
+    return lint_file(str(f), config)

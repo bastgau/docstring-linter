@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 528 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 538 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -144,6 +144,7 @@ This file lists the 528 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_parse_file_staticmethod_keeps_first_param` | @staticmethod: the first parameter is a regular parameter, even when named self. |
 | `test_ast_parser.py` | `test_parse_file_skips_main_guard_body` | Functions and classes under 'if __name__ == "__main__":': skipped, the else branch is kept. |
 | `test_ast_parser.py` | `test_parse_file_records_decorators` | Decorators: recorded by their last name segment, sorted, attribute and call forms included. |
+| `test_ast_parser.py` | `test_parse_file_links_class_and_init` | Class with __init__: the class carries the __init__ parameters, __init__ carries the class docstring. |
 
 ## test_end_to_end.py -- lint_file on real sources
 
@@ -170,6 +171,13 @@ This file lists the 528 tests of the `docstring-linter` project. Each entry show
 | `test_end_to_end.py` | `test_exemptions_off_by_default` | Strict default: dunder, private, overridden and property methods are all checked. |
 | `test_end_to_end.py` | `test_exemptions_enabled` | All four options on: none of those entities is reported. |
 | `test_end_to_end.py` | `test_exempted_docstring_still_checked` | Dunder with a docstring under exclude_dunder_methods: the docstring content is still checked. |
+| `test_end_to_end.py` | `test_init_args_in_class_rejected_by_default` | Parameters documented in the class, init_args_location = 'init' (default): __init__ lacks a docstring. |
+| `test_end_to_end.py` | `test_init_args_in_class_accepted` | Parameters documented in the class, location class or either: no error (2 cases). |
+| `test_end_to_end.py` | `test_init_args_in_class_checked` | Class Args missing a parameter, location either: the parameter is reported on the class. |
+| `test_end_to_end.py` | `test_init_args_either_falls_back_to_init` | Class without Args, location either: __init__ is checked as usual and needs its docstring. |
+| `test_end_to_end.py` | `test_init_args_short_init_docstring` | __init__ with a docstring but no Args, class with Args, location either: no error. |
+| `test_end_to_end.py` | `test_init_args_mixed` | Args in the class and in __init__, location either: reported as mixed on __init__. |
+| `test_end_to_end.py` | `test_init_args_class_location_rejects_init_args` | Args only in __init__, location class: reported on __init__, and missing on the class. |
 
 ---
 
@@ -746,6 +754,7 @@ This file lists the 528 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `test_config.py` | `test_exemption_options` | Exemption option: off by default, set from the file, allowed in an override (4 cases). |
+| `test_config.py` | `test_init_args_location` | init_args_location: 'init' by default, accepts class and either, rejects other values. |
 
 ### type_matching
 

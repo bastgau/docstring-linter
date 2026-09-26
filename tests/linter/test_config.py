@@ -276,6 +276,7 @@ def test_convention_google_sets_defaults() -> None:
     assert config.exclude_private is True
     assert config.exclude_overridden is True
     assert config.properties_as_attributes is True
+    assert config.init_args_location == "either"
     assert "imperative_mood" not in config.enabled_rules
     assert "return_type_annotation" not in config.enabled_rules
     assert "raises_extraneous" not in config.enabled_rules
@@ -332,6 +333,14 @@ def test_exemption_options(option: str) -> None:
     assert getattr(_parse_toml_config({option: True}), option) is True
     config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], option: True}]})
     assert getattr(config.for_path("tests/test_foo.py"), option) is True
+
+
+def test_init_args_location() -> None:
+    """init_args_location: 'init' by default, accepts class and either, rejects other values."""
+    assert _parse_toml_config({}).init_args_location == "init"
+    assert _parse_toml_config({"init_args_location": "class"}).init_args_location == "class"
+    with pytest.raises(ValueError, match=re.escape("'init_args_location': invalid value 'both', expected one of init, class, either.")):
+        _parse_toml_config({"init_args_location": "both"})
 
 
 # ---------------------------------------------------------------------------
