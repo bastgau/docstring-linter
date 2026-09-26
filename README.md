@@ -2,27 +2,54 @@
 
 ## Overview
 
-Python linter that validates Google-style docstrings against the actual implementation of functions, methods, classes, and modules.
+Python linter that checks Google-style docstrings against the code they document: the signature, the body and the class they belong to.
 
-It can detect mismatches between documented arguments, return values, raised exceptions, and type annotations.
+- **Consistency with the code**: every parameter documented, no phantom parameter, documented types matching the annotations, `Returns:` and `Yields:` matching what the function does, every exception raised documented, class attributes documented.
+- **House style, as strict as you want**: every construct is a policy (`required`, `forbidden` or `optional`), from the `Args:` section to the period ending the summary. Two conventions give the starting point: `strict` (default) and `google`, which follows the Google Python Style Guide.
+- **Layout**: section order and names, blank lines, indentation, entry spacing.
+- **Per-path settings**, a configuration that rejects anything it does not recognize, and no runtime dependency.
 
-## What is checked?
+## Requirements and installation
 
-Examples include:
+Python 3.14 is required. The package is not published on PyPI yet: install it from GitHub.
 
-- Parameter documentation mismatches
-- Return documentation mismatches
-- Raised exception mismatches
-- Yielded value mismatches
-- Class attribute mismatches
-- Missing or empty docstrings
-- Duplicate argument entries
-- Missing or invalid summary lines
-- Missing required sections
-- Section ordering and formatting issues
-- Google-style formatting issues
+```bash
+pip install "git+https://github.com/bastgau/docstring-linter.git"
+# or, as a standalone tool
+uv tool install "git+https://github.com/bastgau/docstring-linter.git"
+```
 
-See the rule reference for the complete list.
+## Quick start
+
+```python
+# src/shop.py
+"""Shopping cart helpers."""
+
+
+def total(prices: list[float], discount: float = 0.0) -> float:
+    """Compute the total price.
+
+    Args:
+        prices (list[int]): Item prices.
+
+    """
+    if discount < 0:
+        raise ValueError(discount)
+    return sum(prices) * (1 - discount)
+```
+
+```console
+$ docstring-linter src/
+Config: defaults (no config file found)
+
+File "/path/to/project/src/shop.py", line 4, in total
+    [args_section] Arg 'discount' in signature but not documented.
+    [args_match] Arg 'prices' type mismatch: signature='list[float]', docstring='list[int]'.
+    [returns_section] Missing 'Returns:' section. Signature declares -> float.
+    [raises_section] 'ValueError' raised in code but not documented in 'Raises:'.
+
+✗ 4 errors in 1 file (1 file checked).
+```
 
 ## Usage
 
@@ -33,7 +60,7 @@ docstring-linter src/module.py
 # Lint a directory
 docstring-linter src/
 
-# List available rules
+# List the rules, policies and options, with their value in the current config
 docstring-linter --list-rules
 
 # Compact one-line-per-error report
@@ -47,9 +74,6 @@ docstring-linter src/ --format github-annotations
 
 # Use an explicit config file
 docstring-linter src/ --config pyproject.toml
-
-# CI/CD
-docstring-linter src/ && echo "OK" || echo "FAIL"
 ```
 
 ### Options
@@ -76,15 +100,7 @@ Command-line options always override configuration file values.
 
 Colors are only used when the output is a terminal, and never when the `NO_COLOR` environment variable is set to a non-empty value.
 
-`traceback` is the default. It prints one location header per entity, in the same shape as a Python traceback, which editors turn into a clickable link:
-
-```
-File "/workspaces/docstring-linter/example/docstring_format_reference.py", line 84, in divide
-    [args_match] Arg 'numerator' missing type. Expected '(int)'.
-    [returns_section] Missing 'Returns:' section. Signature declares -> float.
-
-✗ 2 errors in 1 file (2 files checked).
-```
+`traceback` is the default, shown in the quick start. It prints one location header per entity, in the same shape as a Python traceback, which editors turn into a clickable link. Errors point to the line of the `def` or `class`.
 
 <details>
 
@@ -93,65 +109,65 @@ File "/workspaces/docstring-linter/example/docstring_format_reference.py", line 
 `text` keeps the compact layout, one line per error grouped by file:
 
 ```
-example/docstring_format_reference.py
-  L84   divide [args_match] Arg 'numerator' missing type. Expected '(int)'.
-  L84   divide [returns_section] Missing 'Returns:' section. Signature declares -> float.
+src/shop.py
+  L4    total [args_section] Arg 'discount' in signature but not documented.
+  L4    total [args_match] Arg 'prices' type mismatch: signature='list[float]', docstring='list[int]'.
+  L4    total [returns_section] Missing 'Returns:' section. Signature declares -> float.
+  L4    total [raises_section] 'ValueError' raised in code but not documented in 'Raises:'.
 
-✗ 2 errors in 1 file (2 files checked).
+✗ 4 errors in 1 file (1 file checked).
 ```
 
-`json` produces a machine-readable report suitable for automation and tooling.
+`json` produces a machine-readable report suitable for automation and tooling:
 
-```
+```json
 {
   "summary": {
-    "files_checked": 2,
-    "total_errors": 2,
+    "files_checked": 1,
+    "total_errors": 4,
     "files_with_errors": 1
   },
   "errors": [
     {
-      "filepath": "example/docstring_format_reference.py",
-      "line": 84,
-      "entity_name": "divide",
+      "filepath": "src/shop.py",
+      "line": 4,
+      "entity_name": "total",
       "node_type": "function",
-      "rule": "args_match",
-      "message": "Arg 'numerator' missing type. Expected '(int)'."
-    },
-    {
-      "filepath": "example/docstring_format_reference.py",
-      "line": 84,
-      "entity_name": "divide",
-      "node_type": "function",
-      "rule": "returns_section",
-      "message": "Missing 'Returns:' section. Signature declares -> float."
+      "rule": "args_section",
+      "message": "Arg 'discount' in signature but not documented."
     }
   ]
 }
 ```
 
-`github-annotations` produces GitHub workflow annotations displayed directly in pull requests and CI logs.
+The `errors` list above is shortened to its first entry.
+
+`github-annotations` produces GitHub workflow annotations displayed directly in pull requests and CI logs:
 
 ```
-::error file=example/docstring_format_reference.py,line=84,title=args_match::Arg 'numerator' missing type. Expected '(int)'.
-::error file=example/docstring_format_reference.py,line=84,title=returns_section::Missing 'Returns:' section. Signature declares -> float.
-2 errors in 1 file (2 files checked).
+::error file=src/shop.py,line=4,title=args_section::Arg 'discount' in signature but not documented.
+::error file=src/shop.py,line=4,title=args_match::Arg 'prices' type mismatch: signature='list[float]', docstring='list[int]'.
+::error file=src/shop.py,line=4,title=returns_section::Missing 'Returns:' section. Signature declares -> float.
+::error file=src/shop.py,line=4,title=raises_section::'ValueError' raised in code but not documented in 'Raises:'.
+4 errors in 1 file (1 file checked).
 ```
 
 </details>
 
 ## Configuration
 
-Every key has a built-in default, so no config file is required at all.
+Every key has a built-in default, so no config file is required at all. The configuration is read from `[tool.docstring-linter]` in `pyproject.toml`, or from a standalone `.docstring-linter.toml`.
 
-The defaults enforce a strict house style. To follow the Google Python Style Guide layout instead (types in the signature only, no `Returns: None`, descriptive summaries accepted), start from the `google` convention:
+The defaults enforce a strict house style: every type repeated in the docstring, `Returns: None` on `-> None` functions, every exception and attribute documented. To follow the Google Python Style Guide instead, start from the `google` convention:
 
 ```toml
 [tool.docstring-linter]
 convention = "google"
 ```
 
-The full list of options is available on the [configuration](/docs/configuration.md) page.
+Among other things, it leaves types to the signature, accepts one-line docstrings without sections on fully annotated functions, documents properties like attributes, and lets `__init__` parameters live in the class docstring. Any key written in the file overrides the convention.
+
+The full list of options, the conventions and the per-path overrides are described on the [configuration](/docs/configuration.md) page.
 
 ### Rule Reference
 
@@ -171,6 +187,7 @@ repos:
     hooks:
       - id: docstring-linter
         files: ^src/
+        language_version: python3.14  # when python3.14 is not the default interpreter
 ```
 
 Then install the hook:
@@ -201,3 +218,16 @@ prek install
 | `paths` | `src/` | Files or directories to lint. |
 | `format` | `github-annotations` | Output format: `traceback`, `text`, `json`, or `github-annotations`. |
 | `extra-args` | `""` | Additional arguments passed to `docstring-linter`. |
+
+## How it compares
+
+State of the tools checked in September 2026.
+
+| Tool | Focus |
+|------|-------|
+| [ruff](https://docs.astral.sh/ruff/) `D` rules | Docstring format (PEP 257, Google, NumPy conventions). Its `DOC` rules, which compare the docstring with the code, are still in preview (7 rules in ruff 0.16.8). |
+| [pydoclint](https://github.com/jsh9/pydoclint) | Consistency between docstring and code (arguments, returns, yields, raises, class attributes), with a baseline and `noqa` support. |
+| [docsig](https://github.com/jshwi/docsig) | Consistency between the documented parameters and the signature. |
+| docstring-linter | Consistency with the code, plus a configurable house style: tri-state policies for every section and construct, layout rules, and the `strict` and `google` conventions. Google style only. |
+
+docstring-linter does not replace ruff: it can run next to its `D` rules, with the rules both tools check turned off on one side.
