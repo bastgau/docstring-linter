@@ -35,16 +35,9 @@ jobs:
         run: uv sync --no-dev --group ${{ env.GROUP }}
 
       - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
-        name: Execute Prek on push
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        name: Execute Prek
         with:
           extra-args: --group ${{ env.GROUP }} --all-files
-
-      - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
-        name: Execute Prek on pull_request
-        if: github.event_name == 'pull_request'
-        with:
-          extra-args: --group ${{ env.GROUP }} --files origin/${{ github.base_ref }}..HEAD
 
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         name: Upload coverage to Codecov
