@@ -271,6 +271,7 @@ def test_convention_google_sets_defaults() -> None:
     assert config.raises_section is Policy.OPTIONAL
     assert config.attributes_section is Policy.OPTIONAL
     assert config.blank_lines_before_closing_quotes == 0
+    assert config.type_matching == "lenient"
     assert "imperative_mood" not in config.enabled_rules
     assert "return_type_annotation" not in config.enabled_rules
     assert "args_order" in config.enabled_rules
@@ -312,6 +313,36 @@ def test_convention_rejected_in_override() -> None:
 def test_convention_listed_in_option_values() -> None:
     """option_values: reports the active convention."""
     assert _parse_toml_config({"convention": "google"}).option_values()["convention"] == "google"
+
+
+# ---------------------------------------------------------------------------
+# type_matching
+# ---------------------------------------------------------------------------
+
+
+def test_type_matching_default_strict() -> None:
+    """No type_matching key: strict comparison."""
+    assert _parse_toml_config({}).type_matching == "strict"
+
+
+def test_type_matching_set() -> None:
+    """type_matching = 'equivalent': stored as is and reported by option_values."""
+    config = _parse_toml_config({"type_matching": "equivalent"})
+    assert config.type_matching == "equivalent"
+    assert config.option_values()["type_matching"] == "equivalent"
+
+
+def test_type_matching_invalid() -> None:
+    """type_matching = 'loose': raises ValueError listing the accepted levels."""
+    with pytest.raises(ValueError, match=re.escape("'type_matching': invalid value 'loose', expected one of strict, equivalent, lenient.")):
+        _parse_toml_config({"type_matching": "loose"})
+
+
+def test_type_matching_in_override() -> None:
+    """type_matching in an override: applied to the matching files only."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "type_matching": "lenient"}]})
+    assert config.for_path("tests/test_foo.py").type_matching == "lenient"
+    assert config.for_path("src/foo.py").type_matching == "strict"
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ These rules are always on because requiring a section and then tolerating wrong 
 
 #### args_match
 
-Checks what the `Args:` section declares: phantom parameters, type `(type)` according to the `documented_types` policy, and presence of a description. A parameter of the signature that is not documented at all is reported by the `args_section` policy, not here.
+Checks what the `Args:` section declares: phantom parameters, type `(type)` according to the `documented_types` policy and compared with the signature as set by [`type_matching`](/docs/configuration.md#type-matching), and presence of a description. A parameter of the signature that is not documented at all is reported by the `args_section` policy, not here.
 
 ```python
 # Bad: type mismatch (int vs float)
@@ -173,7 +173,7 @@ Note: bare `raise` (re-raise), dynamic raises, or raises from internal calls are
 
 #### returns_match
 
-When a `Returns:` section exists, its type must match the signature, and the type must not be missing. This rule never reports a missing section (that is `returns_section`).
+When a `Returns:` section exists, its type must match the signature as set by [`type_matching`](/docs/configuration.md#type-matching), and its presence follows the `documented_types` policy. The text before the colon counts as a type only when it reads as a Python expression: `The mapping: key to value.` is a description. This rule never reports a missing section (that is `returns_section`).
 
 A documented type that contradicts the signature is wrong, not stylistic, so this rule ignores `select` and `ignore` and always reports.
 
@@ -188,7 +188,7 @@ def get_name() -> str:
     """
     return "Alice"
 
-# Bad: type missing in Returns
+# Bad under documented_types = "required" (default): type missing in Returns
 def get_name() -> str:
     """Get the user name.
 

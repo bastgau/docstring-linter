@@ -63,7 +63,7 @@ See the Available keys section below for the complete list of options.
 | `examples_section` | `"optional"` | Policy for the `Example:` section. |
 | `notes_section` | `"optional"` | Policy for the `Note:` section. |
 | `todo_section` | `"optional"` | Policy for the `Todo:` section. |
-| `documented_types` | `"required"` | Policy for the type between parentheses in `Args:` and `Attributes:` entries. |
+| `documented_types` | `"required"` | Policy for the type in `Args:` and `Attributes:` entries and on the `Returns:` and `Yields:` lines. |
 | `returns_descriptions` | `"required"` | Policy for the description on the `Returns:` and `Yields:` lines. |
 | `exclude_empty_init_method` | `true` | Do not require a docstring on `__init__` methods with no parameter beyond `self` and a body limited to `pass` or a docstring. |
 | `exclude_empty_init_module` | `true` | Do not require a docstring on `__init__.py` files with an empty body (empty file or comments only). |
@@ -73,6 +73,7 @@ See the Available keys section below for the complete list of options.
 | `summary_max_length` | `80` | Maximum summary line length for `summary_too_long`. |
 | `blank_lines_before_section` | `1` | Blank lines expected before a section header, checked by `blank_lines`. |
 | `blank_lines_before_closing_quotes` | `1` | Blank lines expected before the closing `"""`, checked by `blank_lines`. |
+| `type_matching` | `"strict"` | How closely a documented type must match the signature: `"strict"`, `"equivalent"` or `"lenient"`. See [Type matching](#type-matching). |
 | `scope.modules` | `true` | Check module-level docstrings. |
 | `scope.classes` | `true` | Check class docstrings. |
 | `scope.functions` | `true` | Check function docstrings. |
@@ -94,6 +95,7 @@ Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five 
 | `raises_section` | `"required"` | `"optional"` |
 | `attributes_section` | `"required"` | `"optional"` |
 | `blank_lines_before_closing_quotes` | `1` | `0` |
+| `type_matching` | `"strict"` | `"lenient"` |
 | `imperative_mood` rule | enabled | disabled |
 | `return_type_annotation` rule | enabled | disabled |
 
@@ -108,6 +110,20 @@ raises_section = "required"   # stricter than the convention on this point
 ```
 
 `convention` applies to the whole run and cannot be set in an override.
+
+### Type matching
+
+When a docstring declares a type, `args_match` and `returns_match` compare it with the annotation of the signature. `type_matching` sets how close the two must be. Each level accepts everything the previous one accepts.
+
+| Level | Also considered identical | Example (docstring vs signature) |
+|---|---|---|
+| `"strict"` | Quotes of forward references, spacing, the `, optional` suffix, the Sphinx `~` prefix | `Node` vs `'Node'`, `bool, optional` vs `bool`, `~Console` vs `Console` |
+| `"equivalent"` | The same type spelled differently: `Optional[X]`, `Union[X, None]` and `X \| None`; `List`, `Dict`, `Set`, `Tuple`, `Type` and their builtin form | `str \| None` vs `Optional[str]`, `List[int]` vs `list[int]` |
+| `"lenient"` | A docstring leaving `None` implicit when the signature accepts it | `int, optional` vs `Optional[int]` |
+
+Differences that change the type are reported at every level: `int` vs `str`, `List[int]` vs `Iterable[int]`, `IO` vs `IO[str]`. A documented type that is not a Python expression (`list of int`) is compared as text.
+
+`type_matching` may be set in an override.
 
 ### Per-path overrides
 
@@ -150,7 +166,7 @@ select = ["docstring_exists"]
 - **A single block applies to a given file**: the last declared among those matching it. The other matching blocks are ignored, blocks never accumulate. Declare the general case first and the exceptions after it, and make each block self-contained.
 - The block that applies is resolved against the base configuration, so a setting it does not declare keeps its base value, not the linter default.
 - `ignore` removes rules from the inherited set, `select` replaces that set entirely. Same meaning as at the base level.
-- An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`.
+- An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`, `type_matching`.
 - `exclude`, `workers` and `scope.*` apply to the whole run rather than individual files, so they are rejected inside an override.
 
 `docstring-linter --list-rules` prints the overrides after the base configuration, showing only what each one changes.

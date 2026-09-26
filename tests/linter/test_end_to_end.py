@@ -307,3 +307,52 @@ def test_strict_convention_rejects_google_guide_style(tmp_path: Path) -> None:
     """Same source under the strict default: the house rules the google convention relaxes are reported."""
     rules = {rule for _, rule in _lint(tmp_path, _GOOGLE_GUIDE_SOURCE)}
     assert {"args_match", "attributes_section", "blank_lines", "imperative_mood", "returns_none"} <= rules
+
+
+def test_google_convention_accepts_napoleon_types(tmp_path: Path) -> None:
+    """Optional parameter documented '(int, optional)', forward reference, untyped Returns: no error under google."""
+    source = '''\
+        """Module."""
+
+        from typing import Optional
+
+
+        class Node:
+            """Store a node."""
+
+            def resize(self, width: Optional[int] = None, other: "Node | None" = None) -> "Node":
+                """Return a resized copy.
+
+                Args:
+                    width (int, optional): New width. Defaults to None.
+                    other (~Node, optional): Node to copy the height from.
+
+                Returns:
+                    The new node: a copy with the requested size.
+                """
+                return self
+        '''
+    assert not _lint(tmp_path, source, _parse_toml_config({"convention": "google"}))
+
+
+def test_strict_convention_reports_implicit_none(tmp_path: Path) -> None:
+    """Same kind of source under strict: '(int, optional)' for Optional[int] and the untyped Returns are reported."""
+    source = '''\
+        """Module."""
+
+        from typing import Optional
+
+
+        def scale(width: Optional[int] = None) -> int:
+            """Scale the width.
+
+            Args:
+                width (int, optional): New width.
+
+            Returns:
+                The scaled width: twice the input.
+
+            """
+            return (width or 0) * 2
+        '''
+    assert _lint(tmp_path, source) == [("scale", "args_match"), ("scale", "returns_match")]

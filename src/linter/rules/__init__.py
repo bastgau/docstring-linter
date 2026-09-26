@@ -107,7 +107,7 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
         errors.extend(check_args_section(entity, parsed_doc, config.args_section))
 
         if config.args_section is not Policy.FORBIDDEN:
-            errors.extend(check_args_match(entity, parsed_doc, config.documented_types))
+            errors.extend(check_args_match(entity, parsed_doc, config.documented_types, config.type_matching))
 
         errors.extend(check_duplicate_arg(entity, parsed_doc))
 
@@ -117,7 +117,7 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
         errors.extend(check_returns_section(entity, parsed_doc, config.returns_section))
 
         if config.returns_section is not Policy.FORBIDDEN:
-            errors.extend(check_returns_match(entity, parsed_doc, config.returns_descriptions))
+            errors.extend(check_returns_match(entity, parsed_doc, config.returns_descriptions, config.documented_types, config.type_matching))
             errors.extend(check_returns_none(entity, parsed_doc, config.returns_none))
             errors.extend(check_init_returns_none(entity, parsed_doc, config.init_returns_none))
 
@@ -129,7 +129,7 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
         errors.extend(check_yields_section(entity, parsed_doc, config.yields_section))
 
         if config.yields_section is not Policy.FORBIDDEN:
-            errors.extend(check_yields_match(entity, parsed_doc, config.returns_descriptions))
+            errors.extend(check_yields_match(entity, parsed_doc, config.returns_descriptions, config.documented_types))
 
     if entity.node_type == NodeType.CLASS:
         errors.extend(check_attributes_section(entity, parsed_doc, config.attributes_section))

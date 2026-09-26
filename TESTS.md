@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 430 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 472 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -21,6 +21,9 @@ This file lists the 430 tests of the `docstring-linter` project. Each entry show
 | `test_docstring_parser.py` | `test_parse_returns_none_keyword` | Returns section containing only 'None': type_annotation is 'None', description is None. |
 | `test_docstring_parser.py` | `test_parse_returns_bare_type` | Returns section holding a bare type, no colon: type is read, description is None. |
 | `test_docstring_parser.py` | `test_parse_returns_bare_description` | Returns section holding prose, no colon: description is read, type is None. |
+| `test_docstring_parser.py` | `test_parse_returns_prose_with_colon` | Returns line whose text before the colon is prose: the whole line is the description. |
+| `test_docstring_parser.py` | `test_parse_returns_continuation_lines` | Returns description spread over several lines: the lines are joined. |
+| `test_docstring_parser.py` | `test_parse_returns_single_word_prose` | Returns section holding a single word that is not a type: read as the description. |
 | `test_docstring_parser.py` | `test_parse_no_returns_section` | Docstring without Returns section: returns field is None. |
 | `test_docstring_parser.py` | `test_parse_raises_single` | Single Raises entry: exception_type and description populated. |
 | `test_docstring_parser.py` | `test_parse_raises_multiline_description` | Raises entry with continuation line: description is concatenated. |
@@ -150,6 +153,8 @@ This file lists the 430 tests of the `docstring-linter` project. Each entry show
 | `test_end_to_end.py` | `test_variable_raise_not_required_in_raises` | Raise of a variable holding an exception: nothing to document, no error. |
 | `test_end_to_end.py` | `test_google_convention_accepts_google_guide_style` | Google guide layout (untyped Args, no Returns: None, descriptive mood): no error under convention google. |
 | `test_end_to_end.py` | `test_strict_convention_rejects_google_guide_style` | Same source under the strict default: the house rules the google convention relaxes are reported. |
+| `test_end_to_end.py` | `test_google_convention_accepts_napoleon_types` | Optional parameter documented '(int, optional)', forward reference, untyped Returns: no error under google. |
+| `test_end_to_end.py` | `test_strict_convention_reports_implicit_none` | Same kind of source under strict: '(int, optional)' for Optional[int] and the untyped Returns are reported. |
 
 ---
 
@@ -218,6 +223,12 @@ This file lists the 430 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_duplicate_arg_no_args` | No args: no duplicate_arg error. |
 | `rules/test_rules_args.py` | `test_duplicate_arg_cannot_be_disabled` | Rule listed in ignore: duplicate is still reported, the rule is always on. |
 
+### type comparison
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_types.py` | `test_types_match` | Each level accepts what the previous one accepts, and real differences are always reported (20 cases). |
+
 ### args_order
 
 | Fichier | Fonction | Description |
@@ -245,7 +256,12 @@ This file lists the 430 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `rules/test_rules_args.py` | `test_returns_match_mismatch` | Returns section type differs from signature: returns returns_match error. |
-| `rules/test_rules_args.py` | `test_returns_match_missing_type` | Returns section present but no type declared: returns returns_match error. |
+| `rules/test_rules_args.py` | `test_returns_match_missing_type` | documented_types = required, Returns section without a type: returns returns_match error. |
+| `rules/test_rules_args.py` | `test_returns_match_type_optional` | documented_types = optional, Returns section without a type: no returns_match error. |
+| `rules/test_rules_args.py` | `test_returns_match_type_forbidden` | documented_types = forbidden, Returns line carrying a type: returns returns_match error. |
+| `rules/test_rules_args.py` | `test_returns_match_type_forbidden_allows_none` | documented_types = forbidden, 'Returns: None': None is the whole line, no error. |
+| `rules/test_rules_args.py` | `test_returns_match_type_matching_levels` | Signature Optional[str], docstring 'str \| None': a mismatch only at the strict level (3 cases). |
+| `rules/test_rules_args.py` | `test_args_match_type_matching_levels` | Signature 'int \| None': each level accepts what the previous ones accept, and more (5 cases). |
 | `rules/test_rules_args.py` | `test_returns_match_no_section_no_error` | No Returns section: returns_match does not flag a missing section. |
 | `rules/test_rules_args.py` | `test_returns_match_missing_description` | Policy required, Returns section without a description: returns returns_match error. |
 | `rules/test_rules_args.py` | `test_returns_match_none_exempt_from_description` | Policy required, 'Returns: None': the description is not demanded. |
@@ -295,7 +311,9 @@ This file lists the 430 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_yields_section_required_missing` | Policy required, generator without Yields section: returns yields_section error. |
 | `rules/test_rules_args.py` | `test_yields_section_optional_missing` | Policy optional, generator without Yields section: no error. |
 | `rules/test_rules_args.py` | `test_yields_section_forbidden_present` | Policy forbidden, Yields section present: returns yields_section error. |
-| `rules/test_rules_args.py` | `test_yields_match_missing_type` | Yields section without a type: returns yields_match error. |
+| `rules/test_rules_args.py` | `test_yields_match_missing_type` | documented_types = required, Yields section without a type: returns yields_match error. |
+| `rules/test_rules_args.py` | `test_yields_match_type_optional` | documented_types = optional, Yields section without a type: no yields_match type error. |
+| `rules/test_rules_args.py` | `test_yields_match_type_forbidden` | documented_types = forbidden, Yields line carrying a type: returns yields_match error. |
 | `rules/test_rules_args.py` | `test_yields_match_missing_description` | Yields section without a description: returns yields_match error. |
 | `rules/test_rules_args.py` | `test_yields_section_correct` | Generator with correct Yields section: no error. |
 | `rules/test_rules_args.py` | `test_yields_section_not_applied_to_non_generator` | Non-generator function: the yields_section policy is not applied. |
@@ -685,6 +703,15 @@ This file lists the 430 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_convention_unknown` | Convention = 'numpy': raises ValueError listing the accepted conventions. |
 | `test_config.py` | `test_convention_rejected_in_override` | Convention in an override: rejected, it sets the defaults of the whole run. |
 | `test_config.py` | `test_convention_listed_in_option_values` | option_values: reports the active convention. |
+
+### type_matching
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_config.py` | `test_type_matching_default_strict` | No type_matching key: strict comparison. |
+| `test_config.py` | `test_type_matching_set` | type_matching = 'equivalent': stored as is and reported by option_values. |
+| `test_config.py` | `test_type_matching_invalid` | type_matching = 'loose': raises ValueError listing the accepted levels. |
+| `test_config.py` | `test_type_matching_in_override` | type_matching in an override: applied to the matching files only. |
 
 ### value types
 

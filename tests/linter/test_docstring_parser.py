@@ -123,6 +123,30 @@ def test_parse_returns_bare_description() -> None:
     assert result.returns.description == "The user name."
 
 
+def test_parse_returns_prose_with_colon() -> None:
+    """Returns line whose text before the colon is prose: the whole line is the description."""
+    result = PARSER.parse("Do something.\n\nReturns:\n    The mapping: key to value.\n")
+    assert result.returns is not None
+    assert result.returns.type_annotation is None
+    assert result.returns.description == "The mapping: key to value."
+
+
+def test_parse_returns_continuation_lines() -> None:
+    """Returns description spread over several lines: the lines are joined."""
+    result = PARSER.parse("Do something.\n\nReturns:\n    dict[str, int]: Mapping of\n        names to counts.\n")
+    assert result.returns is not None
+    assert result.returns.type_annotation == "dict[str, int]"
+    assert result.returns.description == "Mapping of names to counts."
+
+
+def test_parse_returns_single_word_prose() -> None:
+    """Returns section holding a single word that is not a type: read as the description."""
+    result = PARSER.parse("Do something.\n\nReturns:\n    Nothing.\n")
+    assert result.returns is not None
+    assert result.returns.type_annotation is None
+    assert result.returns.description == "Nothing."
+
+
 def test_parse_no_returns_section() -> None:
     """Docstring without Returns section: returns field is None."""
     result = PARSER.parse("Do something.")

@@ -3,6 +3,7 @@
 Parse raw Google style docstrings into structured data.
 """
 
+import ast
 import re
 from abc import ABC, abstractmethod
 
@@ -233,6 +234,10 @@ class GoogleStyleParser(BaseDocstringParser):
     def _parse_returns(self, text: str) -> DocstringReturn | None:
         """Parse Returns section into DocstringReturn.
 
+        The text before the first colon is the type only when it reads as a
+        Python expression, so that 'The mapping: key to value' stays prose.
+        Continuation lines extend the description.
+
         Args:
             text (str): Raw text content of the Returns section.
 
@@ -240,26 +245,29 @@ class GoogleStyleParser(BaseDocstringParser):
             DocstringReturn | None: Parsed return entry, or None.
 
         """
+        result: DocstringReturn | None = None
+
         for line in text.split("\n"):
-            match = self.RETURN_PATTERN.match(line)
-            if match:
-                return DocstringReturn(
-                    type_annotation=match.group(1).strip(),
-                    description=match.group(2).strip() or None,
-                )
             stripped = line.strip()
             if not stripped:
                 continue
 
-            if stripped.lower() == "none":
-                return DocstringReturn(type_annotation="None", description=None)
+            if result is not None:
+                result.description = f"{result.description or ''} {stripped}".strip()
+                continue
 
-            # degraded form, no colon: a single token is a type, anything else is prose
-            if " " in stripped:
-                return DocstringReturn(type_annotation=None, description=stripped)
-            return DocstringReturn(type_annotation=stripped, description=None)
+            match = self.RETURN_PATTERN.match(line)
+            if match and _is_expression(match.group(1).strip()):
+                result = DocstringReturn(type_annotation=match.group(1).strip(), description=match.group(2).strip() or None)
+            elif stripped.lower() == "none":
+                result = DocstringReturn(type_annotation="None", description=None)
+            elif " " not in stripped and _is_expression(stripped):
+                # degraded form, no colon: a bare type
+                result = DocstringReturn(type_annotation=stripped, description=None)
+            else:
+                result = DocstringReturn(type_annotation=None, description=stripped)
 
-        return None
+        return result
 
     def _parse_raises(self, text: str) -> list[DocstringRaise]:
         """Parse Raises section into list of DocstringRaise.
@@ -339,6 +347,23 @@ class GoogleStyleParser(BaseDocstringParser):
                 current_attr.description = f"{current_attr.description} {stripped}".strip()
 
         return attrs
+
+
+def _is_expression(text: str) -> bool:
+    """Check whether a text parses as a Python expression, the form a type takes.
+
+    Args:
+        text (str): Candidate type.
+
+    Returns:
+        bool: True if the text is a valid expression.
+
+    """
+    try:
+        ast.parse(text, mode="eval")
+    except SyntaxError:
+        return False
+    return True
 
 
 PARSERS = {

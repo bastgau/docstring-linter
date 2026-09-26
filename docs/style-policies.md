@@ -40,7 +40,7 @@ One more policy governs what an entry declares:
 
 | Policy | Default | Applies to |
 |---|---|---|
-| `documented_types` | `"required"` | Type between parentheses in `Args:` and `Attributes:` entries |
+| `documented_types` | `"required"` | Type in `Args:` and `Attributes:` entries and on the `Returns:` and `Yields:` lines |
 | `returns_descriptions` | `"required"` | Description on the `Returns:` and `Yields:` lines |
 
 The two halves are independent. The policy answers "must this be documented", the rule answers "is what is documented correct". Under `"optional"`, nothing forces you to document, but everything you do document is still checked. Under `"forbidden"`, the section is rejected and the content rule is not run, to avoid reporting the same block twice.
@@ -420,9 +420,9 @@ def process(x: int) -> int:
 
 ### documented_types
 
-Governs the type declared between parentheses in `Args:` and `Attributes:` entries. The signature already carries the type, so a project may consider the docstring copy redundant.
+Governs the type declared between parentheses in `Args:` and `Attributes:` entries, and before the colon on the `Returns:` and `Yields:` lines. The signature already carries the type, so a project may consider the docstring copy redundant.
 
-Does not apply to `Returns:` and `Yields:`, where the type is the payload of the line: removing it would leave prose with nothing to identify. Their types stay mandatory, checked by `returns_match` and `yields_match`.
+A `Returns: None` line is exempt: `None` is the whole content of the line, it is accepted whatever the policy. How closely a type that is present must match the signature is set by [`type_matching`](/docs/configuration.md#type-matching).
 
 ```toml
 [tool.docstring-linter]
@@ -450,12 +450,12 @@ def create_user(name: str) -> dict:
         name: User name.
 
     Returns:
-        dict: User record.
+        User record.
 
     """
 
 # optional: both forms accepted, and a type that is present is still
-# compared with the signature by args_match
+# compared with the signature by args_match and returns_match
 ```
 
 The description of an entry is never optional: an `Args:`, `Attributes:`, `Raises:` or `Yields:` entry without a description is always reported. A name alone carries no information the signature does not already give.

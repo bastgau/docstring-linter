@@ -53,7 +53,7 @@ POLICIES_REGISTRY = {
     "examples_section": "Example section",
     "notes_section": "Note section",
     "todo_section": "Todo section",
-    "documented_types": "Type between parentheses in Args and Attributes entries",
+    "documented_types": "Type in Args and Attributes entries and on the Returns and Yields lines",
     "returns_descriptions": "Description on the Returns and Yields lines",
 }
 
@@ -68,6 +68,7 @@ OPTIONS_REGISTRY = {
     "summary_max_length": "Maximum summary line length for summary_too_long",
     "blank_lines_before_section": "Blank lines expected before a section header",
     "blank_lines_before_closing_quotes": "Blank lines expected before the closing triple quotes",
+    "type_matching": "How closely a documented type must match the signature",
     "scope.modules": "Check module docstrings",
     "scope.classes": "Check class docstrings",
     "scope.functions": "Check function docstrings",
@@ -178,6 +179,7 @@ CONVENTIONS: dict[str, Convention] = {
             "raises_section": Policy.OPTIONAL,
             "attributes_section": Policy.OPTIONAL,
             "blank_lines_before_closing_quotes": 0,
+            "type_matching": "lenient",
         },
         disabled_rules=frozenset({"imperative_mood", "return_type_annotation"}),
     ),
@@ -201,6 +203,7 @@ SETTING_KEYS: frozenset[str] = frozenset(
         "summary_max_length",
         "blank_lines_before_section",
         "blank_lines_before_closing_quotes",
+        "type_matching",
     }
 )
 
@@ -218,8 +221,14 @@ OVERRIDABLE_OPTIONS: frozenset[str] = frozenset(
         "exclude_empty_init_method",
         "exclude_empty_init_module",
         "ignore_placeholder_docstrings",
+        "type_matching",
     }
 )
+
+# Options taking one value among a fixed list
+CHOICE_OPTIONS: dict[str, tuple[str, ...]] = {
+    "type_matching": ("strict", "equivalent", "lenient"),
+}
 
 # Integer options with the minimum value they are clamped to
 INT_OPTIONS: dict[str, int] = {
@@ -314,6 +323,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         summary_max_length (int): Maximum allowed summary line length.
         blank_lines_before_section (int): Blank lines expected before a section header.
         blank_lines_before_closing_quotes (int): Blank lines expected before the closing quotes.
+        type_matching (str): How closely a documented type must match the signature.
         returns_none (Policy): Policy for 'Returns: None' on -> None functions.
         init_returns_none (Policy): Policy for 'Returns: None' on __init__ methods.
         summary_on_first_line (Policy): Policy for the summary on the opening quotes line.
@@ -327,7 +337,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         examples_section (Policy): Policy for the presence of the Example section.
         notes_section (Policy): Policy for the presence of the Note section.
         todo_section (Policy): Policy for the presence of the Todo section.
-        documented_types (Policy): Policy for the type in Args and Attributes entries.
+        documented_types (Policy): Policy for the type in Args, Attributes, Returns and Yields.
         returns_descriptions (Policy): Policy for the description on the Returns and Yields lines.
         overrides (list[ConfigOverride]): Per-path settings applied in declaration order.
 
@@ -349,6 +359,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     summary_max_length: int = 80
     blank_lines_before_section: int = 1
     blank_lines_before_closing_quotes: int = 1
+    type_matching: str = "strict"
     returns_none: Policy = Policy.REQUIRED
     init_returns_none: Policy = Policy.FORBIDDEN
     summary_on_first_line: Policy = Policy.REQUIRED
@@ -417,6 +428,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
             "summary_max_length": str(self.summary_max_length),
             "blank_lines_before_section": str(self.blank_lines_before_section),
             "blank_lines_before_closing_quotes": str(self.blank_lines_before_closing_quotes),
+            "type_matching": self.type_matching,
             "scope.modules": str(self.check_modules).lower(),
             "scope.classes": str(self.check_classes).lower(),
             "scope.functions": str(self.check_functions).lower(),
@@ -638,23 +650,29 @@ def _parse_bool(key: str, value: object, location: str = "") -> bool:
     raise ValueError(msg)
 
 
-def _parse_option(key: str, value: object, location: str = "") -> int | bool:
-    """Check an integer or boolean option, clamping integers to their minimum.
+def _parse_option(key: str, value: object, location: str = "") -> int | bool | str:
+    """Check an integer, boolean or choice option, clamping integers to their minimum.
 
     Args:
-        key (str): Option identifier, a key of INT_OPTIONS or BOOL_OPTIONS.
+        key (str): Option identifier, a key of INT_OPTIONS, BOOL_OPTIONS or CHOICE_OPTIONS.
         value (object): Value read from the config file.
         location (str): Config section carrying it, empty for the top level.
 
     Returns:
-        int | bool: The boolean as is, or the integer clamped to its minimum.
+        int | bool | str: The boolean or choice as is, or the integer clamped to its minimum.
 
     Raises:
-        ValueError: If the value does not have the expected type.
+        ValueError: If the value does not have the expected type or is not an accepted choice.
 
     """
     if key in BOOL_OPTIONS:
         return _parse_bool(key, value, location)
+
+    if key in CHOICE_OPTIONS:
+        if isinstance(value, str) and value in CHOICE_OPTIONS[key]:
+            return value
+        msg = f"{location}'{key}': invalid value {value!r}, expected one of {', '.join(CHOICE_OPTIONS[key])}."
+        raise ValueError(msg)
 
     # bool is a subclass of int, reject it explicitly
     if isinstance(value, int) and not isinstance(value, bool):
@@ -822,7 +840,7 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:
     for key, value in data.items():
         if key in POLICIES_REGISTRY:
             setattr(config, key, _parse_policy(key, value))
-        elif key in INT_OPTIONS or key in BOOL_OPTIONS:
+        elif key in INT_OPTIONS or key in BOOL_OPTIONS or key in CHOICE_OPTIONS:
             setattr(config, key, _parse_option(key, value))
 
     if "exclude" in data:
