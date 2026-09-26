@@ -97,7 +97,7 @@ Proposition : `--generate-baseline .docstring-linter-baseline.json` (empreinte p
 
 ### UX-04 - Portée non réglable [Vérifié] - Haute
 
-**Statut : Partiel.** `ce82164`, `65839f4`. Options `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`, `properties_as_attributes` ; `@overload` toujours ignoré. `exclude_overridden` ne couvre que `@override` : `Child.run` sans décorateur reste signalé [Vérifié]. Pas d'option pour les attributs privés (`attributes_section` est optionnel avec `google`).
+**Statut : Partiel.** `ce82164`, `65839f4` : options `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`, `properties_as_attributes` ; `@overload` toujours ignoré. Décisions : `exclude_overridden` reste limité à `@override` (sur `rich`, 24 méthodes non documentées redéfinissent une méthode d'une classe parente du même fichier, 60 une classe parente d'ailleurs [Vérifié]) ; attributs privés toujours exigés dans `Attributes:` pour le moment (piste écartée : les rattacher à `exclude_private` ; piste possible plus tard : une option dédiée).
 
 Observé :
 
