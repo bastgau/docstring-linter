@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 549 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 554 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -178,6 +178,10 @@ This file lists the 549 tests of the `docstring-linter` project. Each entry show
 | `test_end_to_end.py` | `test_init_args_short_init_docstring` | __init__ with a docstring but no Args, class with Args, location either: no error. |
 | `test_end_to_end.py` | `test_init_args_mixed` | Args in the class and in __init__, location either: reported as mixed on __init__. |
 | `test_end_to_end.py` | `test_init_args_class_location_rejects_init_args` | Args only in __init__, location class: reported on __init__, and missing on the class. |
+| `test_end_to_end.py` | `test_one_liners_need_sections_by_default` | One-line docstrings on annotated functions, option off (strict default): every missing section is reported. |
+| `test_end_to_end.py` | `test_one_liners_sections_optional` | Same functions, sections_optional_on_one_liners on: no error. |
+| `test_end_to_end.py` | `test_one_liner_without_annotations_still_checked` | One-line docstring on a function missing an annotation: sections still required. |
+| `test_end_to_end.py` | `test_multi_line_docstring_still_checked` | Docstring with a description but no section: not a one-liner, sections still required. |
 
 ---
 
@@ -757,7 +761,7 @@ This file lists the 549 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `test_config.py` | `test_exemption_options` | Exemption option: off by default, set from the file, allowed in an override (4 cases). |
+| `test_config.py` | `test_exemption_options` | Exemption option: off by default, set from the file, allowed in an override (5 cases). |
 | `test_config.py` | `test_init_args_location` | init_args_location: 'init' by default, accepts class and either, rejects other values. |
 
 ### type_matching

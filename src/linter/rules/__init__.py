@@ -60,6 +60,33 @@ __all__ = [
 _PROPERTY_GETTERS = frozenset({"property", "cached_property"})
 _PROPERTY_ACCESSORS = frozenset({"setter", "deleter"})
 
+# Policies requiring a section, lifted on one-line docstrings by sections_optional_on_one_liners
+_SECTION_POLICIES = ("args_section", "returns_section", "yields_section", "raises_section", "returns_none", "init_returns_none")
+
+
+def _sections_optional(entity: CodeEntity, config: LinterConfig) -> bool:
+    """Check whether a one-line docstring is enough for a function or method.
+
+    The Google guide omits the sections when the name and the signature say it
+    all, so the signature must be fully annotated.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        config (LinterConfig): Linter configuration.
+
+    Returns:
+        bool: True if the required section policies do not apply to this docstring.
+
+    """
+    return (
+        config.sections_optional_on_one_liners
+        and entity.node_type in (NodeType.FUNCTION, NodeType.METHOD)
+        and entity.docstring is not None
+        and "\n" not in entity.docstring.strip()
+        and entity.return_type is not None
+        and all(arg.type_annotation for arg in entity.args)
+    )
+
 
 def _is_docstring_optional(entity: CodeEntity, config: LinterConfig) -> bool:
     """Check whether the options exempt an entity from having a docstring.
@@ -166,6 +193,9 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
         return errors
 
     is_getter = config.properties_as_attributes and not _PROPERTY_GETTERS.isdisjoint(entity.decorators)
+
+    if _sections_optional(entity, config):
+        config = replace(config, **{policy: Policy.OPTIONAL for policy in _SECTION_POLICIES if getattr(config, policy) is Policy.REQUIRED})
 
     init_in_class = _init_args_in_class(entity, config)
 

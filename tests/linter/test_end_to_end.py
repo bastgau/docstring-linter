@@ -598,3 +598,51 @@ def _lint_errors(tmp_path: Path, source: str, config: LinterConfig) -> list[Lint
     f = tmp_path / "sample.py"
     f.write_text(textwrap.dedent(source), encoding="utf-8")
     return lint_file(str(f), config)
+
+
+_ONE_LINERS = '''\
+    """Module."""
+
+    from collections.abc import Iterator
+
+
+    def scale(width: int, factor: int = 2) -> int:
+        """Scale a width by a factor."""
+        if width < 0:
+            raise ValueError(width)
+        return width * factor
+
+
+    def count(limit: int) -> Iterator[int]:
+        """Count up to the limit."""
+        yield from range(limit)
+
+
+    def reset(width: int) -> None:
+        """Reset the width."""
+    '''
+
+
+def test_one_liners_need_sections_by_default(tmp_path: Path) -> None:
+    """One-line docstrings on annotated functions, option off (strict default): every missing section is reported."""
+    rules = {rule for _, rule in _lint(tmp_path, _ONE_LINERS)}
+    assert {"args_section", "returns_section", "raises_section", "yields_section", "returns_none"} <= rules
+
+
+def test_one_liners_sections_optional(tmp_path: Path) -> None:
+    """Same functions, sections_optional_on_one_liners on: no error."""
+    assert not _lint(tmp_path, _ONE_LINERS, _parse_toml_config({"sections_optional_on_one_liners": True}))
+
+
+def test_one_liner_without_annotations_still_checked(tmp_path: Path) -> None:
+    """One-line docstring on a function missing an annotation: sections still required."""
+    source = _ONE_LINERS.replace("def scale(width: int, factor: int = 2)", "def scale(width, factor: int = 2)")
+    errors = _lint(tmp_path, source, _parse_toml_config({"sections_optional_on_one_liners": True, "ignore": ["return_type_annotation"]}))
+    assert ("scale", "args_section") in errors
+
+
+def test_multi_line_docstring_still_checked(tmp_path: Path) -> None:
+    """Docstring with a description but no section: not a one-liner, sections still required."""
+    source = _ONE_LINERS.replace('"""Scale a width by a factor."""', '"""Scale a width by a factor.\n\n        Negative widths are rejected.\n\n        """')
+    errors = _lint(tmp_path, source, _parse_toml_config({"sections_optional_on_one_liners": True}))
+    assert ("scale", "args_section") in errors

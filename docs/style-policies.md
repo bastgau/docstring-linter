@@ -25,6 +25,8 @@ Section presence policies, one per documentable section:
 | `raises_section` | `"required"` | `Raises:` |
 | `attributes_section` | `"required"` | `Attributes:` |
 
+With `sections_optional_on_one_liners = true`, a one-line docstring on a fully annotated function or method needs none of these sections: the Google guide omits them when the name and signature say it all. A docstring of more than one line still needs every required section.
+
 When present, the content of these sections is also validated by the corresponding content rules. The policy controls whether the section must exist; the corresponding content rule validates what it contains (`args_match`, `returns_match`, `yields_match`, `raises_match`, and `attributes_match`).
 
 Four more sections carry no content rule, only a presence policy. They default to `"optional"`, nothing changes unless you set them:
@@ -56,7 +58,7 @@ Governs the `Returns: None` section on every function or method whose signature 
 
 Not applied at all when `returns_section = "forbidden"`: that value drops the `Returns:` section from the whole docstring, `-> None` functions included.
 
-A one-liner docstring cannot contain a `Returns:` section, so under `"required"` a one-liner on a `-> None` function is an error.
+A one-liner docstring cannot contain a `Returns:` section, so under `"required"` a one-liner on a `-> None` function is an error, unless `sections_optional_on_one_liners` applies.
 
 ```toml
 [tool.docstring-linter]

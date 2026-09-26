@@ -278,6 +278,7 @@ def test_convention_google_sets_defaults() -> None:
     assert config.properties_as_attributes is True
     assert config.init_args_location == "either"
     assert config.documented_stars is Policy.REQUIRED
+    assert config.sections_optional_on_one_liners is True
     assert "imperative_mood" not in config.enabled_rules
     assert "return_type_annotation" not in config.enabled_rules
     assert "raises_extraneous" not in config.enabled_rules
@@ -327,7 +328,7 @@ def test_convention_listed_in_option_values() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("option", ["exclude_dunder_methods", "exclude_private", "exclude_overridden", "properties_as_attributes"])
+@pytest.mark.parametrize("option", ["exclude_dunder_methods", "exclude_private", "exclude_overridden", "properties_as_attributes", "sections_optional_on_one_liners"])
 def test_exemption_options(option: str) -> None:
     """Exemption option: off by default, set from the file, allowed in an override."""
     assert getattr(_parse_toml_config({}), option) is False
