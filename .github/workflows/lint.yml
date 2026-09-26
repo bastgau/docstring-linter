@@ -32,7 +32,14 @@ jobs:
         run: uv sync --no-dev --group ${{ env.GROUP }}
 
       - name: Install dotenv-linter
-        run: curl -sSfL https://raw.githubusercontent.com/dotenv-linter/dotenv-linter/master/install.sh | sudo sh -s -- -b /usr/local/bin v4.0.0
+        env:
+          DOTENV_LINTER_VERSION: v4.0.0
+          DOTENV_LINTER_SHA256: 9e2f1f6eb88a71ac15ef209f78f5a68644db82f132d2677112b4f80ec2bd2127
+        run: |
+          archive="$RUNNER_TEMP/dotenv-linter.tar.gz"
+          curl -sSfL -o "$archive" "https://github.com/dotenv-linter/dotenv-linter/releases/download/${DOTENV_LINTER_VERSION}/dotenv-linter-linux-x86_64.tar.gz"
+          echo "${DOTENV_LINTER_SHA256}  $archive" | sha256sum -c -
+          sudo tar -xzf "$archive" -C /usr/local/bin dotenv-linter
 
       - uses: j178/prek-action@v3.0.0
         name: Execute Prek on push
