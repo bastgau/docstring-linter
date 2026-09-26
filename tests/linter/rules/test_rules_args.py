@@ -490,12 +490,12 @@ def test_raises_section_optional_undocumented() -> None:
 
 
 def test_raises_section_optional_still_checks_documented() -> None:
-    """Policy optional, an exception documented but never raised: raises_match still reports it."""
+    """Policy optional, an exception documented but never raised: raises_extraneous still reports it."""
     entity = _func(raises=[])
     doc = ParsedDocstring(summary="Do something.", raises=[DocstringRaise(exception_type="TypeError", description="Never.")])
-    cfg = _neutral(enabled_rules=["raises_match"], raises_section=Policy.OPTIONAL)
+    cfg = _neutral(enabled_rules=["raises_extraneous"], raises_section=Policy.OPTIONAL)
     errors = validate_entity(entity, doc, cfg)
-    assert any(e.rule == "raises_match" and "TypeError" in e.message for e in errors)
+    assert any(e.rule == "raises_extraneous" and "TypeError" in e.message for e in errors)
 
 
 def test_raises_section_forbidden_present() -> None:
@@ -506,12 +506,19 @@ def test_raises_section_forbidden_present() -> None:
     assert any(e.rule == "raises_section" and "not allowed" in e.message for e in errors)
 
 
-def test_raises_match_phantom_documented() -> None:
-    """Raise in docstring but not in code: returns raises_match error."""
+def test_raises_extraneous_documented_not_raised() -> None:
+    """Raise in docstring but not in code: returns raises_extraneous error."""
     entity = _func(raises=[])
     doc = ParsedDocstring(summary="Do something.", raises=[DocstringRaise(exception_type="ValueError", description="If invalid.")])
-    errors = validate_entity(entity, doc, _rule_only("raises_match"))
-    assert any("ValueError" in e.message and "not raised" in e.message for e in errors)
+    errors = validate_entity(entity, doc, _rule_only("raises_extraneous"))
+    assert any(e.rule == "raises_extraneous" and "ValueError" in e.message and "not raised" in e.message for e in errors)
+
+
+def test_raises_extraneous_disabled() -> None:
+    """Rule off, exception documented but propagated from a callee: no error."""
+    entity = _func(raises=[])
+    doc = ParsedDocstring(summary="Do something.", raises=[DocstringRaise(exception_type="ValueError", description="From int().")])
+    assert not validate_entity(entity, doc, _neutral())
 
 
 def test_raises_match_missing_description() -> None:

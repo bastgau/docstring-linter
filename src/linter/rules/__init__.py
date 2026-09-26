@@ -15,6 +15,7 @@ from linter.rules.args import (
     check_args_section,
     check_duplicate_arg,
     check_init_returns_none,
+    check_raises_extraneous,
     check_raises_match,
     check_raises_section,
     check_return_type_annotation,
@@ -126,6 +127,9 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
         if config.raises_section is not Policy.FORBIDDEN:
             errors.extend(check_raises_match(entity, parsed_doc))
 
+            if config.is_rule_enabled("raises_extraneous"):
+                errors.extend(check_raises_extraneous(entity, parsed_doc))
+
         errors.extend(check_yields_section(entity, parsed_doc, config.yields_section))
 
         if config.yields_section is not Policy.FORBIDDEN:
@@ -153,7 +157,7 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
 
     errors.extend(check_blank_lines(entity, config.blank_lines_before_section, config.blank_lines_before_closing_quotes))
 
-    if config.is_rule_enabled("imperative_mood") and entity.node_type != NodeType.MODULE:
+    if config.is_rule_enabled("imperative_mood") and entity.node_type in (NodeType.FUNCTION, NodeType.METHOD):
         errors.extend(check_imperative_mood(entity, parsed_doc))
 
     errors.extend(check_summary_on_first_line(entity, config.summary_on_first_line))

@@ -356,3 +356,34 @@ def test_strict_convention_reports_implicit_none(tmp_path: Path) -> None:
             return (width or 0) * 2
         '''
     assert _lint(tmp_path, source) == [("scale", "args_match"), ("scale", "returns_match")]
+
+
+_PROPAGATED_SOURCE = '''\
+    """Module."""
+
+
+    def parse(value: str) -> int:
+        """Parse the value.
+
+        Args:
+            value (str): Text to parse.
+
+        Returns:
+            int: Parsed value.
+
+        Raises:
+            ValueError: Propagated from int() when the text is not a number.
+
+        """
+        return int(value)
+    '''
+
+
+def test_propagated_exception_reported_under_strict(tmp_path: Path) -> None:
+    """Exception documented but raised by a callee: raises_extraneous under the strict default."""
+    assert _lint(tmp_path, _PROPAGATED_SOURCE) == [("parse", "raises_extraneous")]
+
+
+def test_propagated_exception_accepted_under_google(tmp_path: Path) -> None:
+    """Same source under convention google, blank line kept before the quotes: raises_extraneous is off, no error."""
+    assert not _lint(tmp_path, _PROPAGATED_SOURCE, _parse_toml_config({"convention": "google", "blank_lines_before_closing_quotes": 1}))

@@ -129,10 +129,10 @@ class User:
 
 #### raises_match
 
-Checks what the `Raises:` section declares: an exception documented but never raised in the code, and an exception documented without a description. An exception raised but not documented is reported by the `raises_section` policy, not here.
+Every exception listed in `Raises:` must carry a description. An exception raised but not documented is reported by the `raises_section` policy, an exception documented but never raised by the configurable [`raises_extraneous`](/docs/configurable-rules.md#raises_extraneous) rule.
 
 ```python
-# Bad: TypeError documented but never raised
+# Bad: no description
 def validate(x: int) -> int:
     """Validate input.
 
@@ -143,9 +143,11 @@ def validate(x: int) -> int:
         int: Validated input.
 
     Raises:
-        TypeError: Never actually raised.
+        ValueError:
 
     """
+    if x < 0:
+        raise ValueError("negative")
     return x
 
 # Good
@@ -167,7 +169,6 @@ def validate(x: int) -> int:
     return x
 ```
 
-Note: bare `raise` (re-raise), dynamic raises, or raises from internal calls are ignored.
 
 ---
 

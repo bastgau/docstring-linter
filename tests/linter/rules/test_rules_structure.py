@@ -1,5 +1,6 @@
 """Tests for rules/structure.py -- indentation, section layout, closing quotes, blank lines."""
 
+import pytest
 from linter.config import Policy
 from linter.models import CodeEntity, NodeType, ParsedDocstring
 
@@ -12,12 +13,34 @@ from .conftest import _cfg, _func, _neutral, _policy_only, _rule_only  # pyright
 # ---------------------------------------------------------------------------
 
 
-def test_indentation_inconsistent() -> None:
-    """More than 2 indent levels in docstring: returns indentation error."""
-    raw = "Summary.\n\nArgs:\n    x: Value.\n        continuation.\n            deep.\n"
+def test_indentation_under_indented_section_line() -> None:
+    """Line of a section indented by 2 spaces: returns one indentation error for the section."""
+    raw = "Summary.\n\nReturns:\n  int: Value.\n  More.\n"
     entity = _func(docstring=raw, raw_docstring=raw)
     errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("indentation"))
-    assert any(e.rule == "indentation" for e in errors)
+    assert [e.message for e in errors if e.rule == "indentation"] == ["Line 'int: Value.' in 'Returns:' is indented by 2 spaces, expected at least 4."]
+
+
+def test_indentation_first_entry_not_at_four() -> None:
+    """First Args entry indented by 8 spaces: returns indentation error."""
+    raw = "Summary.\n\nArgs:\n        x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("indentation"))
+    assert [e.message for e in errors if e.rule == "indentation"] == ["First entry of 'Args:' is indented by 8 spaces, expected 4."]
+
+
+def test_indentation_multiline_entry() -> None:
+    """Entry description continued on deeper lines: no indentation error."""
+    raw = "Summary.\n\nArgs:\n    x (int): A long description\n        that wraps\n            and wraps again.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    assert not [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("indentation")) if e.rule == "indentation"]
+
+
+def test_indentation_description_block_ignored() -> None:
+    """Indented code block in the description, outside any section: no indentation error."""
+    raw = "Summary.\n\nUsage:\n\n  >>> run()\n\nArgs:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    assert not [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("indentation")) if e.rule == "indentation"]
 
 
 def test_indentation_consistent() -> None:
@@ -246,6 +269,15 @@ def test_blank_lines_before_closing_quotes_zero() -> None:
     cfg = _neutral(enabled_rules=["blank_lines"], blank_lines_before_closing_quotes=0)
     errors = validate_entity(entity, ParsedDocstring(summary="Summary."), cfg)
     assert not errors
+
+
+@pytest.mark.parametrize("expected", [0, 1])
+def test_closing_quotes_on_text_line(expected: int) -> None:
+    """Multi-line docstring closed on the line of its last text: one error saying so, whatever the configured count."""
+    entity = _func(docstring="Summary.\n\nDetails.", raw_docstring="Summary.\n\n    Details.")
+    cfg = _neutral(blank_lines_before_closing_quotes=expected)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), cfg)
+    assert [e.message for e in errors] == ['Closing """ must be on its own line.']
 
 
 def test_no_blank_line_in_section_cannot_be_disabled() -> None:

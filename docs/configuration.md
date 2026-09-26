@@ -98,6 +98,7 @@ Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five 
 | `type_matching` | `"strict"` | `"lenient"` |
 | `imperative_mood` rule | enabled | disabled |
 | `return_type_annotation` rule | enabled | disabled |
+| `raises_extraneous` rule | enabled | disabled |
 
 `"strict"` enforces a complete house style: every type repeated in the docstring, `Returns: None` on `-> None` functions, every exception and attribute documented, a blank line before the closing quotes.
 

@@ -512,7 +512,7 @@ def get_name() -> str:
 | Code under `if __name__ == "__main__":` | Not scanned, its `else` branch is |
 | `@overload` stubs | Not scanned, the implementation is |
 | Files excluded by pattern | Not scanned |
-| Module docstrings | `imperative_mood` not applied |
+| Module and class docstrings | `imperative_mood` not applied |
 
 ### exclude_empty_init_method
 

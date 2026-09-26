@@ -274,6 +274,7 @@ def test_convention_google_sets_defaults() -> None:
     assert config.type_matching == "lenient"
     assert "imperative_mood" not in config.enabled_rules
     assert "return_type_annotation" not in config.enabled_rules
+    assert "raises_extraneous" not in config.enabled_rules
     assert "args_order" in config.enabled_rules
 
 

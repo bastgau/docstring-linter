@@ -103,6 +103,7 @@ RULES_CATEGORIES: dict[str, list[str]] = {
         "returns_match",
         "yields_match",
         "raises_match",
+        "raises_extraneous",
         "attributes_match",
     ],
 }
@@ -117,9 +118,10 @@ RULES_REGISTRY = {
     "args_order": "Args section must follow the same order as the function signature",
     "returns_match": "Returns section must match the signature type and carry a description",
     "yields_match": "Yields section must declare a type and a description",
-    "raises_match": "Documented exceptions must be raised in the code and described",
+    "raises_match": "Documented exceptions must carry a description",
+    "raises_extraneous": "Documented exceptions must be raised explicitly in the body",
     "attributes_match": "Documented attributes must match the class (type, description, no phantom)",
-    "indentation": "Indentation must be consistent",
+    "indentation": "Section content must be indented by 4 spaces or more, the first entry of Args, Attributes and Raises by exactly 4",
     "summary_too_long": "Summary line must not exceed the configured maximum length",
     "section_capitalization": "Section names must be capitalized (Args, not args)",
     "section_order": "Sections must follow order: Args, Returns, Yields, Raises, Example(s), Note(s)",
@@ -181,7 +183,7 @@ CONVENTIONS: dict[str, Convention] = {
             "blank_lines_before_closing_quotes": 0,
             "type_matching": "lenient",
         },
-        disabled_rules=frozenset({"imperative_mood", "return_type_annotation"}),
+        disabled_rules=frozenset({"imperative_mood", "return_type_annotation", "raises_extraneous"}),
     ),
 }
 

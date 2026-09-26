@@ -5,47 +5,13 @@ from typing import TYPE_CHECKING
 from linter.config import Policy
 
 from ._base import make_error
+from ._verbs import VERBS
 
 if TYPE_CHECKING:
     from linter.models import CodeEntity, LintError, ParsedDocstring
 
-_IMPERATIVE_EXCEPTIONS = frozenset(
-    {
-        "this",
-        "its",
-        "has",
-        "was",
-        "is",
-        "alias",
-        "unless",
-        "class",
-        "less",
-        "pass",
-        "across",
-        "process",
-        "access",
-        "address",
-        "express",
-        "progress",
-        "success",
-        "stress",
-        "bonus",
-        "bus",
-        "plus",
-        "focus",
-        "status",
-        "synopsis",
-        "basis",
-        "analysis",
-        "hypothesis",
-        "diagnosis",
-        "consensus",
-        "opus",
-        "corpus",
-        "terminus",
-        "axis",
-    }
-)
+# Third-person forms the suffix rules cannot turn back into the base form
+_IRREGULAR_VERBS = {"does": "do", "goes": "go", "undoes": "undo"}
 
 
 def check_docstring_exists(entity: CodeEntity) -> list[LintError]:
@@ -151,33 +117,36 @@ def check_summary_on_first_line(entity: CodeEntity, policy: Policy) -> list[Lint
 def _to_imperative(word: str) -> str | None:
     """Convert a third-person verb to imperative form.
 
+    The word is reported only when a base form derived from it is a known
+    verb, so that plural nouns such as 'Options' or 'Classes' pass.
+
     Args:
-        word (str): Verb to convert.
+        word (str): First word of the summary.
 
     Returns:
         str | None: Imperative form, or None if not a third-person verb.
 
     """
     lower = word.lower()
-
-    if lower in _IMPERATIVE_EXCEPTIONS:
+    if not lower.isalpha():
         return None
 
-    quantity = 4
-    if lower.endswith("ies") and len(lower) > quantity:
-        return word[:-3] + "y"
+    if lower in _IRREGULAR_VERBS:
+        candidates = [_IRREGULAR_VERBS[lower]]
+    elif lower.endswith("ies"):
+        candidates = [lower[:-3] + "y"]
+    elif lower.endswith("es"):
+        # 'processes' drops 'es', 'creates' drops 's'
+        candidates = [lower[:-2], lower[:-1]]
+    elif lower.endswith("s") and not lower.endswith("ss"):
+        candidates = [lower[:-1]]
+    else:
+        return None
 
-    if lower.endswith(("ches", "shes", "sses", "xes", "zes")):
-        return word[:-2]
-
-    quantity = 3
-    if lower.endswith("es") and len(lower) > quantity and lower[-3] not in "aeiou":
-        return word[:-1]
-
-    if lower.endswith("s") and not lower.endswith(("ss", "us", "is", "os", "ws")) and len(lower) > quantity:
-        return word[:-1]
-
-    return None
+    base = next((candidate for candidate in candidates if candidate in VERBS), None)
+    if base is None:
+        return None
+    return base.capitalize() if word[0].isupper() else base
 
 
 def check_summary_too_long(entity: CodeEntity, parsed_doc: ParsedDocstring | None, max_length: int) -> list[LintError]:

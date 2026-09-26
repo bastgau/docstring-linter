@@ -77,9 +77,9 @@ def access_db() -> None:
     """Access the database."""
 ```
 
-Words not treated as third-person singular verbs: `process`, `access`, `class`, `status`, `focus`, `alias`, `analysis`, `basis`, etc.
+The first word is reported only when the base form derived from it is a known English verb (`Returns` -> `Return`, `Copies` -> `Copy`, `Does` -> `Do`). Plural nouns and other words ending in `s` pass: `Options`, `Classes`, `Status`, `Canvas`.
 
-Not applied to module docstrings.
+Applied to functions and methods only, not to module and class docstrings.
 
 ---
 
@@ -105,6 +105,32 @@ summary_max_length = 72
 ```
 
 ### Args / Returns / Raises
+
+#### raises_extraneous
+
+Every exception listed in `Raises:` must be raised explicitly in the body. An exception propagated from a called function is invisible to the linter: a project that documents those turns this rule off, which the `google` convention does.
+
+```python
+# Bad: TypeError documented but never raised
+def validate(x: int) -> int:
+    """Validate input.
+
+    Args:
+        x (int): Input.
+
+    Returns:
+        int: Validated input.
+
+    Raises:
+        TypeError: Never actually raised.
+
+    """
+    return x
+```
+
+Only capitalized class names count as raised: `raise ValueError`, `raise errors.ValidationError(...)`, and `raise err` inside `except ValueError as err`. A dotted name in the docstring is compared on its last segment.
+
+---
 
 #### args_order
 
@@ -136,17 +162,25 @@ def process(x: int, y: str) -> None:
 
 #### indentation
 
-Docstring indentation must be consistent. Nested indentation beyond a section entry is not allowed.
+The content of a section must sit under its header: every line indented by 4 spaces or more, and the first entry of `Args:`, `Attributes:` and `Raises:` by exactly 4. A description continued on deeper lines is fine. Lines outside sections are not checked, so a description may hold indented code or lists. One error is reported per misindented section.
 
 ```python
-# Bad: inconsistent indentation (3+ levels)
-def process() -> None:
+# Bad: section content indented by 2 spaces
+def process(x: int) -> None:
     """Process data.
 
     Args:
-        x (int): Input.
-            Extra indent.
-                Even more indent.
+      x (int): Input.
+
+    """
+
+# Good: continuation lines may go deeper
+def process(x: int) -> None:
+    """Process data.
+
+    Args:
+        x (int): Input, described on
+            several lines.
 
     """
 

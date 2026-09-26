@@ -8,39 +8,56 @@ from linter.rules._base import GOOGLE_SECTION_ORDER, GOOGLE_SECTIONS, SECTION_HE
 
 _SECTION_WITH_ENTRIES = frozenset({"Args", "Attributes", "Raises"})
 
+_SECTION_INDENT = 4
+
 _ENTRY_LAX = re.compile(r"^\s{4}(\*{0,2}\w+)\s*(\([^)]*\))?\s*:\s*(.*)$")
 _ENTRY_LAX_NO_COLON = re.compile(r"^\s{4}(\*{0,2}\w+)\s*(\([^)]+\))\s*$")
 _ENTRY_STRICT = re.compile(r"^ {4}\*{0,2}\w+(?: \([^)]*\))?:(?: \S.*)?$")
 
 
 def check_indentation(entity: CodeEntity) -> list[LintError]:
-    """Check docstring indentation consistency.
+    """Check that the content of each section is indented under its header.
+
+    Inside a section, every line is indented by 4 spaces or more, and the first
+    entry of Args, Attributes and Raises by exactly 4. Lines outside sections are
+    not checked: a description may hold indented code or lists.
 
     Args:
         entity (CodeEntity): Entity to check.
 
     Returns:
-        list[LintError]: Errors if indentation is inconsistent.
+        list[LintError]: One error per section whose content is misindented.
 
     """
     if not entity.docstring:
         return []
 
-    lines = entity.docstring.split("\n")
-    if len(lines) <= 1:
-        return []
+    errors: list[LintError] = []
+    section: str | None = None
+    first_line = False
+    reported = False
 
-    indents: set[int] = set()
-    for line in lines[1:]:
-        if not line.strip():
+    for line in entity.docstring.split("\n")[1:]:
+        stripped = line.strip()
+        if not stripped:
             continue
-        leading = len(line) - len(line.lstrip())
-        indents.add(leading)
 
-    quantity = 2
-    if len(indents) > quantity:
-        return [make_error(entity, "indentation", "Inconsistent indentation in docstring.")]
-    return []
+        indent = len(line) - len(line.lstrip())
+        match = SECTION_HEADER_RE.match(stripped)
+        if indent == 0 and match and match.group(1) in GOOGLE_SECTIONS:
+            section, first_line, reported = match.group(1), True, False
+            continue
+
+        if section and not reported:
+            if 0 < indent < _SECTION_INDENT:
+                errors.append(make_error(entity, "indentation", f"Line '{stripped[:30]}' in '{section}:' is indented by {indent} spaces, expected at least {_SECTION_INDENT}."))
+                reported = True
+            elif first_line and section in _SECTION_WITH_ENTRIES and indent != _SECTION_INDENT:
+                errors.append(make_error(entity, "indentation", f"First entry of '{section}:' is indented by {indent} spaces, expected {_SECTION_INDENT}."))
+                reported = True
+        first_line = False
+
+    return errors
 
 
 def check_section_capitalization(entity: CodeEntity) -> list[LintError]:
@@ -281,6 +298,8 @@ def _check_before_closing_quotes(entity: CodeEntity, expected: int) -> list[Lint
     stripped = entity.raw_docstring.rstrip(" \t")
     found = len(stripped) - len(stripped.rstrip("\n")) - 1
 
+    if found < 0:
+        return [make_error(entity, "blank_lines", 'Closing """ must be on its own line.')]
     if found != expected:
         return [make_error(entity, "blank_lines", f'Expected {expected} {_plural(expected)} before closing """, found {found}.')]
     return []

@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 472 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 497 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -155,6 +155,8 @@ This file lists the 472 tests of the `docstring-linter` project. Each entry show
 | `test_end_to_end.py` | `test_strict_convention_rejects_google_guide_style` | Same source under the strict default: the house rules the google convention relaxes are reported. |
 | `test_end_to_end.py` | `test_google_convention_accepts_napoleon_types` | Optional parameter documented '(int, optional)', forward reference, untyped Returns: no error under google. |
 | `test_end_to_end.py` | `test_strict_convention_reports_implicit_none` | Same kind of source under strict: '(int, optional)' for Optional[int] and the untyped Returns are reported. |
+| `test_end_to_end.py` | `test_propagated_exception_reported_under_strict` | Exception documented but raised by a callee: raises_extraneous under the strict default. |
+| `test_end_to_end.py` | `test_propagated_exception_accepted_under_google` | Same source under convention google, blank line kept before the quotes: raises_extraneous is off, no error. |
 
 ---
 
@@ -298,9 +300,10 @@ This file lists the 472 tests of the `docstring-linter` project. Each entry show
 |---|---|---|
 | `rules/test_rules_args.py` | `test_raises_section_required_undocumented` | Policy required, raise in code but not documented: returns raises_section error. |
 | `rules/test_rules_args.py` | `test_raises_section_optional_undocumented` | Policy optional, raise in code but not documented: no error. |
-| `rules/test_rules_args.py` | `test_raises_section_optional_still_checks_documented` | Policy optional, an exception documented but never raised: raises_match still reports it. |
+| `rules/test_rules_args.py` | `test_raises_section_optional_still_checks_documented` | Policy optional, an exception documented but never raised: raises_extraneous still reports it. |
 | `rules/test_rules_args.py` | `test_raises_section_forbidden_present` | Policy forbidden, documented exceptions: returns raises_section error. |
-| `rules/test_rules_args.py` | `test_raises_match_phantom_documented` | Raise in docstring but not in code: returns raises_match error. |
+| `rules/test_rules_args.py` | `test_raises_extraneous_documented_not_raised` | Raise in docstring but not in code: returns raises_extraneous error. |
+| `rules/test_rules_args.py` | `test_raises_extraneous_disabled` | Rule off, exception documented but propagated from a callee: no error. |
 | `rules/test_rules_args.py` | `test_raises_match_missing_description` | Exception documented without a description: returns raises_match error. |
 | `rules/test_rules_args.py` | `test_raises_match_correct` | Raises section matches the code: no error. |
 
@@ -339,7 +342,10 @@ This file lists the 472 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `rules/test_rules_structure.py` | `test_indentation_consistent` | Normal Google-style docstring with 2 levels: no indentation error. |
-| `rules/test_rules_structure.py` | `test_indentation_inconsistent` | More than 2 indent levels in docstring: returns indentation error. |
+| `rules/test_rules_structure.py` | `test_indentation_under_indented_section_line` | Line of a section indented by 2 spaces: returns one indentation error for the section. |
+| `rules/test_rules_structure.py` | `test_indentation_first_entry_not_at_four` | First Args entry indented by 8 spaces: returns indentation error. |
+| `rules/test_rules_structure.py` | `test_indentation_multiline_entry` | Entry description continued on deeper lines: no indentation error. |
+| `rules/test_rules_structure.py` | `test_indentation_description_block_ignored` | Indented code block in the description, outside any section: no indentation error. |
 | `rules/test_rules_structure.py` | `test_indentation_one_liner_skipped` | One-liner docstring: indentation rule skips it, no error. |
 
 ### section_capitalization
@@ -394,6 +400,7 @@ This file lists the 472 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_structure.py` | `test_blank_lines_before_closing_quotes_default_present` | Default of 1, one blank line before the closing quotes: no error. |
 | `rules/test_rules_structure.py` | `test_blank_lines_before_closing_quotes_too_many` | Default of 1, two blank lines before the closing quotes: returns blank_lines error. |
 | `rules/test_rules_structure.py` | `test_blank_lines_before_closing_quotes_zero` | Configured to 0, no blank line before the closing quotes: no error. |
+| `rules/test_rules_structure.py` | `test_closing_quotes_on_text_line` | Multi-line docstring closed on the line of its last text: one error saying so, whatever the configured count (2 cases). |
 | `rules/test_rules_structure.py` | `test_blank_lines_cannot_be_disabled` | Rule listed in ignore: a wrong blank line count is still reported, the rule is always on. |
 | `rules/test_rules_structure.py` | `test_blank_lines_one_liner_skipped` | One-liner docstring: the closing quotes count is not checked. |
 | `rules/test_rules_structure.py` | `test_blank_lines_module_skipped` | Module entity: the closing quotes count is not checked. |
@@ -407,6 +414,9 @@ This file lists the 472 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_docstring.py` | `test_imperative_mood_ies_form` | Summary starting with 'Identifies' (ies->y): returns imperative_mood error. |
 | `rules/test_rules_docstring.py` | `test_imperative_mood_ches_form` | Summary starting with 'Dispatches' (ches->Dispatch): returns imperative_mood error. |
 | `rules/test_rules_docstring.py` | `test_imperative_mood_es_after_consonant` | Summary starting with 'Compresses' (es after consonant): returns imperative_mood error. |
+| `rules/test_rules_docstring.py` | `test_imperative_mood_suggestion` | Third-person verb, irregular or not: the suggested base form is a real verb (6 cases). |
+| `rules/test_rules_docstring.py` | `test_imperative_mood_not_a_verb` | Plural noun, word ending in s, or token that is not a word: no imperative_mood error (10 cases). |
+| `rules/test_rules_docstring.py` | `test_imperative_mood_skips_classes` | Class docstring starting with a third-person verb: not checked, the rule targets functions and methods. |
 | `rules/test_rules_docstring.py` | `test_imperative_mood_exception_word` | Summary starting with 'This' (in exceptions list): no error. |
 
 ### summary_too_long

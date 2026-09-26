@@ -379,24 +379,37 @@ def check_raises_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None,
 
 
 def check_raises_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> list[LintError]:
-    """Check documented exceptions against the raise statements in the code.
-
-    Only covers what the docstring declares. Undocumented raises are
-    reported by the raises_section policy.
+    """Check that every documented exception carries a description.
 
     Args:
         entity (CodeEntity): Entity to check.
         parsed_doc (ParsedDocstring | None): Parsed docstring.
 
     Returns:
-        list[LintError]: Errors for exceptions never raised or left undescribed.
+        list[LintError]: Errors for exceptions left undescribed.
 
     """
-    if parsed_doc is None or not parsed_doc.raises:
+    if parsed_doc is None:
         return []
+    return [make_error(entity, "raises_match", f"'{doc_raise.exception_type}' missing description in 'Raises:'.") for doc_raise in parsed_doc.raises if not doc_raise.description]
 
+
+def check_raises_extraneous(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> list[LintError]:
+    """Check that every documented exception is raised explicitly in the body.
+
+    An exception propagated from a called function is invisible to the
+    linter, so a project documenting those turns this rule off.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+
+    Returns:
+        list[LintError]: Errors for exceptions documented but never raised.
+
+    """
+    if parsed_doc is None:
+        return []
     code_raises = {r.exception_type for r in entity.raises}
     never_raised = sorted({r.exception_type for r in parsed_doc.raises if r.exception_type.rsplit(".", 1)[-1] not in code_raises})
-    errors = [make_error(entity, "raises_match", f"'{exc}' documented in 'Raises:' but not raised in code.") for exc in never_raised]
-    errors.extend(make_error(entity, "raises_match", f"'{doc_raise.exception_type}' missing description in 'Raises:'.") for doc_raise in parsed_doc.raises if not doc_raise.description)
-    return errors
+    return [make_error(entity, "raises_extraneous", f"'{exc}' documented in 'Raises:' but not raised in code.") for exc in never_raised]
