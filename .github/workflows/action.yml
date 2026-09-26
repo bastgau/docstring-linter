@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: ${{ vars.PYTHON_VERSION }}
 
-      - uses: bastgau/docstring-linter@main
+      - uses: ./
         name: Execute Docstring Linter via GitHub Action
         with:
           paths: src/
