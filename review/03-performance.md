@@ -43,6 +43,8 @@ Les règles, bien qu'elles re-découpent chacune le docstring (ARCH-03), ne pès
 
 ### PERF-01 - Double parcours AST par fonction [Vérifié] - Moyenne
 
+**Statut : Corrigé.** `65839f4`. Gain mesuré d'environ 6 % (voir la mise à jour ci-dessous).
+
 `ast_parser.py:185` (`_extract_raises`) et `ast_parser.py:191` (`is_generator`) parcourent le même sous-arbre. Le second descend en plus dans les fonctions imbriquées (BUG-08).
 
 Proposition : le `_BodyScanner` d'ARCH-01, qui collecte `raises` et `yields` en une passe et s'arrête aux portées imbriquées. Gain attendu : environ la moitié du temps d'extraction, soit 30 à 35 % du temps total [Déduit du profil, non mesuré].
@@ -50,6 +52,8 @@ Proposition : le `_BodyScanner` d'ARCH-01, qui collecte `raises` et `yields` en 
 Mise à jour après le lot 3 [Vérifié] : le parcours unique élagué (`_scan_body`) est en place. Gain mesuré sur la stdlib, 3 exécutions alternées : 4,76 s en moyenne avant, 4,46 s après, soit environ 6 %, dans le bruit de mesure. L'estimation ci-dessus était fausse : le surcoût d'instrumentation de cProfile gonflait la part des appels `ast.iter_child_nodes`. La performance reste sans enjeu.
 
 ### PERF-02 - `workers = 1` par défaut [Vérifié] - Basse
+
+**Statut : Non traité.** `workers = 1` reste le défaut.
 
 Le mode auto donne 2,4x sur 4 CPU pour la stdlib. Pour pre-commit (quelques fichiers), le séquentiel reste préférable à cause du coût de démarrage des process.
 
@@ -65,9 +69,13 @@ if workers <= 1 or len(files) < _PARALLEL_THRESHOLD:
 
 ### PERF-03 - Soumission fichier par fichier [Déduit] - Basse
 
+**Statut : Partiel.** `b2fd640`. `pool.map` avec `itertools.repeat(config)` remplace les `submit` par fichier ; pas de `chunksize`, donc la configuration est encore sérialisée pour chaque fichier [Déduit].
+
 `pool.submit` par fichier (`cli.py:187`) sérialise `LinterConfig` pour chaque tâche et crée un futur par fichier. `pool.map(..., chunksize=16)` réduirait les échanges inter-process. Gain probablement marginal au regard de PERF-01.
 
 ### PERF-04 - Parcours des répertoires exclus [Vérifié] - Basse
+
+**Statut : Non traité.**
 
 `collect_python_files` fait `rglob("*.py")` puis filtre (`cli.py:40`) : les répertoires exclus (`.venv`, `node_modules`, ...) sont quand même parcourus. Sur ce dépôt, `.venv` contient 933 fichiers `.py` et le surcoût mesuré est de 0,02 s (0,205 s pour `.` contre 0,180 s pour `src tests example`). Négligeable ici, sensible sur un monorepo.
 
@@ -75,13 +83,19 @@ Proposition : `os.walk` avec élagage de `dirnames` sur les motifs d'exclusion, 
 
 ### PERF-05 - Pas de cache [Déduit] - Basse
 
+**Statut : Non traité.**
+
 ruff met en cache les résultats par fichier. Pour ce linter, le temps actuel ne le justifie pas. À réévaluer seulement si l'outil vise des monorepos de plusieurs dizaines de milliers de fichiers.
 
 ### PERF-06 - Python 3.14 free-threaded [Non vérifié] - Basse
 
+**Statut : Non traité.**
+
 Sur un build free-threaded, un `ThreadPoolExecutor` éviterait le coût de démarrage et la sérialisation. Piste exploratoire uniquement, pas prioritaire.
 
 ## Méthode de reproduction
+
+Depuis BUG-04, `--config /nonexistent` est une erreur : remplacer ce chemin par un fichier TOML vide.
 
 ```bash
 # Timing

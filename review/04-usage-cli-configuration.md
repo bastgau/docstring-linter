@@ -26,23 +26,25 @@ Scénario : un projet existant, documenté en Google style "classique", lance l'
 
 ## Constats
 
-| ID | Gravité | Sujet |
-|---|---|---|
-| UX-01 | Critique | Aucune suppression inline |
-| UX-02 | Haute | Défauts très opinionnés, pas de preset |
-| UX-03 | Haute | Pas de baseline ni de mode "diff" |
-| UX-04 | Haute | Portée non réglable (privé, dunder, overload, property, override) |
-| UX-05 | Moyenne | Toutes les erreurs pointent la ligne `def` |
-| UX-06 | Critique | Codes de sortie (voir BUG-01 à BUG-04) |
-| UX-07 | Moyenne | Sorties : couleurs forcées, pas de `--quiet`, `--statistics`, `--select` |
-| UX-08 | Moyenne | Pas d'autofix |
-| UX-09 | Moyenne | Chemins relatifs au répertoire courant, pas au fichier de config |
-| UX-10 | Haute | Hook pre-commit inutilisable sans Python 3.14 par défaut |
-| UX-11 | Moyenne | GitHub Action : injection, build à chaque run, Python à fournir |
-| UX-12 | Basse | Identifiants de politiques affichés comme des règles |
-| UX-13 | Basse | Pas de `--version`, pas de `--explain` |
+| ID | Gravité | Sujet | Statut |
+|---|---|---|---|
+| UX-01 | Critique | Aucune suppression inline | Reporté |
+| UX-02 | Haute | Défauts très opinionnés, pas de preset | Corrigé |
+| UX-03 | Haute | Pas de baseline ni de mode "diff" | Non traité |
+| UX-04 | Haute | Portée non réglable (privé, dunder, overload, property, override) | Partiel |
+| UX-05 | Moyenne | Toutes les erreurs pointent la ligne `def` | Non traité |
+| UX-06 | Critique | Codes de sortie (voir BUG-01 à BUG-04) | Partiel |
+| UX-07 | Moyenne | Sorties : couleurs forcées, pas de `--quiet`, `--statistics`, `--select` | Partiel |
+| UX-08 | Moyenne | Pas d'autofix | Non traité |
+| UX-09 | Moyenne | Chemins relatifs au répertoire courant, pas au fichier de config | Non traité |
+| UX-10 | Haute | Hook pre-commit inutilisable sans Python 3.14 par défaut | Partiel |
+| UX-11 | Moyenne | GitHub Action : injection, build à chaque run, Python à fournir | Non traité |
+| UX-12 | Basse | Identifiants de politiques affichés comme des règles | Écarté |
+| UX-13 | Basse | Pas de `--version`, pas de `--explain` | Partiel |
 
 ### UX-01 - Suppression inline [Vérifié] - Critique
+
+**Statut : Reporté.** Après vérification de l'affichage dans VS Code.
 
 Aucun mécanisme `# noqa` ou équivalent (`grep` sur `src/` : aucune lecture de commentaire). Combiné aux 11 règles always-on (ARCH-06), tout faux positif est bloquant.
 
@@ -58,6 +60,8 @@ Implémentation : `tokenize` ou lecture de la ligne `node.lineno` (et des lignes
 Bonus utile : signaler les suppressions inutiles (équivalent de `RUF100` de ruff [Non vérifié]).
 
 ### UX-02 - Défauts opinionnés [Vérifié] - Haute
+
+**Statut : Corrigé.** `b676b02`, complété par `735d616`, `ce82164`, `66b3bed`, `f7df8f3`. `convention = "google"` fixe des défauts proches du guide Google ; `strict` reste le défaut. Sur `rich`, 758 erreurs avec `google` contre 2 410 à la revue [Vérifié].
 
 Valeurs par défaut qui s'écartent des usages courants du Google style :
 
@@ -85,11 +89,15 @@ convention = "google"   # permissive defaults matching the Google guide
 
 ### UX-03 - Baseline / mode diff [Déduit] - Haute
 
+**Statut : Non traité.**
+
 Pour adopter l'outil sur une base existante, il faut soit tout corriger, soit exclure massivement. pydoclint propose `--baseline` et `--generate-baseline` [Vérifié via `--help`].
 
 Proposition : `--generate-baseline .docstring-linter-baseline.json` (empreinte par `filepath`, `entity_name`, `rule`, `message`, sans numéro de ligne pour résister aux décalages) puis `--baseline` pour ne remonter que les nouvelles erreurs.
 
 ### UX-04 - Portée non réglable [Vérifié] - Haute
+
+**Statut : Partiel.** `ce82164`, `65839f4`. Options `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`, `properties_as_attributes` ; `@overload` toujours ignoré. `exclude_overridden` ne couvre que `@override` : `Child.run` sans décorateur reste signalé [Vérifié]. Pas d'option pour les attributs privés (`attributes_section` est optionnel avec `google`).
 
 Observé :
 
@@ -118,9 +126,13 @@ private_attributes = false
 
 ### UX-05 - Ligne de l'erreur [Vérifié] - Moyenne
 
+**Statut : Non traité.**
+
 `make_error` utilise `entity.line` (`rules/_base.py:36-55`) : toutes les erreurs d'une entité pointent la ligne `def`/`class`. Pour une annotation GitHub ou un saut d'éditeur, la ligne fautive dans le docstring serait plus utile (entrée `Args:` erronée, section mal ordonnée). Dépend d'ARCH-03 (modèle ligne à ligne) et d'ARCH-07 (`docstring_line`).
 
 ### UX-06 - Codes de sortie [Vérifié] - Critique
+
+**Statut : Partiel.** `b2fd640`. Codes 0, 1 et 2 en place et documentés dans le README (`a1fb08e`). Pas de code 3 (voir ARCH-08).
 
 Détail dans BUG-01 à BUG-04. Contrat proposé et à documenter :
 
@@ -132,6 +144,8 @@ Détail dans BUG-01 à BUG-04. Contrat proposé et à documenter :
 | 3 | Erreur interne |
 
 ### UX-07 - Sorties [Vérifié] - Moyenne
+
+**Statut : Partiel.** Couleurs désactivées hors terminal et avec `NO_COLOR` (`0355225`), `--statistics` (`9c90fd5`). `--select`/`--ignore` en CLI écartés. Restent : ligne `Config:` sur stdout, pas de SARIF ni de niveau `warning`.
 
 - Codes ANSI toujours émis, même vers un pipe ou un fichier (`reporter.py:18-30`) ; pas de `NO_COLOR` ni `--no-color`. Vérifié : la sortie redirigée contient `\x1b[1m`, `\x1b[96m`, etc.
 
@@ -151,11 +165,15 @@ Détail dans BUG-01 à BUG-04. Contrat proposé et à documenter :
 
 ### UX-08 - Pas d'autofix [Vérifié] - Moyenne
 
+**Statut : Non traité.**
+
 Beaucoup de règles sont mécaniques : `blank_lines`, `summary_final_period`, `section_capitalization`, `entry_spacing`, `returns_none`, `section_order`, et la synchronisation des types depuis la signature. ruff propose des corrections pour une partie de ses règles `D` [Vérifié : `ruff rule --all` indique "Fix is always/sometimes available" pour certaines]. pydoclint ne corrige pas [Non vérifié].
 
 Un `--fix` limité aux règles de mise en page serait un différenciateur fort (voir 07). Prérequis : modèle ligne à ligne (ARCH-03) et réécriture du littéral dans la source (positions via `ast.get_source_segment` ou `tokenize`).
 
 ### UX-09 - Chemins relatifs au CWD [Déduit] - Moyenne
+
+**Statut : Non traité.**
 
 `ConfigOverride.matches` (`config.py:213-231`) et `exclude` comparent au répertoire courant, pas au répertoire du fichier de config. Lancer `docstring-linter .` depuis `src/` avec un override `paths = ["src/**"]` ne l'applique pas. ruff résout les chemins relativement au fichier de configuration [Non vérifié].
 
@@ -163,9 +181,13 @@ Proposition : conserver `config_dir` dans `LinterConfig` et calculer les chemins
 
 ### UX-10 - Hook pre-commit [Déduit] - Haute
 
+**Statut : Partiel.** `a1fb08e`. Le contournement `language_version: python3.14` est documenté dans le README. La vraie solution (OPS-03) est reportée au lot 0.
+
 `.pre-commit-hooks.yaml` déclare `language: python`. pre-commit crée un venv avec l'interpréteur par défaut ; avec `requires-python = ">=3.14,<3.15"`, l'installation échoue partout où le Python par défaut n'est pas 3.14 (la majorité des postes et runners en septembre 2026 [Non vérifié]). Contournement utilisateur : `language_version: python3.14`, à documenter a minima. Vraie solution : OPS-03.
 
 ### UX-11 - GitHub Action [Vérifié] - Moyenne
+
+**Statut : Non traité.** `action.yml` interpole toujours les inputs dans le script shell.
 
 `action.yml` :
 
@@ -194,9 +216,13 @@ run: docstring-linter ${{ inputs.paths }} --format ${{ inputs.format }} ${{ inpu
 
 ### UX-12 - Identifiants de politiques [Déduit] - Basse
 
+**Statut : Écarté.** Décision : pas de message spécifique.
+
 Une erreur `[returns_section]` ressemble à une règle ; `ignore = ["returns_section"]` échoue avec "unknown rule" (`config.py:528`). Le message devrait l'orienter : "'returns_section' is a policy, set returns_section = \"optional\"".
 
 ### UX-13 - `--version`, `--explain` [Vérifié] - Basse
+
+**Statut : Partiel.** `--version` reporté : la version sera gérée plus tard par la CI/CD (voir OPS-04). `--explain` écarté ; à la place, `--list-rules` affiche les règles always-on dans une section dédiée (`3bc192e`).
 
 Pas de `--version` (utile pour les rapports de bug et le débogage pre-commit). Pas d'équivalent à `ruff rule <code>` pour afficher la doc d'une règle depuis le terminal ; `--list-rules` masque les règles always-on, alors qu'elles apparaissent dans les sorties.
 

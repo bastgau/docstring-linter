@@ -38,20 +38,22 @@ cli.main
 
 ## Constats
 
-| ID | Gravité | Sujet |
-|---|---|---|
-| ARCH-01 | Moyenne | Couche d'extraction AST trop superficielle |
-| ARCH-02 | Moyenne | Règles non déclaratives, dispatcher monolithique, registres dupliqués |
-| ARCH-03 | Moyenne | Docstring re-parsé par chaque règle de structure, 3 définitions d'un en-tête |
-| ARCH-04 | Moyenne | Abstraction multi-style creuse |
-| ARCH-05 | Moyenne | Options énumérées à la main à 5 endroits |
-| ARCH-06 | Haute | Always-on sans échappatoire |
-| ARCH-07 | Moyenne | Modèle `CodeEntity` trop pauvre |
-| ARCH-08 | Haute | `ValueError` comme fourre-tout au niveau fichier |
-| ARCH-09 | Basse | Code mort ou trompeur |
-| ARCH-10 | Moyenne | Tests unitaires qui contournent l'AST |
+| ID | Gravité | Sujet | Statut |
+|---|---|---|---|
+| ARCH-01 | Moyenne | Couche d'extraction AST trop superficielle | Corrigé |
+| ARCH-02 | Moyenne | Règles non déclaratives, dispatcher monolithique, registres dupliqués | Non traité |
+| ARCH-03 | Moyenne | Docstring re-parsé par chaque règle de structure, 3 définitions d'un en-tête | Partiel |
+| ARCH-04 | Moyenne | Abstraction multi-style creuse | Partiel |
+| ARCH-05 | Moyenne | Options énumérées à la main à 5 endroits | Partiel |
+| ARCH-06 | Haute | Always-on sans échappatoire | Reporté |
+| ARCH-07 | Moyenne | Modèle `CodeEntity` trop pauvre | Partiel |
+| ARCH-08 | Haute | `ValueError` comme fourre-tout au niveau fichier | Partiel |
+| ARCH-09 | Basse | Code mort ou trompeur | Partiel |
+| ARCH-10 | Moyenne | Tests unitaires qui contournent l'AST | Partiel |
 
 ### ARCH-01 - Extraction AST superficielle [Vérifié] - Moyenne
+
+**Statut : Corrigé.** `65839f4`. `_scan_body` collecte raises et yields en une passe élaguée aux portées imbriquées, avec les alias `except` et les noms pointés. Implémenté par un parcours itératif plutôt qu'un `NodeVisitor`.
 
 `ast_parser.py` est la source des bugs les plus coûteux (BUG-08, 09, 10, 15, 16, 21). Causes communes :
 
@@ -98,6 +100,8 @@ class _BodyScanner(ast.NodeVisitor):
 
 ### ARCH-02 - Règles non déclaratives [Vérifié] - Moyenne
 
+**Statut : Non traité.** Les registres restent séparés. Sous-points réglés : description de `section_order` (`acdcf43`), commentaire sur `--select` (`89c4a28`). Le message pour les identifiants de politiques est écarté (UX-12).
+
 Ajouter une règle impose de toucher au moins 4 endroits : `RULES_REGISTRY`, `RULES_CATEGORIES`, `ALWAYS_ON` (`config.py:83-156`), `validate_entity` (`rules/__init__.py:59-165`, marqué `noqa: C901, PLR0912, PLR0915`), plus la doc. Les politiques ajoutent `POLICIES_REGISTRY`, un champ `LinterConfig` et un appel dans le dispatcher.
 
 La dérive est déjà visible :
@@ -126,6 +130,8 @@ RULES: tuple[Rule, ...] = (...)
 `validate_entity` devient une boucle de 5 lignes ; `--list-rules`, la doc et les tests de complétude se génèrent depuis `RULES`.
 
 ### ARCH-03 - Docstring re-parsé par chaque règle [Vérifié] - Moyenne
+
+**Statut : Partiel.** `acdcf43`. Les en-têtes connus sont définis une seule fois (`sections.py`) et partagés par le parser et les règles. Restent : `CANDIDATE_SECTION_PATTERN` pour les sections inconnues, deux jeux de regex d'entrée, pas de modèle ligne à ligne.
 
 `GoogleStyleParser` produit un `ParsedDocstring` sémantique, mais 9 règles de structure (`check_indentation`, `check_section_capitalization`, `check_section_order`, `check_empty_section`, `check_blank_lines`, `check_named_section`, `check_entry_spacing`, `check_no_blank_line_in_section`, `extract_section_headers`) refont chacune leur `split("\n")` et leurs regex.
 
@@ -164,11 +170,15 @@ class Entry:
 
 ### ARCH-04 - Abstraction multi-style creuse [Vérifié] - Moyenne
 
+**Statut : Partiel.** `b2fd640`. `DocstringStyle` réduit à `GOOGLE`, docstrings de paquet alignées. `BaseDocstringParser`, `PARSERS` et `--style` masqué sont conservés.
+
 `BaseDocstringParser`, `PARSERS`, `DocstringStyle` (4 valeurs), `--style` masqué et les docstrings de paquet (`__init__.py:3-4`, `docstring_parser.py:3-5`) annoncent NumPy, Sphinx et PEP 257. Or toutes les règles de structure sont codées pour Google (`GOOGLE_SECTIONS`, `GOOGLE_SECTION_ORDER`, indentation à 4). Résultat : BUG-01 et une promesse non tenue.
 
 Recommandation (cohérente avec la règle "pas de fonctionnalité spéculative" du `CLAUDE.md`) : supprimer les styles non implémentés et `BaseDocstringParser` tant qu'un second style n'est pas réellement développé. Si NumPy devient un objectif, le modèle ligne à ligne d'ARCH-03 est le bon point d'extension.
 
 ### ARCH-05 - Options énumérées à la main [Vérifié] - Moyenne
+
+**Statut : Partiel.** `b6ad01e` et suivants. Validation typée par tables (`INT_OPTIONS` avec minimum, `BOOL_OPTIONS`, `CHOICE_OPTIONS`) partagée par la racine et les overrides. Les options restent énumérées dans `OPTIONS_REGISTRY`, `SETTING_KEYS`, `OVERRIDABLE_OPTIONS` et `LinterConfig`.
 
 La liste des options apparaît dans `SETTING_KEYS`, `OVERRIDABLE_OPTIONS`, `OPTIONS_REGISTRY`, `LinterConfig`, `option_values()` et `_parse_toml_config` (`config.py:67-80`, `159-193`, `276-306`, `345-364`, `577-641`). Chaque ajout doit être répliqué ; la validation de type manque (BUG-06) et les bornes (`max(1, ...)`) ne s'appliquent qu'au niveau racine.
 
@@ -194,6 +204,8 @@ OPTIONS: dict[str, Option] = {
 
 ### ARCH-06 - Always-on sans échappatoire [Vérifié] - Haute
 
+**Statut : Reporté.** Lié à UX-01 (`# noqa`), reporté après vérification de l'affichage dans VS Code. Atténué : `raises_extraneous` sorti des règles always-on (`6f95960`), niveaux de `type_matching` (`735d616`).
+
 11 règles sont non désactivables (`config.py:142-156`) et `ignore` les refuse explicitement (`config.py:530-533`). Justification donnée : "requiring a section and then tolerating wrong content in it makes no sense" (`docs/always-on-rules.md`).
 
 L'argument tient pour un code parfaitement analysé. Il ne tient plus dès qu'un faux positif existe : BUG-09, 10, 11, 12, 13, 19, 20 touchent tous des règles always-on. Sans `# noqa` ni baseline (UX-01, UX-03), la seule issue est d'exclure le fichier entier.
@@ -206,11 +218,15 @@ Options à discuter :
 
 ### ARCH-07 - Modèle `CodeEntity` trop pauvre [Vérifié] - Moyenne
 
+**Statut : Partiel.** `ce82164`, `66b3bed`. Ajout de `decorators`, `init_args` et `class_docstring`. Pas de `docstring_line` ni de `parent` (voir UX-05).
+
 `CodeEntity` (`models.py:61-93`) ne porte ni décorateurs, ni ligne de début de docstring, ni parent structuré. Conséquences : `_is_init` teste un suffixe de chaîne (`rules/args.py:98-108`), impossible de traiter `@overload`, `@property`, `@staticmethod`, `@override` (BUG-16, BUG-21, UX-04), toutes les erreurs pointent la ligne `def` (UX-05).
 
 Champs à ajouter : `decorators: list[str]`, `docstring_line: int | None`, `parent: str | None`, `is_private: bool`, `is_dunder: bool`.
 
 ### ARCH-08 - `ValueError` fourre-tout [Vérifié] - Haute
+
+**Statut : Partiel.** `b2fd640`. Configuration validée une fois dans `main()` ; au niveau fichier, seuls `SyntaxError`, `UnicodeDecodeError` et `OSError` sont attrapés. Pas de code 3 pour une erreur interne, qui remonte en traceback.
 
 `_lint_file_safe` (`cli.py:127-143`) attrape `ValueError` en supposant une erreur de configuration. En pratique, elle couvre `UnicodeDecodeError`, le style non supporté et toute `ValueError` d'un bug interne, et les convertit en succès (BUG-01, BUG-02). Une exception d'un autre type (ex. `RecursionError` sur un fichier très imbriqué [Déduit]) arrête tout le run avec une traceback, y compris en mode parallèle via `future.result()`.
 
@@ -218,12 +234,16 @@ Proposition : erreurs de configuration validées une fois dans `main()` ; au niv
 
 ### ARCH-09 - Code mort ou trompeur [Vérifié] - Basse
 
+**Statut : Partiel.** Les constantes `quantity` ont disparu avec la réécriture des règles (`6f95960`). Restent : `OFF_BY_DEFAULT` vide, `ParsedDocstring.examples` jamais lu, `.vulture` avec `YELLOW`/`GREEN` et des numéros de ligne périmés.
+
 - `OFF_BY_DEFAULT` est vide ; la mécanique (affichage "disabled by default", filtrages) existe sans cas d'usage.
 - `ParsedDocstring.examples` jamais lu par une règle.
 - `.vulture` liste `YELLOW` et `GREEN` comme inutilisés alors qu'ils le sont dans `report_policies` ; références de lignes périmées.
 - `quantity = 2`, `quantity = 3`, `quantity = 4` (`rules/structure.py:40`, `rules/docstring.py:166-173`) : contournement de `PLR2004` qui réduit la lisibilité ; une constante nommée (`_MAX_DISTINCT_INDENTS = 2`) serait plus claire.
 
 ### ARCH-10 - Tests [Vérifié] - Moyenne
+
+**Statut : Partiel.** `tests/linter/test_end_to_end.py` (32 tests passant par le vrai parsing AST) ; 565 tests, couverture branches 96 %. Seuil de couverture toujours à 85, pas de test de corpus ni de test de complétude des registres.
 
 État : 372 tests, 1,45 s, 94,39 % de couverture branches, seuil CI 85 %.
 

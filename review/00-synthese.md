@@ -40,6 +40,36 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | [06-packaging-ci-outillage.md](06-packaging-ci-outillage.md) | Distribution, versions Python, workflows, chaîne d'approvisionnement |
 | [07-positionnement-et-concurrence.md](07-positionnement-et-concurrence.md) | Intérêt du projet, comparatif mesuré, stratégie |
 
+## Suivi des corrections
+
+État à la révision `89c4a28` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
+
+| Statut | Signification |
+|---|---|
+| Corrigé | Proposition appliquée, revérifiée sur le code actuel. |
+| Partiel | Une partie appliquée ; le reste est détaillé sous le point. |
+| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version). |
+| Écarté | Décision de ne pas appliquer. |
+| Non traité | Pas encore discuté. |
+
+| Rapport | Corrigé | Partiel | Reporté | Écarté | Non traité | Total |
+|---|---|---|---|---|---|---|
+| 01 - Bugs (BUG) | 23 | 0 | 0 | 0 | 0 | 23 |
+| 02 - Architecture (ARCH) | 1 | 7 | 1 | 0 | 1 | 10 |
+| 03 - Performance (PERF) | 1 | 1 | 0 | 0 | 4 | 6 |
+| 04 - Usage (UX) | 1 | 5 | 1 | 1 | 5 | 13 |
+| 05 - Documentation (DOC) | 3 | 3 | 0 | 0 | 4 | 10 |
+| 06 - Packaging et CI (OPS) | 1 | 2 | 5 | 3 | 2 | 13 |
+| **Total** | **30** | **18** | **7** | **4** | **16** | **75** |
+
+Mesures sur la révision `89c4a28` [Vérifié] :
+
+- Tests : 565 (372 à la revue), couverture branches 96 % (94,39 %).
+- `rich` 15.0.0 : 1 988 erreurs avec les défauts (`strict`), 758 avec `convention = "google"`, contre 2 410 à la revue. Les 100 fichiers restent signalés, notamment parce que 95 modules n'ont pas de docstring.
+- Les fichiers de reproduction de l'annexe du rapport 01 ne produisent plus que les erreurs attendues : avec `convention = "google"` et une ligne vide avant `"""`, il reste `hidden_in_if` (sans docstring) et `Child.run` (surcharge sans `@override`).
+
+Principaux points ouverts : `# noqa` (UX-01, ARCH-06), lot 0 (OPS-01 à OPS-03, matrice de versions), baseline (UX-03), publication PyPI (OPS-05), durcissement de la GitHub Action (UX-11).
+
 ## Verdict global
 
 Le code est propre, strictement typé, bien testé au niveau unitaire et sans dépendance. Le concept de **politiques tri-états** (`required` / `forbidden` / `optional`) appliqué uniformément et la **validation stricte de la configuration** sont de vrais points forts.
@@ -67,21 +97,21 @@ En revanche, l'outil n'est pas encore prêt pour un usage hors du dépôt lui-m�
 
 ## Priorités recommandées
 
-| Prio | ID | Action | Effort |
-|---|---|---|---|
-| P0 | BUG-01 à BUG-04 | Codes de sortie non nuls et messages sur stderr pour tout échec d'analyse ou de configuration | S |
-| P0 | UX-01 | Suppression inline `# noqa: rule` (ligne `def`/`class`) | M |
-| P0 | BUG-12, BUG-13 | Normaliser les types avant comparaison (`, optional`, guillemets, `Optional[X]`) | M |
-| P0 | BUG-08 à BUG-10, BUG-15, BUG-16 | Corriger l'extraction AST (portées imbriquées, `raise` de variable, noms pointés, blocs `if`/`try`, premier paramètre) | M |
-| P0 | BUG-14 | Corriger ou supprimer la règle `indentation` | S |
-| P0 | OPS-01 à OPS-03 | Renommer le paquet importable, déclarer le build backend, élargir `requires-python` | S |
-| P1 | BUG-05 à BUG-07 | `select = ["ALL"]` en override, typage des valeurs de config, glob d'exclusion | S |
-| P1 | UX-02, UX-04 | Preset "google" moins strict, options de portée (privé, dunder, overload, property) | M |
-| P1 | BUG-18, BUG-19 | Sections Napoleon à deux mots, `Returns:` sans type | M |
-| P1 | DOC-01 à DOC-03 | README (installation, positionnement), docs obsolètes | S |
-| P1 | OPS-05, OPS-06 | Publication PyPI, flux de release beta | S |
-| P2 | UX-03, UX-08 | Baseline, autofix des règles de mise en page | L |
-| P2 | ARCH-02, ARCH-03, PERF-01 | Registre de règles déclaratif, modèle ligne à ligne du docstring, passe AST unique | L |
+| Prio | ID | Action | Effort | Statut |
+|---|---|---|---|---|
+| P0 | BUG-01 à BUG-04 | Codes de sortie non nuls et messages sur stderr pour tout échec d'analyse ou de configuration | S | Corrigé |
+| P0 | UX-01 | Suppression inline `# noqa: rule` (ligne `def`/`class`) | M | Reporté |
+| P0 | BUG-12, BUG-13 | Normaliser les types avant comparaison (`, optional`, guillemets, `Optional[X]`) | M | Corrigé |
+| P0 | BUG-08 à BUG-10, BUG-15, BUG-16 | Corriger l'extraction AST (portées imbriquées, `raise` de variable, noms pointés, blocs `if`/`try`, premier paramètre) | M | Corrigé |
+| P0 | BUG-14 | Corriger ou supprimer la règle `indentation` | S | Corrigé |
+| P0 | OPS-01 à OPS-03 | Renommer le paquet importable, déclarer le build backend, élargir `requires-python` | S | Reporté |
+| P1 | BUG-05 à BUG-07 | `select = ["ALL"]` en override, typage des valeurs de config, glob d'exclusion | S | Corrigé |
+| P1 | UX-02, UX-04 | Preset "google" moins strict, options de portée (privé, dunder, overload, property) | M | Corrigé, Partiel |
+| P1 | BUG-18, BUG-19 | Sections Napoleon à deux mots, `Returns:` sans type | M | Corrigé |
+| P1 | DOC-01 à DOC-03 | README (installation, positionnement), docs obsolètes | S | Corrigé, Corrigé, Partiel |
+| P1 | OPS-05, OPS-06 | Publication PyPI, flux de release beta | S | Non traité, Écarté |
+| P2 | UX-03, UX-08 | Baseline, autofix des règles de mise en page | L | Non traité |
+| P2 | ARCH-02, ARCH-03, PERF-01 | Registre de règles déclaratif, modèle ligne à ligne du docstring, passe AST unique | L | Non traité, Partiel, Corrigé |
 
 Effort : S = moins d'une journée, M = 1 à 3 jours, L = plus.
 

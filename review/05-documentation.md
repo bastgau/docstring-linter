@@ -19,20 +19,22 @@ Points forts : la référence des règles est riche, avec des exemples "Bad / Go
 
 ## Constats
 
-| ID | Gravité | Sujet |
-|---|---|---|
-| DOC-01 | Haute | README : pas d'installation, exemple de sortie faux |
-| DOC-02 | Moyenne | Support NumPy / Sphinx / PEP 257 annoncé dans le code |
-| DOC-03 | Moyenne | Fichiers annexes périmés, langues mélangées |
-| DOC-04 | Haute | Aucun positionnement ni comparaison |
-| DOC-05 | Moyenne | Pas de CHANGELOG, CONTRIBUTING, guide "ajouter une règle" |
-| DOC-06 | Basse | Liens absolus `/docs/...` |
-| DOC-07 | Moyenne | Limitations connues non documentées |
-| DOC-08 | Moyenne | Sémantique de `exclude` fausse dans la doc |
-| DOC-09 | Basse | Descriptions internes incohérentes |
-| DOC-10 | Basse | Documentation non générée depuis les registres |
+| ID | Gravité | Sujet | Statut |
+|---|---|---|---|
+| DOC-01 | Haute | README : pas d'installation, exemple de sortie faux | Corrigé |
+| DOC-02 | Moyenne | Support NumPy / Sphinx / PEP 257 annoncé dans le code | Corrigé |
+| DOC-03 | Moyenne | Fichiers annexes périmés, langues mélangées | Partiel |
+| DOC-04 | Haute | Aucun positionnement ni comparaison | Corrigé |
+| DOC-05 | Moyenne | Pas de CHANGELOG, CONTRIBUTING, guide "ajouter une règle" | Non traité |
+| DOC-06 | Basse | Liens absolus `/docs/...` | Non traité |
+| DOC-07 | Moyenne | Limitations connues non documentées | Non traité |
+| DOC-08 | Moyenne | Sémantique de `exclude` fausse dans la doc | Partiel |
+| DOC-09 | Basse | Descriptions internes incohérentes | Partiel |
+| DOC-10 | Basse | Documentation non générée depuis les registres | Non traité |
 
 ### DOC-01 - README [Vérifié] - Haute
+
+**Statut : Corrigé.** `a1fb08e`. README réécrit : installation, prérequis, sortie réelle, codes de sortie, conventions.
 
 - **Pas de section Installation.** Le paquet n'est pas sur PyPI (`pip index versions docstring-linter` : aucun résultat), et rien n'indique comment l'installer (`pip install git+https://...`, `uvx --from git+...`).
 - **Pas de prérequis Python.** Python 3.14 exclusivement : c'est la première chose qu'un utilisateur doit savoir.
@@ -66,9 +68,13 @@ One-line pitch + badges
 
 ### DOC-02 - Styles annoncés [Vérifié] - Moyenne
 
+**Statut : Corrigé.** `b2fd640`. Les docstrings de `__init__.py` et `docstring_parser.py` ne mentionnent plus que Google.
+
 `src/linter/__init__.py:3-4` : "with support for Google, NumPy, Sphinx, and PEP 257 styles". `docstring_parser.py:3-5` : "Extensible via abstract base class for multiple styles (Google, NumPy, Sphinx, PEP 257)". Seul Google existe (BUG-01, ARCH-04). À aligner sur le README, qui dit correctement "Google-style".
 
 ### DOC-03 - Fichiers annexes périmés [Vérifié] - Moyenne
+
+**Statut : Partiel.** `TESTS.md` tenu à jour à chaque commit (565 tests), toujours maintenu à la main. Restent : `TODO.md` (items `RULES.md` et version périmés, rédigé en français), commentaires de section en français dans `.pre-commit-config.yaml`, `.vulture` périmé.
 
 - `TESTS.md` : "369 tests" contre 372 exécutés. 680 lignes maintenues à la main, redondantes avec les docstrings des tests (constat déjà noté dans `TODO.md`). Recommandation : le générer (`pytest --collect-only` + docstrings) ou le supprimer.
 - `TODO.md` :
@@ -79,9 +85,13 @@ One-line pitch + badges
 
 ### DOC-04 - Positionnement absent [Vérifié] - Haute
 
+**Statut : Corrigé.** `a1fb08e`. Section "How it compares" du README.
+
 Aucune mention de ruff, pydoclint, pydocstyle, darglint ou docsig. Un visiteur ne sait pas pourquoi choisir cet outil. Voir 07 pour le contenu d'un tableau comparatif honnête (y compris ce que l'outil ne fait pas).
 
 ### DOC-05 - Contribution et historique [Vérifié] - Moyenne
+
+**Statut : Non traité.**
 
 - Pas de `CHANGELOG.md` : les notes de release sont la liste brute des sujets de commits (`publish-release.yml`). Les changements de comportement (nouvelles politiques, règles devenues always-on) ne sont pas signalés comme tels.
 - Pas de `CONTRIBUTING.md` : ajouter une règle implique 4 à 6 fichiers (ARCH-02) et des conventions strictes (commitlint : sujet en minuscules, 15 caractères minimum, corps interdit).
@@ -89,9 +99,13 @@ Aucune mention de ruff, pydoclint, pydocstyle, darglint ou docsig. Un visiteur n
 
 ### DOC-06 - Liens absolus [Déduit] - Basse
 
+**Statut : Non traité.** Le README utilise toujours `/docs/...`.
+
 Le README utilise `/docs/configuration.md`. Ces liens fonctionnent sur GitHub mais seront cassés dans la description PyPI, qui reprend le README. Utiliser des URL complètes `https://github.com/bastgau/docstring-linter/blob/main/docs/...` ou des liens relatifs réécrits au build.
 
 ### DOC-07 - Limitations non documentées [Vérifié] - Moyenne
+
+**Statut : Non traité.** La plupart des limitations listées sont corrigées (BUG-09 à BUG-15). Restent non documentées : fonctions imbriquées dans une fonction jamais analysées [Vérifié] et erreurs rapportées sur la ligne `def` (UX-05).
 
 Non mentionnées nulle part :
 
@@ -105,15 +119,21 @@ Tant que ces points ne sont pas corrigés, une section "Known limitations" évit
 
 ### DOC-08 - `exclude` [Vérifié] - Moyenne
 
+**Statut : Partiel.** `b6ad01e`. Sémantique unifiée (BUG-07) et documentée dans `docs/style-policies.md` ("Exclusion Patterns"). La section n'a pas été déplacée dans `docs/configuration.md`.
+
 `docs/configuration.md` et `--help` parlent de "Glob patterns". Les globs récursifs ne fonctionnent pas (BUG-07), et un motif littéral exclut un nom de répertoire à toute profondeur. La section "Default Exclusion Patterns" est placée dans `docs/style-policies.md:565-567`, alors qu'il ne s'agit pas d'une politique de style ; sa place est `docs/configuration.md`.
 
 ### DOC-09 - Descriptions internes [Vérifié] - Basse
+
+**Statut : Partiel.** Description de `section_order` (`acdcf43`) et commentaire sur `--select` (`89c4a28`) corrigés. L'input `format` d'`action.yml` omet toujours `traceback`.
 
 - `RULES_REGISTRY["section_order"]` : "Args, Returns, Yields, Raises, Example(s), Note(s)" ; ordre réel : Attributes, Args, Returns, Yields, Raises, Example(s), Note(s), Todo. Cette chaîne est affichée par `--list-rules`.
 - Commentaire `config.py:138` : mentionne `--select`, flag inexistant.
 - `action.yml` : input `format` décrit "(text, json, github-annotations)", sans `traceback`.
 
 ### DOC-10 - Documentation non générée [Vérifié] - Basse
+
+**Statut : Non traité.**
 
 Registres (`RULES_REGISTRY`, `POLICIES_REGISTRY`, `OPTIONS_REGISTRY`) et pages `docs/` sont maintenus séparément. Proposition déjà esquissée dans `TODO.md` : générer le squelette (tableaux, valeurs par défaut) depuis le registre unique d'ARCH-02 / ARCH-05, garder les exemples à la main, et vérifier en CI que le fichier committé est à jour.
 

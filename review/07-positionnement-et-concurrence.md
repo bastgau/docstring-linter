@@ -56,6 +56,8 @@ Lecture : pydoclint a moins de faux positifs sur l'extraction AST (portées imbr
 
 Les volumes ne sont pas comparables un à un : docstring-linter vérifie aussi la présence (`docstring_exists`), la mise en page et le style maison.
 
+Suivi, révision `89c4a28` [Vérifié] : 1 988 signalements avec les défauts, 758 avec `convention = "google"`. Les faux positifs AST et de types listés dans 01 sont corrigés ; le README contient désormais un tableau comparatif (DOC-04).
+
 ## Forces distinctives de docstring-linter
 
 1. **Politiques tri-états homogènes** : 15 politiques `required` / `forbidden` / `optional` couvrant sections, types, descriptions, `Returns: None`, position et ponctuation du résumé. On peut *interdire* une construction (types dans les docstrings, `Returns: None`), pas seulement l'exiger. pydoclint a des booléens sur certains axes, avec une sémantique moins uniforme [Vérifié via `--help`, appréciation].

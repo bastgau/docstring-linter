@@ -4,35 +4,37 @@ Tous les cas marqués **[Vérifié]** ont été reproduits avec `docstring-linte
 
 ## Sommaire
 
-| ID | Gravité | Sujet | Preuve |
-|---|---|---|---|
-| BUG-01 | Critique | Style non Google accepté, aucun fichier analysé, exit 0 | Vérifié |
-| BUG-02 | Critique | Erreur de syntaxe / d'encodage : exit 0, message sur stdout, JSON pollué | Vérifié |
-| BUG-03 | Critique | Chemin inexistant : "No Python files found." et exit 0 | Vérifié |
-| BUG-04 | Haute | `--config` vers un fichier absent : défauts silencieux | Vérifié |
-| BUG-05 | Haute | `select = ["ALL"]` dans un override désactive toutes les règles configurables | Vérifié |
-| BUG-06 | Moyenne | Types des valeurs de config non validés (traceback ou comportement absurde) | Vérifié |
-| BUG-07 | Haute | `exclude` : les globs `**` et `dir/*` ne fonctionnent pas | Vérifié |
-| BUG-08 | Haute | Générateur imbriqué : la fonction parente est traitée comme générateur | Vérifié |
-| BUG-09 | Haute | `raise err` : `err` exigé dans `Raises:` | Vérifié |
-| BUG-10 | Haute | `raise mod.Error()` invisible, `mod.Error` non parsable dans `Raises:` | Vérifié |
-| BUG-11 | Moyenne | Exceptions propagées impossibles à documenter (règle always-on) | Vérifié |
-| BUG-12 | Critique | `(int, optional)` produit un type mismatch always-on | Vérifié |
-| BUG-13 | Haute | Forward reference `"Node"` produit un type mismatch always-on | Vérifié |
-| BUG-14 | Haute | `indentation` en erreur dès qu'une description tient sur deux lignes | Vérifié |
-| BUG-15 | Haute | `def` sous `if`/`try`/`with` jamais analysés | Vérifié |
-| BUG-16 | Moyenne | `self`/`cls` ignorés par nom et non par position | Vérifié |
-| BUG-17 | Moyenne | Heuristique d'impératif : "Does" -> "Doe", "Settings" -> "Setting" | Vérifié |
-| BUG-18 | Moyenne | Sections Napoleon à deux mots avalées silencieusement | Vérifié |
-| BUG-19 | Haute | `Returns:` sans préfixe de type (forme du guide Google) rejeté, always-on | Vérifié |
-| BUG-20 | Basse | `Returns:` : description avec `:` lue comme un type, continuation perdue | Vérifié |
-| BUG-21 | Moyenne | `@overload` exige une docstring par signature | Vérifié |
-| BUG-22 | Basse | Annotations GitHub non échappées | Déduit |
-| BUG-23 | Basse | "1 files checked" | Vérifié |
+| ID | Gravité | Sujet | Preuve | Statut |
+|---|---|---|---|---|
+| BUG-01 | Critique | Style non Google accepté, aucun fichier analysé, exit 0 | Vérifié | Corrigé |
+| BUG-02 | Critique | Erreur de syntaxe / d'encodage : exit 0, message sur stdout, JSON pollué | Vérifié | Corrigé |
+| BUG-03 | Critique | Chemin inexistant : "No Python files found." et exit 0 | Vérifié | Corrigé |
+| BUG-04 | Haute | `--config` vers un fichier absent : défauts silencieux | Vérifié | Corrigé |
+| BUG-05 | Haute | `select = ["ALL"]` dans un override désactive toutes les règles configurables | Vérifié | Corrigé |
+| BUG-06 | Moyenne | Types des valeurs de config non validés (traceback ou comportement absurde) | Vérifié | Corrigé |
+| BUG-07 | Haute | `exclude` : les globs `**` et `dir/*` ne fonctionnent pas | Vérifié | Corrigé |
+| BUG-08 | Haute | Générateur imbriqué : la fonction parente est traitée comme générateur | Vérifié | Corrigé |
+| BUG-09 | Haute | `raise err` : `err` exigé dans `Raises:` | Vérifié | Corrigé |
+| BUG-10 | Haute | `raise mod.Error()` invisible, `mod.Error` non parsable dans `Raises:` | Vérifié | Corrigé |
+| BUG-11 | Moyenne | Exceptions propagées impossibles à documenter (règle always-on) | Vérifié | Corrigé |
+| BUG-12 | Critique | `(int, optional)` produit un type mismatch always-on | Vérifié | Corrigé |
+| BUG-13 | Haute | Forward reference `"Node"` produit un type mismatch always-on | Vérifié | Corrigé |
+| BUG-14 | Haute | `indentation` en erreur dès qu'une description tient sur deux lignes | Vérifié | Corrigé |
+| BUG-15 | Haute | `def` sous `if`/`try`/`with` jamais analysés | Vérifié | Corrigé |
+| BUG-16 | Moyenne | `self`/`cls` ignorés par nom et non par position | Vérifié | Corrigé |
+| BUG-17 | Moyenne | Heuristique d'impératif : "Does" -> "Doe", "Settings" -> "Setting" | Vérifié | Corrigé |
+| BUG-18 | Moyenne | Sections Napoleon à deux mots avalées silencieusement | Vérifié | Corrigé |
+| BUG-19 | Haute | `Returns:` sans préfixe de type (forme du guide Google) rejeté, always-on | Vérifié | Corrigé |
+| BUG-20 | Basse | `Returns:` : description avec `:` lue comme un type, continuation perdue | Vérifié | Corrigé |
+| BUG-21 | Moyenne | `@overload` exige une docstring par signature | Vérifié | Corrigé |
+| BUG-22 | Basse | Annotations GitHub non échappées | Déduit | Corrigé |
+| BUG-23 | Basse | "1 files checked" | Vérifié | Corrigé |
 
 ---
 
 ## BUG-01 - Style non Google accepté, exit 0 [Vérifié] - Critique
+
+**Statut : Corrigé.** `b2fd640`. `style = "numpy"` donne "Configuration error: 'style': invalid value 'numpy', expected one of google." et le code 2 [Vérifié].
 
 `DocstringStyle` expose `numpy`, `sphinx`, `pep257` (`config.py:15-29`), la config les accepte (`_parse_style`, `config.py:491`), mais seul Google a un parser (`docstring_parser.py:345`). `get_parser` lève `ValueError`, capturée fichier par fichier dans `_lint_file_safe` (`cli.py:142`), imprimée, puis ignorée pour le code de sortie.
 
@@ -57,6 +59,8 @@ def _parse_style(value: object) -> DocstringStyle:
 ```
 
 ## BUG-02 - Erreurs d'analyse : exit 0, stdout, JSON invalide [Vérifié] - Critique
+
+**Statut : Corrigé.** `b2fd640`. Message sur stderr, JSON valide sur stdout, code 2 [Vérifié].
 
 `cli.py:140-143` transforme `SyntaxError` et `ValueError` en message texte, imprimé sur **stdout** (`cli.py:184`, `cli.py:192`), sans effet sur le code de sortie. `UnicodeDecodeError` hérite de `ValueError` et s'affiche comme "Configuration error".
 
@@ -103,6 +107,8 @@ return 1 if all_errors else 0
 
 ## BUG-03 - Chemin inexistant : exit 0 [Vérifié] - Critique
 
+**Statut : Corrigé.** `b2fd640`. "Path not found: nope/" sur stderr, code 2 [Vérifié].
+
 `collect_python_files` (`cli.py:21`) ignore silencieusement un chemin qui n'est ni un fichier `.py` ni un répertoire. Une faute de frappe dans un workflow désactive le linter sans bruit.
 
 ```console
@@ -115,6 +121,8 @@ Correctif : erreur explicite et exit 2 pour un chemin inexistant. Garder "No Pyt
 
 ## BUG-04 - `--config` introuvable : défauts silencieux [Vérifié] - Haute
 
+**Statut : Corrigé.** `b2fd640`. "config file not found", code 2 [Vérifié]. Décision associée : un `pyproject.toml` passé explicitement sans section `[tool.docstring-linter]` est aussi une erreur.
+
 `_find_config` renvoie `None` si le chemin explicite n'existe pas (`config.py:425-429`), ce qui charge les défauts.
 
 ```console
@@ -125,6 +133,8 @@ Config: defaults (no config file found)
 Correctif : lever `ValueError(f"config file not found: {explicit_path}")`. Même traitement si `--config pyproject.toml` ne contient pas de section `[tool.docstring-linter]` (aujourd'hui : défauts silencieux, `config.py:405-407`).
 
 ## BUG-05 - `select = ["ALL"]` dans un override [Vérifié] - Haute
+
+**Statut : Corrigé.** `b6ad01e`. Avec l'override `select = ["ALL"]`, `cases.py` donne 8 erreurs, autant que sans override [Vérifié].
 
 `_validate_rules` accepte `["ALL"]` dans un override, mais `for_path` filtre sur `RULES_REGISTRY` (`config.py:327`) : `"ALL"` disparaît, l'ensemble activé devient vide.
 
@@ -149,6 +159,8 @@ else:
 ```
 
 ## BUG-06 - Types de configuration non validés [Vérifié] - Moyenne
+
+**Statut : Corrigé.** `b6ad01e`. `workers = "4"` et `exclude = "src"` sont refusés avec le code 2 ; les entiers sont ramenés à leur minimum de la même façon à la racine et dans les overrides [Vérifié].
 
 Les `cast(...)` de `_parse_toml_config` et `_parse_override` ne sont que des indications pour le type checker.
 
@@ -182,6 +194,8 @@ def _expect(key: str, value: object, kind: type, minimum: int | None = None) -> 
 
 ## BUG-07 - Globs d'exclusion inopérants [Vérifié] - Haute
 
+**Statut : Corrigé.** `b6ad01e`. Une seule fonction de correspondance (`path_matches`, `full_match`) pour `exclude` et les overrides, plus la règle des motifs littéraux, documentées. `--exclude "t/**"` exclut toute l'arborescence [Vérifié].
+
 `_is_excluded` utilise `Path.match` (`cli.py:57`), ancré à droite et sans sémantique récursive pour `**`, alors que les overrides utilisent `full_match` (`config.py:231`). Deux sémantiques de glob coexistent.
 
 ```text
@@ -197,6 +211,8 @@ Conséquences : `--exclude "tests/**"` n'exclut rien ; un motif littéral `tests
 Correctif : une seule fonction de correspondance (celle de `ConfigOverride.matches`), utilisée pour `exclude` et `overrides`, et documentée.
 
 ## BUG-08 - Générateur imbriqué [Vérifié] - Haute
+
+**Statut : Corrigé.** `65839f4`. Parcours du corps élagué aux portées imbriquées ; `outer_with_nested_generator` ne produit plus d'erreur [Vérifié].
 
 `is_generator` parcourt tout le sous-arbre avec `ast.walk` (`ast_parser.py:191`), y compris les fonctions et lambdas imbriquées.
 
@@ -229,6 +245,8 @@ Correctif : réutiliser le parcours élagué de `_extract_raises` (qui s'arrête
 
 ## BUG-09 - `raise err` [Vérifié] - Haute
 
+**Statut : Corrigé.** `65839f4`, `7e575a5`. `raise err` issu d'un `except X as err` est lu comme `X` ; décision : le `raise` d'une variable ordinaire n'est plus compté [Vérifié sur `reraise`].
+
 `_extract_raises` prend tout `ast.Name` comme type d'exception (`ast_parser.py:311-319`).
 
 ```python
@@ -254,6 +272,8 @@ Correctif : mémoriser les noms liés par `except X as name` et remplacer `raise
 
 ## BUG-10 - Exceptions pointées [Vérifié] - Haute
 
+**Statut : Corrigé.** `65839f4`. Noms pointés extraits, comparés sur leur dernier segment, et acceptés dans `Raises:` [Vérifié sur `dotted_raise`].
+
 Côté code, seul `ast.Name` est reconnu (`ast_parser.py:313-316`) : `raise errors.ValidationError(...)` est invisible. Côté docstring, `RAISE_PATTERN = r"^\s{4}(\w+)\s*:..."` (`docstring_parser.py:68`) n'accepte pas `errors.ValidationError:`.
 
 ```text
@@ -263,6 +283,8 @@ Côté code, seul `ast.Name` est reconnu (`ast_parser.py:313-316`) : `raise erro
 Correctif : extraire `ast.Attribute` (nom complet via `ast.unparse`, comparaison sur le dernier segment), accepter `[\w.]+` dans le parser.
 
 ## BUG-11 - Exceptions propagées [Vérifié] - Moyenne
+
+**Statut : Corrigé.** `6f95960`. `raises_match` (always-on) ne vérifie plus que les descriptions ; une exception documentée mais non levée relève de la nouvelle règle configurable `raises_extraneous`, désactivée par la convention `google` [Vérifié sur `propagated`].
 
 `raises_match` est always-on et exige que toute exception documentée soit levée *directement* dans le corps.
 
@@ -284,6 +306,8 @@ Documenter les exceptions propagées est une pratique courante et utile à l'app
 Correctif proposé : sortir la vérification "documenté mais non levé" dans une politique (`raises_extraneous = "forbidden" | "optional"`), défaut `optional`.
 
 ## BUG-12 - `(int, optional)` [Vérifié] - Critique
+
+**Statut : Corrigé.** `735d616`. Option `type_matching` (`strict`, `equivalent`, `lenient`) ; `, optional` est ignoré à tous les niveaux. `int, optional` contre `int | None` est accepté en `lenient` (convention `google`) et reste signalé en `strict`, par conception [Vérifié sur `optional_arg`].
 
 La comparaison de types est textuelle (`rules/args.py:89-90`). La forme `name (type, optional): ...`, très répandue en Google style (Napoleon la documente [Non vérifié]), produit une erreur always-on.
 
@@ -319,6 +343,8 @@ def _normalize_type(text: str) -> str:
 
 ## BUG-13 - Forward references [Vérifié] - Haute
 
+**Statut : Corrigé.** `735d616`. Les guillemets des forward references sont retirés à tous les niveaux [Vérifié sur `forward_ref`, même en `strict`].
+
 `ast.unparse` conserve les guillemets d'une annotation chaîne (`ast_parser.py:184`, `ast_parser.py:229`).
 
 ```text
@@ -329,6 +355,8 @@ def _normalize_type(text: str) -> str:
 84 occurrences sur `rich`. Correctif : dans `_extract_args` et pour `node.returns`, si l'annotation est un `ast.Constant` de type `str`, prendre `.value`. Couvert par `_normalize_type` ci-dessus.
 
 ## BUG-14 - Règle `indentation` [Vérifié] - Haute
+
+**Statut : Corrigé.** `6f95960`. Contrôle structurel : une erreur par section, première entrée à exactement 4 espaces [Vérifié sur `multiline_arg`].
 
 `check_indentation` (`rules/structure.py:16-43`) compte les indentations distinctes hors première ligne et échoue au-delà de 2. Une section (`0`), une entrée (`4`) et une ligne de continuation (`8`) suffisent.
 
@@ -355,6 +383,8 @@ def multiline_arg(value: int) -> int:
 Correctif : vérifier que chaque indentation est multiple de 4 et cohérente avec la structure (en-têtes à 0, entrées à 4, continuations >= 8), ou retirer la règle, le docstring étant déjà nettoyé par `inspect.cleandoc`.
 
 ## BUG-15 - `def` sous `if` / `try` / `with` [Vérifié] - Haute
+
+**Statut : Corrigé.** `65839f4`. Les `def` sous `if`/`try`/`with` sont analysés (`hidden_in_if` produit le `docstring_exists` attendu) [Vérifié]. Décision associée (`7e575a5`) : le bloc `if __name__ == "__main__":` est ignoré.
 
 `_walk_body` ne descend que dans `ClassDef` (`ast_parser.py:64-70`).
 
@@ -389,6 +419,8 @@ Les fonctions imbriquées dans des fonctions restent non analysées : c'est un c
 
 ## BUG-16 - `self` / `cls` par nom [Vérifié] - Moyenne
 
+**Statut : Corrigé.** `65839f4`. Premier paramètre ignoré par position pour les méthodes, sauf `@staticmethod` [Vérifié sur `Meta.__new__(mcs, ...)`].
+
 `skip = {"self", "cls"}` (`ast_parser.py:218`) s'applique à toutes les fonctions, par nom.
 
 ```python
@@ -407,6 +439,8 @@ Correctif : pour une méthode non `@staticmethod`, ignorer le premier paramètre
 
 ## BUG-17 - Heuristique d'impératif [Vérifié] - Moyenne
 
+**Statut : Corrigé.** `6f95960`. Liste de verbes et formes irrégulières (`does`, `goes`, `undoes`) : 'Does' -> 'Do' [Vérifié].
+
 `_to_imperative` (`rules/docstring.py:151-180`) retire un `s` final :
 
 ```text
@@ -419,6 +453,8 @@ Uses -> Use      Parses -> Parse  Returns -> Return        Has -> (exception)
 Correctifs : table de verbes irréguliers (`does -> do`, `goes -> go`, `has -> have`, `is -> be`) ; ne signaler que si la forme proposée appartient à une liste de verbes connus (approche d'une liste blanche, utilisée par pydocstyle D401 [Non vérifié]).
 
 ## BUG-18 - Sections Napoleon à deux mots [Vérifié] - Moyenne
+
+**Statut : Corrigé.** `acdcf43`, `e41e293`. Sections Napoleon reconnues dans `sections.py`, alias signalés par la règle `section_alias`, `Keyword Args` lu [Vérifié sur `kwargs_section`].
 
 `CANDIDATE_SECTION_PATTERN = r"^([A-Z][A-Za-z]*):\s*$"` (`docstring_parser.py:63`) ne reconnaît qu'un mot. `Keyword Args:`, `See Also:`, `Other Parameters:` sont silencieusement fusionnés dans la description ou la section précédente.
 
@@ -448,6 +484,8 @@ Correctif : reconnaître les en-têtes multi-mots ; décider pour chaque alias N
 
 ## BUG-19 - `Returns:` sans préfixe de type [Vérifié] - Haute
 
+**Statut : Corrigé.** `735d616`. `documented_types` s'applique aussi à `Returns:` : optionnel avec la convention `google`, exigé en `strict` par conception [Vérifié sur `google_guide_returns`].
+
 Le guide Google montre `Returns:` suivi d'une phrase, sans `type:` quand la signature est annotée [Non vérifié]. Ici, c'est une erreur always-on (`rules/args.py:229-230`).
 
 ```python
@@ -471,6 +509,8 @@ Correctif : étendre `documented_types` (aujourd'hui limité à `Args:` et `Attr
 
 ## BUG-20 - Parsing de `Returns:` [Vérifié] - Basse
 
+**Statut : Corrigé.** `735d616`. Un type n'est retenu que s'il est une expression Python ; les lignes de continuation sont jointes. L'exemple donne maintenant `description='The mapping: key to value, spanning two lines.'` [Vérifié].
+
 `RETURN_PATTERN = r"^\s{4}([^:]+?)\s*:\s*(.*)$"` (`docstring_parser.py:67`) prend tout ce qui précède le premier `:` comme type, et `_parse_returns` s'arrête à la première ligne.
 
 ```python
@@ -483,6 +523,8 @@ Effet : type mismatch always-on sur une phrase contenant `:` ; description tronq
 Correctif : n'accepter comme type qu'une expression parsable par `ast.parse(..., mode="eval")` ; concaténer les lignes de continuation comme pour `Args:`.
 
 ## BUG-21 - `@overload` [Vérifié] - Moyenne
+
+**Statut : Corrigé.** `65839f4`. Les signatures `@overload` sont ignorées [Vérifié sur `conv`].
 
 ```python
 @overload
@@ -502,6 +544,8 @@ Correctif : ignorer les fonctions décorées `@overload` / `@typing.overload`. V
 
 ## BUG-22 - Annotations GitHub non échappées [Déduit] - Basse
 
+**Statut : Corrigé.** `0355225`. Échappement du message et des propriétés comme `@actions/core` [Vérifié par les tests du reporter].
+
 `reporter.py:163` écrit `::error file=...,line=...,title=...::{message}` sans échappement. La documentation des workflow commands demande d'échapper `%`, `\r`, `\n` dans le message, et en plus `:` et `,` dans les propriétés [Non vérifié]. Les messages de `summary_final_period` incluent un extrait du résumé utilisateur (`Got: '...'`), donc un `%` ou un retour ligne peut y apparaître.
 
 ```python
@@ -516,13 +560,15 @@ def _escape_property(text: str) -> str:
 
 ## BUG-23 - Pluriel [Vérifié] - Basse
 
+**Statut : Corrigé.** `0355225`. "1 file checked" [Vérifié par les tests du reporter].
+
 `reporter.py:57`, `:76`, `:95`, `:115`, `:168-170` : "1 files checked".
 
 ---
 
 ## Annexe - fichiers de reproduction
 
-Sorties obtenues avec `docstring-linter <fichier> --config /nonexistent --format text`. Les fichiers ne sont pas versionnés en `.py` pour ne pas être pris par les hooks pyright/ruff du dépôt.
+Sorties obtenues avec `docstring-linter <fichier> --config /nonexistent --format text`. Les fichiers ne sont pas versionnés en `.py` pour ne pas être pris par les hooks pyright/ruff du dépôt. Depuis BUG-04, `--config /nonexistent` est une erreur : pour les défauts, passer un fichier TOML vide.
 
 Suggestion : les ajouter dans `tests/fixtures/` avec les erreurs attendues, comme tests de bout en bout (voir ARCH-10).
 
