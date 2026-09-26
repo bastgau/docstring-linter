@@ -8,7 +8,7 @@
 | OPS-02 | Haute | Pas de `[build-system]`, backend setuptools legacy, licence dépréciée | Reporté |
 | OPS-03 | Haute | `requires-python = ">=3.14,<3.15"` | Reporté |
 | OPS-04 | Basse | Version statique `0.1.0`, pas de `--version` | Reporté |
-| OPS-05 | Haute | Absent de PyPI malgré le job de publication | Non traité |
+| OPS-05 | Haute | Absent de PyPI malgré le job de publication | Reporté |
 | OPS-06 | Haute | Flux de release beta cassé, changelog beta incorrect | Écarté |
 | OPS-07 | Moyenne | Chaîne d'approvisionnement de la CI | Corrigé |
 | OPS-08 | Basse | Erreurs dans `.pre-commit-config.yaml` | Partiel |
@@ -88,7 +88,7 @@ Correctif : `--version` via `importlib.metadata.version("docstring-linter")` ; o
 
 ### OPS-05 - PyPI [Vérifié] - Haute
 
-**Statut : Non traité.**
+**Statut : Reporté.** Cause vérifiée dans le log du job "Publish to PyPI" de `v0.9.0` : `invalid-publisher`, aucun trusted publisher déclaré sur PyPI (le projet n'existe pas, 404 sur `pypi.org/pypi/docstring-linter/json`). À faire après le lot 0 : déclarer un pending publisher (`bastgau` / `docstring-linter` / `publish-release.yml` / environnement `pypi`), passer les liens du README en URL complètes (DOC-06), ne pas relancer le job de `v0.9.0`.
 
 Le job `pypi-publish` existe (trusted publishing, environnement `pypi`), 4 releases stables sont publiées sur GitHub (`v0.3.0`, `v0.4.0`, `v0.5.0`, `v0.9.0`, vérifié via l'API), mais `pip index versions docstring-linter` ne renvoie rien. Soit l'environnement `pypi` / le trusted publisher n'est pas configuré, soit le job échoue [Déduit, logs non consultés]. Le nom semble libre [Déduit].
 

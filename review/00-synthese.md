@@ -48,7 +48,7 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 |---|---|
 | Corrigé | Proposition appliquée, revérifiée sur le code actuel. |
 | Partiel | Une partie appliquée ; le reste est détaillé sous le point. |
-| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version, baseline). |
+| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version, baseline, PyPI). |
 | Écarté | Décision de ne pas appliquer. |
 | Non traité | Pas encore discuté. |
 
@@ -59,8 +59,8 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | 03 - Performance (PERF) | 1 | 1 | 0 | 0 | 4 | 6 |
 | 04 - Usage (UX) | 2 | 6 | 2 | 1 | 2 | 13 |
 | 05 - Documentation (DOC) | 5 | 2 | 0 | 0 | 3 | 10 |
-| 06 - Packaging et CI (OPS) | 2 | 2 | 5 | 3 | 1 | 13 |
-| **Total** | **34** | **18** | **8** | **4** | **11** | **75** |
+| 06 - Packaging et CI (OPS) | 2 | 2 | 6 | 3 | 0 | 13 |
+| **Total** | **34** | **18** | **9** | **4** | **10** | **75** |
 
 Mesures sur la révision `23fc020` [Vérifié] :
 
@@ -109,7 +109,7 @@ En revanche, l'outil n'est pas encore prêt pour un usage hors du dépôt lui-m�
 | P1 | UX-02, UX-04 | Preset "google" moins strict, options de portée (privé, dunder, overload, property) | M | Corrigé, Partiel |
 | P1 | BUG-18, BUG-19 | Sections Napoleon à deux mots, `Returns:` sans type | M | Corrigé |
 | P1 | DOC-01 à DOC-03 | README (installation, positionnement), docs obsolètes | S | Corrigé, Corrigé, Partiel |
-| P1 | OPS-05, OPS-06 | Publication PyPI, flux de release beta | S | Non traité, Écarté |
+| P1 | OPS-05, OPS-06 | Publication PyPI, flux de release beta | S | Reporté, Écarté |
 | P2 | UX-03, UX-08 | Baseline, autofix des règles de mise en page | L | Reporté, Non traité |
 | P2 | ARCH-02, ARCH-03, PERF-01 | Registre de règles déclaratif, modèle ligne à ligne du docstring, passe AST unique | L | Non traité, Partiel, Corrigé |
 
