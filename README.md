@@ -104,7 +104,7 @@ Command-line options always override configuration file values.
 
 ## Output formats
 
-Colors are only used when the output is a terminal, and never when the `NO_COLOR` environment variable is set to a non-empty value.
+Colors are only used when the output is a terminal, and never when the `NO_COLOR` environment variable is set to a non-empty value. The `Config:` line of the `traceback` and `text` formats goes to stderr, so a redirected report only holds the report.
 
 `traceback` is the default, shown in the quick start. It prints one location header per entity, in the same shape as a Python traceback, which editors turn into a clickable link. Errors point to the line of the `def` or `class`.
 

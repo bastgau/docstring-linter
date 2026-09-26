@@ -440,6 +440,21 @@ def test_list_rules_google_convention_disabled_rules(tmp_path: Path, capsys: pyt
         assert "(disabled by default)" in next(line for line in out.splitlines() if f" {rule} " in line)
 
 
+def test_main_config_line_on_stderr(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Text format: the Config line goes to stderr, stdout only holds the report."""
+    config = tmp_path / "linter.toml"
+    config.write_text("", encoding="utf-8")
+    (tmp_path / "valid.py").write_text(_VALID_SOURCE, encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["docstring-linter", str(tmp_path / "valid.py"), "--config", str(config), "--format", "text"])
+    with pytest.raises(SystemExit):
+        main()
+
+    captured = capsys.readouterr()
+    assert f"Config: {config}" in captured.err
+    assert "Config:" not in captured.out
+    assert "1 file checked, 0 errors." in captured.out
+
+
 def test_main_invalid_config_value(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
     """Invalid value in the config file: prints a configuration error and exits with 2."""
     f = tmp_path / "bad.toml"

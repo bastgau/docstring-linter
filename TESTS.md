@@ -603,6 +603,7 @@ This file lists the test functions of the `docstring-linter` project, a parametr
 | Fichier | Fonction | Description |
 |---|---|---|
 | `test_cli.py` | `test_list_rules_google_convention_disabled_rules` | --list-rules with the google convention: its disabled rules are counted and labelled as disabled by default. |
+| `test_cli.py` | `test_main_config_line_on_stderr` | Text format: the Config line goes to stderr, stdout only holds the report. |
 | `test_cli.py` | `test_main_invalid_config_value` | Invalid value in the config file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_missing_config_file` | --config pointing to a missing file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_statistics_rejected_with_json` | --statistics with a machine-readable format: error on stderr and exit 2. |

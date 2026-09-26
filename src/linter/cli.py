@@ -306,11 +306,12 @@ def _main() -> int:
         print(f"--statistics is not available with the {config.output_format} format.", file=sys.stderr)
         return 2
 
+    # on stderr, so that a redirected report only holds the report
     if config.output_format in ("text", "traceback"):
         if config_file is not None:
-            print(f"Config: {config_file}")
+            print(f"Config: {config_file}", file=sys.stderr)
         else:
-            print("Config: defaults (no config file found)")
+            print("Config: defaults (no config file found)", file=sys.stderr)
 
     return run(args.paths, config, statistics=args.statistics, force_exclude=args.force_exclude)
 
