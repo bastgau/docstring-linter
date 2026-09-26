@@ -62,7 +62,7 @@ source = ["src"]
 
 [tool.coverage.report]
 omit = ["tests/*", "example/*"]
-fail_under = 85
+fail_under = 90
 
 [tool.ruff]
 target-version = "py314"
