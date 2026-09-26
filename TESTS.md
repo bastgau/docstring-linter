@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 379 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 394 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -452,6 +452,8 @@ This file lists the 379 tests of the `docstring-linter` project. Each entry show
 | `test_cli.py` | `test_collect_directory_recursive` | Directory with nested .py files: all collected. |
 | `test_cli.py` | `test_collect_venv_excluded_by_literal_pattern` | File inside a .venv directory: excluded by literal pattern matching path parts. |
 | `test_cli.py` | `test_collect_pycache_excluded_by_literal_pattern` | File inside __pycache__: excluded by literal pattern matching path parts. |
+| `test_cli.py` | `test_collect_recursive_glob_excluded` | Pattern tests/**: every file under tests/ is excluded, at any depth. |
+| `test_cli.py` | `test_collect_directory_glob_excluded` | Pattern src/gen/*.py: files directly under src/gen/ are excluded, others kept. |
 
 ### lint_file
 
@@ -636,6 +638,16 @@ This file lists the 379 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_for_path_last_override_wins` | Two matching overrides: the last declared one wins. |
 | `test_config.py` | `test_for_path_ignore_removes_from_inherited_rules` | Ignore key in an override: the rule is removed from the inherited set. |
 | `test_config.py` | `test_for_path_select_replaces_inherited_rules` | Select key in an override: the inherited set is replaced by the listed rules. |
+| `test_config.py` | `test_for_path_override_select_all` | Select = ['ALL'] in an override: every rule is enabled on the matching files. |
+
+### value types
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_config.py` | `test_parse_rejects_wrong_value_type` | Value of the wrong TOML type: raises ValueError naming the key and the value (9 cases). |
+| `test_config.py` | `test_parse_override_rejects_wrong_value_type` | Option of the wrong type in an override: raises ValueError naming the override. |
+| `test_config.py` | `test_parse_override_rejects_string_paths` | Paths given as a string in an override: raises ValueError. |
+| `test_config.py` | `test_parse_override_option_clamped` | summary_max_length = -5 in an override: clamped to 1, like at the top level. |
 
 ### load_config
 

@@ -186,6 +186,44 @@ OVERRIDABLE_OPTIONS: frozenset[str] = frozenset(
     }
 )
 
+# Integer options with the minimum value they are clamped to
+INT_OPTIONS: dict[str, int] = {
+    "workers": 0,
+    "summary_max_length": 1,
+    "blank_lines_before_section": 0,
+    "blank_lines_before_closing_quotes": 0,
+}
+
+BOOL_OPTIONS: frozenset[str] = frozenset(
+    {
+        "exclude_empty_init_method",
+        "exclude_empty_init_module",
+        "ignore_placeholder_docstrings",
+    }
+)
+
+
+def path_matches(filepath: str, patterns: list[str]) -> bool:
+    """Check whether a file path fully matches one of the glob patterns.
+
+    The path is matched as given, then relative to the current directory,
+    so that an absolute path on the command line behaves like a relative one.
+
+    Args:
+        filepath (str): Path of the file.
+        patterns (list[str]): Glob patterns matched with PurePath.full_match.
+
+    Returns:
+        bool: True if one of the patterns matches.
+
+    """
+    candidates = [PurePath(filepath)]
+    absolute = Path(filepath).resolve()
+    if absolute.is_relative_to(Path.cwd()):
+        candidates.append(PurePath(absolute.relative_to(Path.cwd())))
+
+    return any(candidate.full_match(pattern) for pattern in patterns for candidate in candidates)
+
 
 @dataclass
 class ConfigOverride:
@@ -207,9 +245,6 @@ class ConfigOverride:
     def matches(self, filepath: str) -> bool:
         """Check whether a file path matches one of the patterns.
 
-        The path is matched as given, then relative to the current directory,
-        so that an absolute path on the command line behaves like a relative one.
-
         Args:
             filepath (str): Path of the file being linted.
 
@@ -217,12 +252,7 @@ class ConfigOverride:
             bool: True if the override applies to that file.
 
         """
-        candidates = [PurePath(filepath)]
-        absolute = Path(filepath).resolve()
-        if absolute.is_relative_to(Path.cwd()):
-            candidates.append(PurePath(absolute.relative_to(Path.cwd())))
-
-        return any(candidate.full_match(pattern) for pattern in self.paths for candidate in candidates)
+        return path_matches(filepath, self.paths)
 
 
 @dataclass
@@ -318,7 +348,12 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
 
         override = matching[-1]
         resolved = copy.copy(self)
-        enabled = set(self.enabled_rules) if override.select is None else {rule for rule in override.select if rule in RULES_REGISTRY}
+        if override.select is None:
+            enabled = set(self.enabled_rules)
+        elif override.select == ["ALL"]:
+            enabled = set(RULES_REGISTRY)
+        else:
+            enabled = {rule for rule in override.select if rule in RULES_REGISTRY}
         enabled -= {rule for rule in override.ignore if rule in RULES_REGISTRY}
 
         for name, value in override.values.items():
@@ -511,6 +546,73 @@ def _parse_style(value: object) -> DocstringStyle:
         raise ValueError(msg) from None
 
 
+def _parse_str_list(key: str, value: object, location: str = "") -> list[str]:
+    """Check that a configured value is a list of strings.
+
+    Args:
+        key (str): Setting identifier, used in the error message.
+        value (object): Value read from the config file.
+        location (str): Config section carrying it, empty for the top level.
+
+    Returns:
+        list[str]: The value, unchanged.
+
+    Raises:
+        ValueError: If the value is not a list of strings.
+
+    """
+    if isinstance(value, list) and all(isinstance(item, str) for item in cast("list[object]", value)):
+        return cast("list[str]", value)
+    msg = f"{location}'{key}': expected a list of strings, got {value!r}."
+    raise ValueError(msg)
+
+
+def _parse_bool(key: str, value: object, location: str = "") -> bool:
+    """Check that a configured value is a boolean.
+
+    Args:
+        key (str): Setting identifier, used in the error message.
+        value (object): Value read from the config file.
+        location (str): Config section carrying it, empty for the top level.
+
+    Returns:
+        bool: The value, unchanged.
+
+    Raises:
+        ValueError: If the value is not a boolean.
+
+    """
+    if isinstance(value, bool):
+        return value
+    msg = f"{location}'{key}': expected true or false, got {value!r}."
+    raise ValueError(msg)
+
+
+def _parse_option(key: str, value: object, location: str = "") -> int | bool:
+    """Check an integer or boolean option, clamping integers to their minimum.
+
+    Args:
+        key (str): Option identifier, a key of INT_OPTIONS or BOOL_OPTIONS.
+        value (object): Value read from the config file.
+        location (str): Config section carrying it, empty for the top level.
+
+    Returns:
+        int | bool: The boolean as is, or the integer clamped to its minimum.
+
+    Raises:
+        ValueError: If the value does not have the expected type.
+
+    """
+    if key in BOOL_OPTIONS:
+        return _parse_bool(key, value, location)
+
+    # bool is a subclass of int, reject it explicitly
+    if isinstance(value, int) and not isinstance(value, bool):
+        return max(INT_OPTIONS[key], value)
+    msg = f"{location}'{key}': expected an integer, got {value!r}."
+    raise ValueError(msg)
+
+
 def _validate_rules(select: list[str], ignore: list[str], location: str = "") -> None:
     """Check the rule names listed in select and ignore.
 
@@ -549,17 +651,18 @@ def _parse_override(data: dict[str, object]) -> ConfigOverride:
         ValueError: If paths is missing or a key is not allowed in an override.
 
     """
-    paths = cast("list[str]", data.get("paths", []))
+    paths = _parse_str_list("paths", data.get("paths", []), "override: ")
     if not paths:
         msg = "an override must declare a non-empty 'paths' list."
         raise ValueError(msg)
 
-    override = ConfigOverride(paths=paths, ignore=cast("list[str]", data.get("ignore", [])))
+    location = f"override {paths}: "
+    override = ConfigOverride(paths=paths, ignore=_parse_str_list("ignore", data.get("ignore", []), location))
 
     if "select" in data:
-        override.select = cast("list[str]", data["select"])
+        override.select = _parse_str_list("select", data["select"], location)
 
-    _validate_rules(override.select or [], override.ignore, f"override {paths}: ")
+    _validate_rules(override.select or [], override.ignore, location)
 
     for key, value in data.items():
         if key in {"paths", "select", "ignore"}:
@@ -567,7 +670,7 @@ def _parse_override(data: dict[str, object]) -> ConfigOverride:
         if key in POLICIES_REGISTRY:
             override.values[key] = _parse_policy(key, value)
         elif key in OVERRIDABLE_OPTIONS:
-            override.values[key] = value
+            override.values[key] = _parse_option(key, value, location)
         elif key in CONFIG_KEYS:
             msg = f"override {paths}: '{key}' cannot be set per path, it applies to the whole run."
             raise ValueError(msg)
@@ -577,7 +680,47 @@ def _parse_override(data: dict[str, object]) -> ConfigOverride:
     return override
 
 
-def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, PLR0912  # pylint: disable=too-many-branches
+def _parse_scope(value: object) -> dict[str, bool]:
+    """Parse the [scope] table.
+
+    Args:
+        value (object): Value read from the config file.
+
+    Returns:
+        dict[str, bool]: Scope key to whether that kind of entity is checked.
+
+    Raises:
+        ValueError: If the value is not a table.
+
+    """
+    if isinstance(value, dict):
+        scope = cast("dict[str, object]", value)
+        _reject(sorted(set(scope) - SCOPE_KEYS), "configuration key", "scope")
+        return {key: _parse_bool(f"scope.{key}", item) for key, item in scope.items()}
+    msg = f"'scope': expected a table, got {value!r}."
+    raise ValueError(msg)
+
+
+def _parse_overrides(value: object) -> list[ConfigOverride]:
+    """Parse the [[overrides]] array of tables.
+
+    Args:
+        value (object): Value read from the config file.
+
+    Returns:
+        list[ConfigOverride]: Overrides in declaration order.
+
+    Raises:
+        ValueError: If the value is not an array of tables.
+
+    """
+    if isinstance(value, list) and all(isinstance(block, dict) for block in cast("list[object]", value)):
+        return [_parse_override(block) for block in cast("list[dict[str, object]]", value)]
+    msg = "'overrides': expected an array of tables."
+    raise ValueError(msg)
+
+
+def _parse_toml_config(data: dict[str, object]) -> LinterConfig:
     """Parse TOML config dict into LinterConfig.
 
     Args:
@@ -594,41 +737,22 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:  # noqa: C901, 
     if "style" in data:
         config.style = _parse_style(data["style"])
 
-    scope = cast("dict[str, bool]", data.get("scope", {}))
-    _reject(sorted(set(scope) - SCOPE_KEYS), "configuration key", "scope")
-    if "modules" in scope:
-        config.check_modules = scope["modules"]
-    if "classes" in scope:
-        config.check_classes = scope["classes"]
-    if "functions" in scope:
-        config.check_functions = scope["functions"]
-    if "methods" in scope:
-        config.check_methods = scope["methods"]
+    for key, value in _parse_scope(data.get("scope", {})).items():
+        setattr(config, f"check_{key}", value)
 
-    if "exclude_empty_init_method" in data:
-        config.exclude_empty_init_method = cast("bool", data["exclude_empty_init_method"])
-    if "exclude_empty_init_module" in data:
-        config.exclude_empty_init_module = cast("bool", data["exclude_empty_init_module"])
-    if "ignore_placeholder_docstrings" in data:
-        config.ignore_placeholder_docstrings = cast("bool", data["ignore_placeholder_docstrings"])
+    for key, value in data.items():
+        if key in POLICIES_REGISTRY:
+            setattr(config, key, _parse_policy(key, value))
+        elif key in INT_OPTIONS or key in BOOL_OPTIONS:
+            setattr(config, key, _parse_option(key, value))
+
     if "exclude" in data:
-        config.exclude_patterns = cast("list[str]", data["exclude"])
-    for policy in POLICIES_REGISTRY:
-        if policy in data:
-            setattr(config, policy, _parse_policy(policy, data[policy]))
-    if "workers" in data:
-        config.workers = max(0, cast("int", data["workers"]))
-    if "summary_max_length" in data:
-        config.summary_max_length = max(1, cast("int", data["summary_max_length"]))
-    if "blank_lines_before_section" in data:
-        config.blank_lines_before_section = max(0, cast("int", data["blank_lines_before_section"]))
-    if "blank_lines_before_closing_quotes" in data:
-        config.blank_lines_before_closing_quotes = max(0, cast("int", data["blank_lines_before_closing_quotes"]))
+        config.exclude_patterns = _parse_str_list("exclude", data["exclude"])
 
-    config.overrides = [_parse_override(cast("dict[str, object]", block)) for block in cast("list[object]", data.get("overrides", []))]
+    config.overrides = _parse_overrides(data.get("overrides", []))
 
-    select = cast("list[str]", data.get("select", []))
-    ignore = cast("list[str]", data.get("ignore", []))
+    select = _parse_str_list("select", data.get("select", []))
+    ignore = _parse_str_list("ignore", data.get("ignore", []))
     _validate_rules(select, ignore)
 
     if select or ignore:

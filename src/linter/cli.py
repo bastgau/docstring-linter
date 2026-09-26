@@ -12,7 +12,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from linter.ast_parser import parse_file
-from linter.config import ALWAYS_ON, OFF_BY_DEFAULT, OPTIONS_REGISTRY, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig, load_config
+from linter.config import ALWAYS_ON, OFF_BY_DEFAULT, OPTIONS_REGISTRY, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig, load_config, path_matches
 from linter.docstring_parser import get_parser
 from linter.models import LintError, NodeType
 from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_traceback
@@ -46,6 +46,10 @@ def collect_python_files(paths: list[str], exclude_patterns: list[str]) -> list[
 def _is_excluded(path: Path, patterns: list[str]) -> bool:
     """Check if a file path matches any exclusion pattern.
 
+    A pattern matches the end of the path (test_*.py), the whole path
+    relative to the current directory (tests/**), or, when it carries no
+    wildcard, any directory or file name along the path (.venv).
+
     Args:
         path (Path): File path to check.
         patterns (list[str]): Glob patterns to match against.
@@ -60,7 +64,7 @@ def _is_excluded(path: Path, patterns: list[str]) -> bool:
         # literal patterns (no glob chars) are also matched against directory parts
         if "*" not in pattern and "?" not in pattern and pattern in path.parts:
             return True
-    return False
+    return path_matches(str(path), patterns)
 
 
 def lint_file(filepath: str, config: LinterConfig) -> list[LintError]:

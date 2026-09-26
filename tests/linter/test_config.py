@@ -1,6 +1,7 @@
 """Tests for config module."""
 
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -249,6 +250,49 @@ def test_always_on_rule_stays_enabled_when_not_selected() -> None:
 
 
 # ---------------------------------------------------------------------------
+# value types
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        ({"workers": "4"}, "'workers': expected an integer, got '4'"),
+        ({"summary_max_length": True}, "'summary_max_length': expected an integer, got True"),
+        ({"exclude_empty_init_method": "no"}, "'exclude_empty_init_method': expected true or false, got 'no'"),
+        ({"exclude": "src"}, "'exclude': expected a list of strings, got 'src'"),
+        ({"select": "ALL"}, "'select': expected a list of strings, got 'ALL'"),
+        ({"ignore": ["imperative_mood", 3]}, "'ignore': expected a list of strings"),
+        ({"scope": "all"}, "'scope': expected a table, got 'all'"),
+        ({"scope": {"modules": "yes"}}, "'scope.modules': expected true or false, got 'yes'"),
+        ({"overrides": ["tests/**"]}, "'overrides': expected an array of tables"),
+    ],
+)
+def test_parse_rejects_wrong_value_type(data: dict[str, object], message: str) -> None:
+    """Value of the wrong TOML type: raises ValueError naming the key and the value."""
+    with pytest.raises(ValueError, match=re.escape(message)):
+        _parse_toml_config(data)
+
+
+def test_parse_override_rejects_wrong_value_type() -> None:
+    """Option of the wrong type in an override: raises ValueError naming the override."""
+    with pytest.raises(ValueError, match=re.escape("override ['tests/**']: 'summary_max_length': expected an integer, got 'x'")):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "summary_max_length": "x"}]})
+
+
+def test_parse_override_rejects_string_paths() -> None:
+    """Paths given as a string in an override: raises ValueError."""
+    with pytest.raises(ValueError, match=re.escape("override: 'paths': expected a list of strings")):
+        _parse_toml_config({"overrides": [{"paths": "tests/**"}]})
+
+
+def test_parse_override_option_clamped() -> None:
+    """summary_max_length = -5 in an override: clamped to 1, like at the top level."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "summary_max_length": -5}]})
+    assert config.for_path("tests/test_foo.py").summary_max_length == 1
+
+
+# ---------------------------------------------------------------------------
 # unknown keys and rules
 # ---------------------------------------------------------------------------
 
@@ -401,6 +445,12 @@ def test_for_path_select_replaces_inherited_rules() -> None:
     """Select key in an override: the inherited set is replaced by the listed rules."""
     config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "select": ["docstring_exists"]}]})
     assert config.for_path("tests/test_foo.py").enabled_rules == ["docstring_exists"]
+
+
+def test_for_path_override_select_all() -> None:
+    """Select = ['ALL'] in an override: every rule is enabled on the matching files."""
+    config = _parse_toml_config({"ignore": ["imperative_mood"], "overrides": [{"paths": ["tests/**"], "select": ["ALL"]}]})
+    assert config.for_path("tests/test_foo.py").enabled_rules == sorted(RULES_REGISTRY)
 
 
 # ---------------------------------------------------------------------------

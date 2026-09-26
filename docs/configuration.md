@@ -67,7 +67,7 @@ See the Available keys section below for the complete list of options.
 | `exclude_empty_init_method` | `true` | Do not require a docstring on `__init__` methods with no parameter beyond `self` and a body limited to `pass` or a docstring. |
 | `exclude_empty_init_module` | `true` | Do not require a docstring on `__init__.py` files with an empty body (empty file or comments only). |
 | `ignore_placeholder_docstrings` | `false` | Skip docstrings containing only `...`. |
-| `exclude` | see [built-in defaults](/docs/style-policies.md#default-exclusion-patterns) | Glob/literal patterns for files and directories to skip. |
+| `exclude` | see [built-in defaults](/docs/style-policies.md#default-exclusion-patterns) | Glob/literal patterns for files and directories to skip. See [matching rules](/docs/style-policies.md#default-exclusion-patterns). |
 | `workers` | `1` | Parallel workers. `0` = auto-detect CPU count. |
 | `summary_max_length` | `80` | Maximum summary line length for `summary_too_long`. |
 | `blank_lines_before_section` | `1` | Blank lines expected before a section header, checked by `blank_lines`. |
@@ -129,7 +129,7 @@ select = ["docstring_exists"]
 
 ### Strict configuration
 
-Anything the linter does not recognize is an error, reported on stderr with exit code 2 before any file is read. This covers a key absent from the table above (including inside `[scope]` and inside an override), a rule name absent from `--list-rules` in `select` or `ignore`, an always-on rule listed in `ignore`, or an invalid policy value.
+Anything the linter does not recognize is an error, reported on stderr with exit code 2 before any file is read. This covers a key absent from the table above (including inside `[scope]` and inside an override), a rule name absent from `--list-rules` in `select` or `ignore`, an always-on rule listed in `ignore`, an invalid policy value, or a value of the wrong type (`workers = "4"`, `exclude = "src"`).
 
 ```console
 $ docstring-linter src/

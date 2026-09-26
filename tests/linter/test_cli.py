@@ -84,6 +84,25 @@ def test_collect_pycache_excluded_by_literal_pattern(tmp_path: Path) -> None:
     assert all("__pycache__" not in f for f in files)
 
 
+def test_collect_recursive_glob_excluded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pattern tests/**: every file under tests/ is excluded, at any depth."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "tests" / "unit").mkdir(parents=True)
+    (tmp_path / "tests" / "unit" / "test_a.py").write_text("", encoding="utf-8")
+    (tmp_path / "tests" / "conftest.py").write_text("", encoding="utf-8")
+    (tmp_path / "main.py").write_text("", encoding="utf-8")
+    assert collect_python_files(["."], ["tests/**"]) == ["main.py"]
+
+
+def test_collect_directory_glob_excluded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pattern src/gen/*.py: files directly under src/gen/ are excluded, others kept."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "src" / "gen").mkdir(parents=True)
+    (tmp_path / "src" / "gen" / "model.py").write_text("", encoding="utf-8")
+    (tmp_path / "src" / "app.py").write_text("", encoding="utf-8")
+    assert collect_python_files(["src"], ["src/gen/*.py"]) == ["src/app.py"]
+
+
 # ---------------------------------------------------------------------------
 # lint_file
 # ---------------------------------------------------------------------------

@@ -578,11 +578,17 @@ The following patterns are excluded by default when scanning directories:
 | `.venv` | literal | virtual environment directory |
 | `__pycache__` | literal | Python bytecode cache |
 
-Literal patterns match any directory component in the path (e.g. `.venv` excludes `src/.venv/foo.py`). Test files are linted like any other file; exclude them explicitly with `exclude = ["test_*", "*_test.py"]` if desired.
+A pattern excludes a file when one of these holds:
+
+- it has no wildcard and names a directory or file anywhere in the path: `.venv` excludes `src/.venv/foo.py`;
+- it matches the end of the path: `test_*.py` excludes `tests/unit/test_foo.py`;
+- it matches the whole path, relative to the current directory: `tests/**` excludes every file under `tests/`, `src/gen/*.py` the files directly in `src/gen/`.
+
+Test files are linted like any other file; exclude them explicitly with `exclude = ["test_*", "*_test.py"]` if desired.
 
 Override defaults in `pyproject.toml`:
 
 ```toml
 [tool.docstring-linter]
-exclude = [".venv", "__pycache__", "migrations/"]
+exclude = [".venv", "__pycache__", "migrations"]
 ```
