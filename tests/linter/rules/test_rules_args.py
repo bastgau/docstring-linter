@@ -237,6 +237,21 @@ def test_returns_match_mismatch() -> None:
     assert any(e.rule == "returns_match" and "mismatch" in e.message for e in errors)
 
 
+def test_args_section_kwargs_documented_by_keyword_args() -> None:
+    """**kwargs in the signature and a Keyword Args section: **kwargs counts as documented."""
+    entity = _func(args=[ArgInfo(name="**options", type_annotation="int")])
+    doc = ParsedDocstring(summary="Do something.", keyword_args=[DocstringArg(name="width", description="Width.")])
+    assert not validate_entity(entity, doc, _policy_only("args_section", Policy.REQUIRED))
+
+
+def test_args_match_keyword_arg_missing_description() -> None:
+    """Keyword Args entry without a description: returns args_match error, its name is not compared with the signature."""
+    entity = _func(args=[ArgInfo(name="**options")])
+    doc = ParsedDocstring(summary="Do something.", keyword_args=[DocstringArg(name="width", description="")])
+    errors = validate_entity(entity, doc, _neutral())
+    assert [e.message for e in errors] == ["Keyword arg 'width' missing description."]
+
+
 def test_returns_match_missing_type() -> None:
     """documented_types = required, Returns section without a type: returns returns_match error."""
     entity = _func(return_type="int")

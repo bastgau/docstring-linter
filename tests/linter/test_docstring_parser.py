@@ -272,9 +272,9 @@ def test_get_parser_google() -> None:
 
 def test_unknown_section_detected() -> None:
     """Section name not in known list: captured in unknown_sections."""
-    doc = "Do something.\n\nArguments:\n    x (int): Input.\n"
+    doc = "Do something.\n\nParams:\n    x (int): Input.\n"
     result = PARSER.parse(doc)
-    assert result.unknown_sections == ["Arguments"]
+    assert result.unknown_sections == ["Params"]
     assert result.args == []
 
 
@@ -287,6 +287,38 @@ def test_unknown_section_known_not_flagged() -> None:
 
 def test_unknown_section_multiple() -> None:
     """Multiple unknown sections: all captured."""
-    doc = "Do something.\n\nArguments:\n    x (int): Input.\n\nParams:\n    y (int): Other.\n\n"
+    doc = "Do something.\n\nUsage:\n    x (int): Input.\n\nParams:\n    y (int): Other.\n\n"
     result = PARSER.parse(doc)
-    assert set(result.unknown_sections) == {"Arguments", "Params"}
+    assert set(result.unknown_sections) == {"Usage", "Params"}
+
+
+# ---------------------------------------------------------------------------
+# Napoleon sections
+# ---------------------------------------------------------------------------
+
+
+def test_parse_alias_read_as_canonical() -> None:
+    """Parameters: alias of Args, its entries are parsed as args and it is not unknown."""
+    result = PARSER.parse("Do something.\n\nParameters:\n    x (int): Input.\n")
+    assert [a.name for a in result.args] == ["x"]
+    assert not result.unknown_sections
+
+
+def test_parse_args_and_other_parameters_joined() -> None:
+    """Args and Other Parameters sections: entries of both end up in args."""
+    result = PARSER.parse("Do something.\n\nArgs:\n    x (int): Input.\n\nOther Parameters:\n    y (int): Rare.\n")
+    assert [a.name for a in result.args] == ["x", "y"]
+
+
+def test_parse_keyword_args() -> None:
+    """Keyword Arguments: entries parsed into keyword_args, not into args."""
+    result = PARSER.parse("Do something.\n\nKeyword Arguments:\n    width (int): Width.\n")
+    assert [a.name for a in result.keyword_args] == ["width"]
+    assert result.args == []
+
+
+def test_parse_free_text_sections() -> None:
+    """Warning and See Also: known sections, neither unknown nor merged into the description."""
+    result = PARSER.parse("Do something.\n\nMore details.\n\nWarning:\n    Experimental.\n\nSee Also:\n    other().\n")
+    assert not result.unknown_sections
+    assert result.description == "More details."

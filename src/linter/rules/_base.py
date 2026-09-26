@@ -1,36 +1,7 @@
 """Shared constants and helpers for docstring lint rules."""
 
-import re
-
 from linter.models import CodeEntity, LintError
-
-GOOGLE_SECTIONS = [
-    "Args",
-    "Returns",
-    "Yields",
-    "Raises",
-    "Example",
-    "Examples",
-    "Note",
-    "Notes",
-    "Todo",
-    "Attributes",
-]
-
-GOOGLE_SECTION_ORDER = [
-    "Attributes",
-    "Args",
-    "Returns",
-    "Yields",
-    "Raises",
-    "Example",
-    "Examples",
-    "Note",
-    "Notes",
-    "Todo",
-]
-
-SECTION_HEADER_RE = re.compile(r"^([A-Za-z]+):\s*$")
+from linter.sections import section_header
 
 
 def make_error(entity: CodeEntity, rule: str, message: str) -> LintError:
@@ -78,9 +49,4 @@ def extract_section_headers(docstring: str) -> list[str]:
         list[str]: Ordered list of section names found.
 
     """
-    headers: list[str] = []
-    for line in docstring.split("\n"):
-        match = SECTION_HEADER_RE.match(line.strip())
-        if match and match.group(1) in GOOGLE_SECTIONS:
-            headers.append(match.group(1))
-    return headers
+    return [name for name in map(section_header, docstring.split("\n")) if name]

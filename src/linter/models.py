@@ -160,7 +160,8 @@ class ParsedDocstring:  # pylint: disable=too-many-instance-attributes
     Attributes:
         summary (str | None): First line summary.
         description (str | None): Extended description.
-        args (list[DocstringArg]): Parsed Args section.
+        args (list[DocstringArg]): Parsed Args and Other Parameters sections.
+        keyword_args (list[DocstringArg]): Parsed Keyword Args section, the keys of **kwargs.
         returns (DocstringReturn | None): Parsed Returns section.
         yields (DocstringReturn | None): Parsed Yields section.
         raises (list[DocstringRaise]): Parsed Raises section.
@@ -173,6 +174,7 @@ class ParsedDocstring:  # pylint: disable=too-many-instance-attributes
     summary: str | None = None
     description: str | None = None
     args: list[DocstringArg] = field(default_factory=lambda: [])
+    keyword_args: list[DocstringArg] = field(default_factory=lambda: [])
     returns: DocstringReturn | None = None
     yields: DocstringReturn | None = None
     raises: list[DocstringRaise] = field(default_factory=lambda: [])

@@ -233,11 +233,35 @@ Recognized sections: `Args`, `Returns`, `Yields`, `Raises`, `Attributes`, `Examp
 
 ---
 
+#### section_alias
+
+A Napoleon alias is accepted and its content checked as the canonical section, but the header must use the canonical spelling.
+
+```python
+# Bad: 'Parameters:' should be written 'Args:'
+def process(x: int) -> int:
+    """Process data.
+
+    Parameters:
+        x (int): Input.
+
+    Returns:
+        int: Result.
+
+    """
+```
+
+Turn it off with `ignore = ["section_alias"]` to accept `Arguments:`, `Parameters:` and the other aliases as they are.
+
+---
+
 #### section_order
 
 Sections must appear in the expected order.
 
-Expected order: `Attributes` -> `Args` -> `Returns` -> `Yields` -> `Raises` -> `Example`/`Examples` -> `Note`/`Notes` -> `Todo`
+Expected order: `Attributes` -> `Args` -> `Keyword Args` -> `Other Parameters` -> `Returns` -> `Yields` -> `Raises` -> `Example`/`Examples` -> `Note`/`Notes` -> `Todo`
+
+An alias takes the place of its canonical section (`Parameters` sits where `Args` does). Free-text sections such as `Warning` or `See Also` may appear anywhere.
 
 ```python
 # Bad: Returns before Args
@@ -272,16 +296,24 @@ def process(x: int) -> int:
 
 #### unknown_section
 
-A section name that is not in the recognized list triggers an error. Common mistake: `Arguments:` instead of `Args:`.
+A single capitalized word followed by a colon, alone on its line, that is not a recognized section triggers an error. Common mistake: `Params:` instead of `Args:`.
 
-Recognized sections: `Args`, `Returns`, `Yields`, `Raises`, `Attributes`, `Example`, `Examples`, `Note`, `Notes`, `Todo`.
+Recognized sections, the Napoleon ones included:
+
+| Kind | Sections |
+|---|---|
+| Checked content | `Args`, `Keyword Args`, `Other Parameters`, `Returns`, `Yields`, `Raises`, `Attributes` |
+| Free text | `Example`, `Examples`, `Note`, `Notes`, `Todo`, `Attention`, `Caution`, `Danger`, `Error`, `Hint`, `Important`, `Methods`, `Receive`, `Receives`, `References`, `See Also`, `Tip`, `Warn`, `Warning`, `Warnings`, `Warns` |
+| Aliases, read as their canonical section and reported by `section_alias` | `Arguments`, `Parameters` (`Args`), `Keyword Arguments` (`Keyword Args`), `Return` (`Returns`), `Yield` (`Yields`), `Raise`, `Exceptions` (`Raises`) |
+
+`Other Parameters` entries are checked like `Args` entries. `Keyword Args` documents the keys of `**kwargs`: its presence counts as documenting the `**kwargs` parameter, and its entries are not compared with the signature, only their description is required.
 
 ```python
 # Bad
 def process(x: int) -> int:
     """Process data.
 
-    Arguments:
+    Params:
         x (int): Input.
 
     Returns:

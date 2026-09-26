@@ -387,3 +387,50 @@ def test_propagated_exception_reported_under_strict(tmp_path: Path) -> None:
 def test_propagated_exception_accepted_under_google(tmp_path: Path) -> None:
     """Same source under convention google, blank line kept before the quotes: raises_extraneous is off, no error."""
     assert not _lint(tmp_path, _PROPAGATED_SOURCE, _parse_toml_config({"convention": "google", "blank_lines_before_closing_quotes": 1}))
+
+
+def test_napoleon_sections(tmp_path: Path) -> None:
+    """Keyword Args, Warning and See Also: **kwargs documented, no unknown section, no error."""
+    source = '''\
+        """Module."""
+
+
+        def configure(**options: int) -> None:
+            """Configure the widget.
+
+            Keyword Args:
+                width (int): Width in pixels.
+
+            Warning:
+                Experimental.
+
+            See Also:
+                reset().
+
+            Returns:
+                None
+
+            """
+        '''
+    assert not _lint(tmp_path, source)
+
+
+def test_parameters_alias(tmp_path: Path) -> None:
+    """Parameters instead of Args: arguments count as documented, section_alias is the only error."""
+    source = '''\
+        """Module."""
+
+
+        def double(value: int) -> int:
+            """Double the value.
+
+            Parameters:
+                value (int): The value.
+
+            Returns:
+                int: Twice the value.
+
+            """
+            return value * 2
+        '''
+    assert _lint(tmp_path, source) == [("double", "section_alias")]

@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 497 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 515 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -38,6 +38,10 @@ This file lists the 497 tests of the `docstring-linter` project. Each entry show
 | `test_docstring_parser.py` | `test_unknown_section_detected` | Section name not in known list: captured in unknown_sections. |
 | `test_docstring_parser.py` | `test_unknown_section_known_not_flagged` | Known section: not captured in unknown_sections. |
 | `test_docstring_parser.py` | `test_unknown_section_multiple` | Multiple unknown sections in parsed docstring: all captured. |
+| `test_docstring_parser.py` | `test_parse_alias_read_as_canonical` | Parameters: alias of Args, its entries are parsed as args and it is not unknown. |
+| `test_docstring_parser.py` | `test_parse_args_and_other_parameters_joined` | Args and Other Parameters sections: entries of both end up in args. |
+| `test_docstring_parser.py` | `test_parse_keyword_args` | Keyword Arguments: entries parsed into keyword_args, not into args. |
+| `test_docstring_parser.py` | `test_parse_free_text_sections` | Warning and See Also: known sections, neither unknown nor merged into the description. |
 | `test_docstring_parser.py` | `test_parse_lowercase_section_not_recognized` | Lowercase section name (args: instead of Args:): not recognized, no args parsed. |
 
 ### style
@@ -157,6 +161,8 @@ This file lists the 497 tests of the `docstring-linter` project. Each entry show
 | `test_end_to_end.py` | `test_strict_convention_reports_implicit_none` | Same kind of source under strict: '(int, optional)' for Optional[int] and the untyped Returns are reported. |
 | `test_end_to_end.py` | `test_propagated_exception_reported_under_strict` | Exception documented but raised by a callee: raises_extraneous under the strict default. |
 | `test_end_to_end.py` | `test_propagated_exception_accepted_under_google` | Same source under convention google, blank line kept before the quotes: raises_extraneous is off, no error. |
+| `test_end_to_end.py` | `test_napoleon_sections` | Keyword Args, Warning and See Also: **kwargs documented, no unknown section, no error. |
+| `test_end_to_end.py` | `test_parameters_alias` | Parameters instead of Args: arguments count as documented, section_alias is the only error. |
 
 ---
 
@@ -258,6 +264,8 @@ This file lists the 497 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `rules/test_rules_args.py` | `test_returns_match_mismatch` | Returns section type differs from signature: returns returns_match error. |
+| `rules/test_rules_args.py` | `test_args_section_kwargs_documented_by_keyword_args` | **kwargs in the signature and a Keyword Args section: **kwargs counts as documented. |
+| `rules/test_rules_args.py` | `test_args_match_keyword_arg_missing_description` | Keyword Args entry without a description: returns args_match error, its name is not compared with the signature. |
 | `rules/test_rules_args.py` | `test_returns_match_missing_type` | documented_types = required, Returns section without a type: returns returns_match error. |
 | `rules/test_rules_args.py` | `test_returns_match_type_optional` | documented_types = optional, Returns section without a type: no returns_match error. |
 | `rules/test_rules_args.py` | `test_returns_match_type_forbidden` | documented_types = forbidden, Returns line carrying a type: returns returns_match error. |
@@ -353,6 +361,14 @@ This file lists the 497 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `rules/test_rules_structure.py` | `test_section_capitalization_correct` | Correctly capitalized section 'Args:': no error. |
+| `rules/test_rules_structure.py` | `test_section_capitalization_multi_word` | Multi-word Napoleon header 'See also:': returns section_capitalization error expecting 'See Also:'. |
+
+### section_alias
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `rules/test_rules_structure.py` | `test_section_alias_reported` | Napoleon alias used as a header: returns section_alias error naming the canonical spelling (4 cases). |
+| `rules/test_rules_structure.py` | `test_section_alias_disabled` | Alias used, rule off: no section_alias error. |
 | `rules/test_rules_structure.py` | `test_section_capitalization_wrong` | Lowercase section header 'args:': returns section_capitalization error. |
 
 ### section_order
@@ -363,6 +379,10 @@ This file lists the 497 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_structure.py` | `test_section_order_wrong` | Returns before Args: returns section_order error. |
 | `rules/test_rules_structure.py` | `test_section_order_single_section_ok` | Only one recognized section: no section_order error. |
 | `rules/test_rules_structure.py` | `test_section_order_unknown_section_ignored` | Unknown section between known sections: order check skips it. |
+| `rules/test_rules_structure.py` | `test_section_order_alias_and_free_text` | Parameters placed like Args, Warning anywhere: no section_order error. |
+| `rules/test_rules_structure.py` | `test_section_order_alias_out_of_place` | Return before Parameters: section_order error listing canonical names. |
+| `rules/test_rules_structure.py` | `test_empty_free_text_section` | Empty See Also section: returns empty_section error, free-text sections are known sections. |
+| `rules/test_rules_structure.py` | `test_entry_spacing_in_alias_section` | Badly spaced entry under Parameters: entry_spacing applies to aliases of Args. |
 
 ### unknown_section
 

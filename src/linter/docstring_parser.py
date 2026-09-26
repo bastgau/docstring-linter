@@ -15,6 +15,7 @@ from linter.models import (
     DocstringReturn,
     ParsedDocstring,
 )
+from linter.sections import canonical_section, section_header
 
 
 class BaseDocstringParser(ABC):
@@ -47,7 +48,7 @@ class GoogleStyleParser(BaseDocstringParser):
     """Parse Google style docstrings.
 
     Attributes:
-        SECTION_PATTERN (re.Pattern): Regex for section headers.
+        CANDIDATE_SECTION_PATTERN (re.Pattern): Regex for single-word headers of unknown sections.
         ARG_PATTERN (re.Pattern): Regex for typed arg lines.
         ARG_NO_TYPE_PATTERN (re.Pattern): Regex for untyped arg lines.
         ARG_NO_COLON_PATTERN (re.Pattern): Regex for typed arg lines missing their colon.
@@ -56,10 +57,6 @@ class GoogleStyleParser(BaseDocstringParser):
 
     """
 
-    SECTION_PATTERN = re.compile(
-        r"^(Args|Returns|Raises|Attributes|Example|Examples|Note|Notes|Todo|Yields):\s*$",
-        re.MULTILINE,
-    )
     CANDIDATE_SECTION_PATTERN = re.compile(r"^([A-Z][A-Za-z]*):\s*$")
     ARG_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*\(([^)]+)\)\s*:\s*(.*)$")
     ARG_NO_TYPE_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*:\s*(.*)$")
@@ -96,29 +93,27 @@ class GoogleStyleParser(BaseDocstringParser):
         result.summary = sections.get("_summary")
         result.description = sections.get("_description")
 
-        if "Args" in sections:
-            result.args = self._parse_args(sections["Args"])
-        if "Returns" in sections:
-            result.returns = self._parse_returns(sections["Returns"])
-        if "Yields" in sections:
-            result.yields = self._parse_returns(sections["Yields"])
-        if "Raises" in sections:
-            result.raises = self._parse_raises(sections["Raises"])
-        if "Attributes" in sections:
-            result.attributes = self._parse_attributes(sections["Attributes"])
-        if "Example" in sections:
-            result.examples = [sections["Example"]]
-        if "Examples" in sections:
-            result.examples = [sections["Examples"]]
+        # each parser returns an empty result on an absent section
+        result.args = self._parse_args(sections.get("Args", "")) + self._parse_args(sections.get("Other Parameters", ""))
+        result.keyword_args = self._parse_args(sections.get("Keyword Args", ""))
+        result.returns = self._parse_returns(sections.get("Returns", ""))
+        result.yields = self._parse_returns(sections.get("Yields", ""))
+        result.raises = self._parse_raises(sections.get("Raises", ""))
+        result.attributes = self._parse_attributes(sections.get("Attributes", ""))
 
-        raw = sections.get("_unknown_sections", "")
-        if raw:
-            result.unknown_sections = raw.split(",")
+        for name in ("Example", "Examples"):
+            if name in sections:
+                result.examples = [sections[name]]
+
+        result.unknown_sections = [name for name in sections.get("_unknown_sections", "").split(",") if name]
 
         return result
 
     def _split_sections(self, docstring: str) -> dict[str, str]:  # noqa: C901 # pylint: disable=R0912:too-many-branches,too-many-locals
         """Split docstring into named sections.
+
+        Napoleon aliases are stored under their canonical name, and two headers
+        resolving to the same section have their contents joined.
 
         Args:
             docstring (str): Raw docstring text.
@@ -140,12 +135,12 @@ class GoogleStyleParser(BaseDocstringParser):
         for line in lines:
             stripped = line.strip()
 
-            section_match = self.SECTION_PATTERN.match(stripped)
+            header = section_header(line)
 
-            if section_match:
+            if header:
                 if current_section:
-                    sections[current_section] = "\n".join(section_lines)
-                current_section = section_match.group(1)
+                    _store_section(sections, current_section, section_lines)
+                current_section = canonical_section(header)
                 section_lines = []
                 in_summary = False
                 continue
@@ -154,7 +149,7 @@ class GoogleStyleParser(BaseDocstringParser):
             if candidate_match and not in_summary:
                 name = candidate_match.group(1)
                 if current_section:
-                    sections[current_section] = "\n".join(section_lines)
+                    _store_section(sections, current_section, section_lines)
                 current_section = f"_unknown_{name}"
                 unknown.append(name)
                 section_lines = []
@@ -170,7 +165,7 @@ class GoogleStyleParser(BaseDocstringParser):
                 desc_lines.append(stripped)
 
         if current_section:
-            sections[current_section] = "\n".join(section_lines)
+            _store_section(sections, current_section, section_lines)
 
         sections["_unknown_sections"] = ",".join(unknown)
 
@@ -347,6 +342,22 @@ class GoogleStyleParser(BaseDocstringParser):
                 current_attr.description = f"{current_attr.description} {stripped}".strip()
 
         return attrs
+
+
+def _store_section(sections: dict[str, str], name: str, lines: list[str]) -> None:
+    """Store the content of a section after any content already stored under its name.
+
+    Args:
+        sections (dict[str, str]): Section name to content, updated in place.
+        name (str): Canonical section name.
+        lines (list[str]): Content lines of the section.
+
+    Returns:
+        None
+
+    """
+    text = "\n".join(lines)
+    sections[name] = f"{sections[name]}\n{text}" if name in sections else text
 
 
 def _is_expression(text: str) -> bool:

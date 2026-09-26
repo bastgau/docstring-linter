@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from linter.config import Policy
 from linter.models import CodeEntity, LintError, NodeType, ParsedDocstring
-from linter.rules._base import GOOGLE_SECTION_ORDER, GOOGLE_SECTIONS, is_placeholder, make_error
+from linter.rules._base import is_placeholder, make_error
 from linter.rules.args import (
     check_args_match,
     check_args_order,
@@ -43,6 +43,7 @@ from linter.rules.structure import (
     check_indentation,
     check_named_section,
     check_no_blank_line_in_section,
+    check_section_alias,
     check_section_capitalization,
     check_section_order,
 )
@@ -51,8 +52,6 @@ if TYPE_CHECKING:
     from linter.config import LinterConfig
 
 __all__ = [
-    "GOOGLE_SECTIONS",
-    "GOOGLE_SECTION_ORDER",
     "validate_entity",
 ]
 
@@ -146,6 +145,9 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
 
     if config.is_rule_enabled("section_capitalization"):
         errors.extend(check_section_capitalization(entity))
+
+    if config.is_rule_enabled("section_alias"):
+        errors.extend(check_section_alias(entity))
 
     if config.is_rule_enabled("section_order"):
         errors.extend(check_section_order(entity))

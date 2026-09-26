@@ -79,6 +79,35 @@ def test_section_capitalization_correct() -> None:
     assert not any(e.rule == "section_capitalization" for e in errors)
 
 
+def test_section_capitalization_multi_word() -> None:
+    """Multi-word Napoleon header 'See also:': returns section_capitalization error expecting 'See Also:'."""
+    raw = "Summary.\n\nSee also:\n    other().\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_capitalization"))
+    assert [e.message for e in errors if e.rule == "section_capitalization"] == ["Section 'See also:' should be 'See Also:'."]
+
+
+# ---------------------------------------------------------------------------
+# Rule => section_alias
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("alias", "canonical"), [("Parameters", "Args"), ("Arguments", "Args"), ("Return", "Returns"), ("Keyword Arguments", "Keyword Args")])
+def test_section_alias_reported(alias: str, canonical: str) -> None:
+    """Napoleon alias used as a header: returns section_alias error naming the canonical spelling."""
+    raw = f"Summary.\n\n{alias}:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_alias"))
+    assert [e.message for e in errors if e.rule == "section_alias"] == [f"Section '{alias}:' should be written '{canonical}:'."]
+
+
+def test_section_alias_disabled() -> None:
+    """Alias used, rule off: no section_alias error."""
+    raw = "Summary.\n\nParameters:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    assert not [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _neutral()) if e.rule == "section_alias"]
+
+
 # ---------------------------------------------------------------------------
 # Rule => section_order
 # ---------------------------------------------------------------------------
@@ -114,6 +143,37 @@ def test_section_order_single_section_ok() -> None:
     entity = _func(docstring=raw, raw_docstring=raw)
     errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_order"))
     assert not any(e.rule == "section_order" for e in errors)
+
+
+def test_section_order_alias_and_free_text() -> None:
+    """Parameters placed like Args, Warning anywhere: no section_order error."""
+    raw = "Summary.\n\nWarning:\n    Slow.\n\nParameters:\n    x (int): Value.\n\nReturns:\n    int: Result.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    assert not [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_order")) if e.rule == "section_order"]
+
+
+def test_section_order_alias_out_of_place() -> None:
+    """Return before Parameters: section_order error listing canonical names."""
+    raw = "Summary.\n\nReturn:\n    int: Result.\n\nParameters:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_order")) if e.rule == "section_order"]
+    assert [e.message for e in errors] == ["Section 'Parameters:' must come before 'Return:'. Expected order: Args, Returns."]
+
+
+def test_empty_free_text_section() -> None:
+    """Empty See Also section: returns empty_section error, free-text sections are known sections."""
+    raw = "Summary.\n\nSee Also:\n\nArgs:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _neutral())
+    assert "Section 'See Also:' is empty." in [e.message for e in errors]
+
+
+def test_entry_spacing_in_alias_section() -> None:
+    """Badly spaced entry under Parameters: entry_spacing applies to aliases of Args."""
+    raw = "Summary.\n\nParameters:\n    x(int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _neutral())
+    assert [e.rule for e in errors if e.rule == "entry_spacing"] == ["entry_spacing"]
 
 
 # ---------------------------------------------------------------------------

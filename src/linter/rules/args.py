@@ -50,6 +50,9 @@ def check_args_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None, p
         return []
 
     documented = {a.name for a in parsed_doc.args}
+    # a Keyword Args section documents the keys of **kwargs
+    if parsed_doc.keyword_args:
+        documented |= {arg.name for arg in entity.args if arg.name.startswith("**")}
     return [make_error(entity, "args_section", f"Arg '{arg.name}' in signature but not documented.") for arg in entity.args if arg.name not in documented]
 
 
@@ -69,10 +72,11 @@ def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, typ
         list[LintError]: Errors for phantom, mistyped, or undescribed args.
 
     """
-    if parsed_doc is None or not parsed_doc.args:
+    if parsed_doc is None:
         return []
 
-    errors: list[LintError] = []
+    # keys of **kwargs are not in the signature, only their description is checked
+    errors = [make_error(entity, "args_match", f"Keyword arg '{kwarg.name}' missing description.") for kwarg in parsed_doc.keyword_args if not kwarg.description]
     sig_args = {a.name: a for a in entity.args}
 
     for doc_arg in parsed_doc.args:

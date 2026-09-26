@@ -88,6 +88,7 @@ RULES_CATEGORIES: dict[str, list[str]] = {
     ],
     "Sections": [
         "section_capitalization",
+        "section_alias",
         "section_order",
         "unknown_section",
         "empty_section",
@@ -124,7 +125,8 @@ RULES_REGISTRY = {
     "indentation": "Section content must be indented by 4 spaces or more, the first entry of Args, Attributes and Raises by exactly 4",
     "summary_too_long": "Summary line must not exceed the configured maximum length",
     "section_capitalization": "Section names must be capitalized (Args, not args)",
-    "section_order": "Sections must follow order: Args, Returns, Yields, Raises, Example(s), Note(s)",
+    "section_alias": "Section names must use the canonical spelling (Args, not Parameters)",
+    "section_order": "Sections must follow order: Attributes, Args, Keyword Args, Other Parameters, Returns, Yields, Raises, Example(s), Note(s), Todo",
     "unknown_section": "Section name is not recognized (e.g. 'Arguments:' instead of 'Args:')",
     "empty_section": "Section must not be empty",
     "imperative_mood": "Summary should start with imperative verb (e.g. 'Process' not 'Processes')",
