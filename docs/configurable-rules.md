@@ -12,7 +12,7 @@ Every entity (module, class, function, method) must have a docstring.
 
 Subject to the configured scope (`modules`, `classes`, `functions`, `methods`) and the two empty `__init__` exemptions.
 
-Functions and classes defined inside `if`, `try`, `with`, `for`, `while` or `match` blocks, at module or class level, are checked like the others. Functions nested inside another function are not checked, and `@overload` stubs are skipped: only the implementation needs a docstring.
+Functions and classes defined inside `if`, `try`, `with`, `for`, `while` or `match` blocks, at module or class level, are checked like the others. Functions nested inside another function are not checked, code under `if __name__ == "__main__":` is skipped, and `@overload` stubs are skipped: only the implementation needs a docstring.
 
 ```python
 # Bad

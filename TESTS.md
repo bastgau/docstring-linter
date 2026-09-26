@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 425 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 430 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -80,7 +80,9 @@ This file lists the 425 tests of the `docstring-linter` project. Each entry show
 |---|---|---|
 | `test_ast_parser.py` | `test_extract_raises_none` | Function with no raise statements: returns empty list. |
 | `test_ast_parser.py` | `test_extract_raises_simple_call` | Raise ValueError("msg"): detected by the exception class name. |
-| `test_ast_parser.py` | `test_extract_raises_bare_name` | Raise err where err is a plain name (not a call): the name itself is recorded. |
+| `test_ast_parser.py` | `test_extract_raises_variable_ignored` | Raise err where err is a variable, not bound by an except clause: ignored. |
+| `test_ast_parser.py` | `test_extract_raises_bare_class_name` | Raise ValueError without call: the class name is recorded. |
+| `test_ast_parser.py` | `test_extract_raises_lowercase_factory_ignored` | Raise make_error('x'): a lowercase callable is not an exception class, ignored. |
 | `test_ast_parser.py` | `test_extract_raises_bare_raise_ignored` | Bare re-raise (raise with no argument): ignored because there is no exception type. |
 | `test_ast_parser.py` | `test_extract_raises_deduplicates` | Same exception raised twice: appears only once in the result list. |
 | `test_ast_parser.py` | `test_extract_raises_multiple_distinct` | Two different exceptions raised: both are present in the result. |
@@ -130,6 +132,7 @@ This file lists the 425 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_parse_file_method_under_if_in_class` | Method defined under an if inside a class body: extracted as a method of that class. |
 | `test_ast_parser.py` | `test_parse_file_skips_overload_stubs` | @overload and @typing.overload stubs: not extracted, the implementation is. |
 | `test_ast_parser.py` | `test_parse_file_staticmethod_keeps_first_param` | @staticmethod: the first parameter is a regular parameter, even when named self. |
+| `test_ast_parser.py` | `test_parse_file_skips_main_guard_body` | Functions and classes under 'if __name__ == "__main__":': skipped, the else branch is kept. |
 
 ## test_end_to_end.py -- lint_file on real sources
 
@@ -143,6 +146,8 @@ This file lists the 425 tests of the `docstring-linter` project. Each entry show
 | `test_end_to_end.py` | `test_metaclass_first_parameter_not_required` | Metaclass __new__(mcs, ...): mcs is not required in Args. |
 | `test_end_to_end.py` | `test_staticmethod_first_parameter_required` | @staticmethod: the first parameter must be documented like any other. |
 | `test_end_to_end.py` | `test_overload_stubs_not_linted` | @overload stubs without docstring: only the documented implementation is linted. |
+| `test_end_to_end.py` | `test_main_guard_not_linted` | Demo code under 'if __name__ == "__main__":' without docstrings: no error. |
+| `test_end_to_end.py` | `test_variable_raise_not_required_in_raises` | Raise of a variable holding an exception: nothing to document, no error. |
 | `test_end_to_end.py` | `test_google_convention_accepts_google_guide_style` | Google guide layout (untyped Args, no Returns: None, descriptive mood): no error under convention google. |
 | `test_end_to_end.py` | `test_strict_convention_rejects_google_guide_style` | Same source under the strict default: the house rules the google convention relaxes are reported. |
 

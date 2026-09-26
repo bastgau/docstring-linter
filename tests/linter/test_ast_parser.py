@@ -269,12 +269,22 @@ def test_extract_raises_simple_call() -> None:
     assert raises[0].exception_type == "ValueError"
 
 
-def test_extract_raises_bare_name() -> None:
-    """Raise err where err is a plain name (not a call): the name itself is recorded."""
+def test_extract_raises_variable_ignored() -> None:
+    """Raise err where err is a variable, not bound by an except clause: ignored."""
     node = _parse_func("def f():\n    err = RuntimeError()\n    raise err")
-    raises = _scan_body(node)[0]
-    assert len(raises) == 1
-    assert raises[0].exception_type == "err"
+    assert not _scan_body(node)[0]
+
+
+def test_extract_raises_bare_class_name() -> None:
+    """Raise ValueError without call: the class name is recorded."""
+    node = _parse_func("def f():\n    raise ValueError")
+    assert [r.exception_type for r in _scan_body(node)[0]] == ["ValueError"]
+
+
+def test_extract_raises_lowercase_factory_ignored() -> None:
+    """Raise make_error('x'): a lowercase callable is not an exception class, ignored."""
+    node = _parse_func("def f():\n    raise make_error('x')")
+    assert not _scan_body(node)[0]
 
 
 def test_extract_raises_bare_raise_ignored() -> None:
@@ -532,3 +542,26 @@ def test_parse_file_staticmethod_keeps_first_param(tmp_path: Path) -> None:
     entities = {e.name: e for e in parse_file(str(f))}
     assert [a.name for a in entities["A.m"].args] == ["self", "x"]
     assert [a.name for a in entities["A.n"].args] == ["y"]
+
+
+def test_parse_file_skips_main_guard_body(tmp_path: Path) -> None:
+    """Functions and classes under 'if __name__ == "__main__":': skipped, the else branch is kept."""
+    source = textwrap.dedent(
+        """\
+        def api(): pass
+
+        if __name__ == "__main__":
+            def demo(): pass
+            class Demo: pass
+        else:
+            def on_import(): pass
+
+        if "__main__" == __name__:
+            def reversed_demo(): pass
+        """
+    )
+    f = tmp_path / "sample.py"
+    f.write_text(source, encoding="utf-8")
+    names = {e.name for e in parse_file(str(f))}
+    assert {"api", "on_import"} <= names
+    assert not {"demo", "Demo", "reversed_demo"} & names

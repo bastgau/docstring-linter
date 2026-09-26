@@ -505,9 +505,12 @@ def get_name() -> str:
 |------|----------|
 | Empty `__init__` method (`pass` only, no parameters) | Docstring not required if `exclude_empty_init_method = true` (default) |
 | Empty `__init__.py` file (empty or comments only) | Docstring not required if `exclude_empty_init_module = true` (default) |
-| `self`, `cls` | Ignored in parameters |
+| First parameter of a method (`self`, `cls`, `mcs`, ...) | Ignored in parameters, except on a `@staticmethod` |
 | `*args`, `**kwargs` | Documented with their stars, `*args (str): ...` |
-| Bare / dynamic / indirect `raise` | Ignored by `raises_match` |
+| Bare `raise`, `raise variable`, `raise make_error()` | Not collected: only capitalized class names count (`raise ValueError`, `raise errors.ValidationError(...)`) |
+| `raise err` inside `except (A, B) as err` | Collected as the caught types `A` and `B` |
+| Code under `if __name__ == "__main__":` | Not scanned, its `else` branch is |
+| `@overload` stubs | Not scanned, the implementation is |
 | Files excluded by pattern | Not scanned |
 | Module docstrings | `imperative_mood` not applied |
 

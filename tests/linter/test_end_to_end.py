@@ -226,6 +226,44 @@ def test_overload_stubs_not_linted(tmp_path: Path) -> None:
     assert not _lint(tmp_path, source)
 
 
+def test_main_guard_not_linted(tmp_path: Path) -> None:
+    """Demo code under 'if __name__ == "__main__":' without docstrings: no error."""
+    source = '''\
+        """Module."""
+
+        if __name__ == "__main__":
+
+            def demo(value):
+                return value
+
+            class Demo:
+                pass
+        '''
+    assert not _lint(tmp_path, source)
+
+
+def test_variable_raise_not_required_in_raises(tmp_path: Path) -> None:
+    """Raise of a variable holding an exception: nothing to document, no error."""
+    source = '''\
+        """Module."""
+
+
+        def fail(message: str) -> None:
+            """Fail with a message.
+
+            Args:
+                message (str): The message.
+
+            Returns:
+                None
+
+            """
+            error = RuntimeError(message)
+            raise error
+        '''
+    assert not _lint(tmp_path, source)
+
+
 _GOOGLE_GUIDE_SOURCE = '''\
     """Module."""
 

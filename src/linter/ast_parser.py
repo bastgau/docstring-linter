@@ -80,8 +80,28 @@ def _walk_body(
                 entities.append(_parse_function(node, filepath, parent_class))
 
         elif isinstance(node, _COMPOUND_STATEMENTS):
-            for block in _statement_blocks(node):
+            # the body of a main guard only runs as a script, its else branch runs on import
+            blocks = [node.orelse] if _is_main_guard(node) else _statement_blocks(node)
+            for block in blocks:
                 _walk_body(block, filepath, entities, parent_class)
+
+
+def _is_main_guard(node: ast.stmt) -> TypeGuard[ast.If]:
+    """Check whether a statement is an 'if __name__ == "__main__":' guard.
+
+    Args:
+        node (ast.stmt): Statement to inspect.
+
+    Returns:
+        TypeGuard[ast.If]: True for the guard, whichever side of == __name__ is on.
+
+    """
+    if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
+        return False
+    test = node.test
+    if len(test.ops) != 1 or not isinstance(test.ops[0], ast.Eq):
+        return False
+    return {ast.unparse(test.left), ast.unparse(test.comparators[0])} == {"__name__", "'__main__'"}
 
 
 def _statement_blocks(node: ast.stmt) -> list[list[ast.stmt]]:
@@ -355,9 +375,9 @@ def _star_arg(arg: ast.arg, prefix: str) -> ArgInfo:
 def _exception_name(node: ast.expr) -> str | None:
     """Return the class name designated by a raise or except expression.
 
-    A dotted name keeps its last segment, and only when it is capitalized, so
-    that errors.ValidationError gives ValidationError while self.error does not
-    pass for an exception class.
+    A dotted name keeps its last segment. Only capitalized names count as
+    exception classes, so that errors.ValidationError gives ValidationError
+    while a variable such as exc or self.error is ignored.
 
     Args:
         node (ast.expr): Expression following raise, or an except clause type.
@@ -369,17 +389,20 @@ def _exception_name(node: ast.expr) -> str | None:
     if isinstance(node, ast.Call):
         return _exception_name(node.func)
     if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute) and node.attr[:1].isupper():
-        return node.attr
-    return None
+        name = node.id
+    elif isinstance(node, ast.Attribute):
+        name = node.attr
+    else:
+        return None
+    return name if name[:1].isupper() else None
 
 
 def _scan_body(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[list[RaiseInfo], bool]:
     """Collect the raise statements and detect yields in one pass over a function body.
 
     Nested functions and lambdas are skipped: their raises and yields belong to them.
-    Raising a name bound by 'except ... as name' reports the caught exception types.
+    Raising a name bound by 'except ... as name' reports the caught exception types,
+    raising any other variable is ignored.
 
     Args:
         node (ast.FunctionDef | ast.AsyncFunctionDef): AST function node.
@@ -400,10 +423,12 @@ def _scan_body(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[list[Raise
             types = child.type.elts if isinstance(child.type, ast.Tuple) else [child.type]
             caught[child.name] = [name for name in map(_exception_name, types) if name]
         elif isinstance(child, ast.Raise) and child.exc is not None:
-            exc_name = _exception_name(child.exc)
-            if exc_name is None:
-                continue
-            for name in caught.get(exc_name, [exc_name]):
+            if isinstance(child.exc, ast.Name) and child.exc.id in caught:
+                names = caught[child.exc.id]
+            else:
+                exc_name = _exception_name(child.exc)
+                names = [exc_name] if exc_name else []
+            for name in names:
                 if name not in seen:
                     seen.add(name)
                     raises.append(RaiseInfo(exception_type=name, line=child.lineno))
