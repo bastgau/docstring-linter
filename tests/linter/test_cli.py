@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path  # noqa: TC003
 
@@ -297,6 +298,18 @@ def test_main_from_subdirectory_uses_config_directory(tmp_path: Path, capsys: py
 
     assert exc.value.code == 0
     assert "1 file checked, 0 errors." in capsys.readouterr().out
+
+
+def test_main_closed_output_pipe_exits_quietly(tmp_path: Path) -> None:
+    """Output pipe closed before the report is written: exit 1 without a traceback."""
+    f = tmp_path / "bad.py"
+    f.write_text("def f():\n    pass\n", encoding="utf-8")
+    with subprocess.Popen([sys.executable, "-m", "linter.cli", str(f)], stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:  # noqa: S603
+        assert proc.stdout is not None
+        proc.stdout.close()
+        _, stderr = proc.communicate()
+    assert proc.returncode == 1
+    assert b"BrokenPipeError" not in stderr
 
 
 def test_list_rules_output(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:

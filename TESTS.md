@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 576 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 577 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -610,6 +610,7 @@ This file lists the 576 tests of the `docstring-linter` project. Each entry show
 | `test_cli.py` | `test_main_missing_config_file` | --config pointing to a missing file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_statistics_rejected_with_json` | --statistics with a machine-readable format: error on stderr and exit 2. |
 | `test_cli.py` | `test_main_from_subdirectory_uses_config_directory` | Run from src/ with the config at the root: exclude and override patterns still apply from the root. |
+| `test_cli.py` | `test_main_closed_output_pipe_exits_quietly` | Output pipe closed before the report is written: exit 1 without a traceback. |
 | `test_cli.py` | `test_list_rules_output` | --list-rules: every rule appears, always-on rules in their own section after the categories. |
 
 ---

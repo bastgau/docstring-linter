@@ -256,11 +256,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> None:
+def _main() -> int:
     """Parse CLI arguments, load config, and delegate to run().
 
     Returns:
-        None
+        int: Exit code.
 
     """
     parser = _build_arg_parser()
@@ -271,21 +271,21 @@ def main() -> None:
         config = merge_cli_into_config(config, args)
     except ValueError as e:
         print(f"Configuration error: {e}", file=sys.stderr)
-        sys.exit(2)
+        return 2
 
     if args.list_rules:
         report_rules(RULES_CATEGORIES, RULES_REGISTRY, OFF_BY_DEFAULT, ALWAYS_ON, frozenset(config.enabled_rules))
         report_policies(POLICIES_REGISTRY, config.policy_values())
         report_options(OPTIONS_REGISTRY, config.option_values())
         report_overrides(config.overrides, config.policy_values() | config.option_values())
-        sys.exit(0)
+        return 0
 
     if not args.paths:
         parser.error("the following arguments are required: paths")
 
     if args.statistics and config.output_format not in ("text", "traceback"):
         print(f"--statistics is not available with the {config.output_format} format.", file=sys.stderr)
-        sys.exit(2)
+        return 2
 
     if config.output_format in ("text", "traceback"):
         if config_file is not None:
@@ -293,7 +293,26 @@ def main() -> None:
         else:
             print("Config: defaults (no config file found)")
 
-    sys.exit(run(args.paths, config, statistics=args.statistics))
+    return run(args.paths, config, statistics=args.statistics)
+
+
+def main() -> None:
+    """Run the CLI and exit with its code, quietly if the output pipe closes early.
+
+    Returns:
+        None
+
+    """
+    try:
+        code = _main()
+        # flush here so that a closed pipe raises inside the try block
+        sys.stdout.flush()
+    except BrokenPipeError:
+        # Python flushes stdout again at exit: point it to devnull to avoid a second error
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        sys.exit(1)
+    sys.exit(code)
 
 
 if __name__ == "__main__":
