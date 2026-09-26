@@ -11,6 +11,19 @@ if TYPE_CHECKING:
     from linter.models import CodeEntity, LintError, ParsedDocstring
 
 
+def _bare(name: str) -> str:
+    """Return a parameter name without the stars of *args or **kwargs.
+
+    Args:
+        name (str): Parameter name as written.
+
+    Returns:
+        str: Name without leading stars.
+
+    """
+    return name.lstrip("*")
+
+
 def check_return_type_annotation(entity: CodeEntity) -> list[LintError]:
     """Check that function or method has -> type annotation.
 
@@ -49,14 +62,15 @@ def check_args_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None, p
     if policy is Policy.OPTIONAL:
         return []
 
-    documented = {a.name for a in parsed_doc.args}
+    # stars are compared by args_match, a starless entry still documents *args
+    documented = {_bare(a.name) for a in parsed_doc.args}
     # a Keyword Args section documents the keys of **kwargs
     if parsed_doc.keyword_args:
-        documented |= {arg.name for arg in entity.args if arg.name.startswith("**")}
-    return [make_error(entity, "args_section", f"Arg '{arg.name}' in signature but not documented.") for arg in entity.args if arg.name not in documented]
+        documented |= {_bare(arg.name) for arg in entity.args if arg.name.startswith("**")}
+    return [make_error(entity, "args_section", f"Arg '{arg.name}' in signature but not documented.") for arg in entity.args if _bare(arg.name) not in documented]
 
 
-def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, types: Policy, type_matching: str) -> list[LintError]:
+def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, types: Policy, type_matching: str, stars: Policy) -> list[LintError]:  # noqa: C901 # pylint: disable=too-many-branches
     """Check documented args against the signature.
 
     Only covers what the docstring declares. Undocumented args are
@@ -67,9 +81,10 @@ def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, typ
         parsed_doc (ParsedDocstring | None): Parsed docstring.
         types (Policy): Policy for the type between parentheses.
         type_matching (str): How closely a documented type must match the annotation.
+        stars (Policy): Policy for the stars of *args and **kwargs entries.
 
     Returns:
-        list[LintError]: Errors for phantom, mistyped, or undescribed args.
+        list[LintError]: Errors for phantom, mistyped, misspelled or undescribed args.
 
     """
     if parsed_doc is None:
@@ -77,14 +92,25 @@ def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, typ
 
     # keys of **kwargs are not in the signature, only their description is checked
     errors = [make_error(entity, "args_match", f"Keyword arg '{kwarg.name}' missing description.") for kwarg in parsed_doc.keyword_args if not kwarg.description]
-    sig_args = {a.name: a for a in entity.args}
+    sig_args = {_bare(a.name): a for a in entity.args}
 
     for doc_arg in parsed_doc.args:
-        sig_arg = sig_args.get(doc_arg.name)
+        sig_arg = sig_args.get(_bare(doc_arg.name))
 
         if sig_arg is None:
             errors.append(make_error(entity, "args_match", f"Arg '{doc_arg.name}' documented but not in signature."))
             continue
+
+        # stars only belong to *args and **kwargs, where the policy decides whether to write them
+        starless = _bare(sig_arg.name)
+        if sig_arg.name == starless or stars is Policy.REQUIRED:
+            expected = sig_arg.name
+        elif stars is Policy.FORBIDDEN:
+            expected = starless
+        else:
+            expected = doc_arg.name
+        if doc_arg.name != expected:
+            errors.append(make_error(entity, "args_match", f"Arg '{doc_arg.name}' must be written '{expected}'."))
 
         if types is Policy.REQUIRED and doc_arg.type_annotation is None:
             errors.append(make_error(entity, "args_match", f"Arg '{doc_arg.name}' missing type. Expected '({sig_arg.type_annotation})'."))
@@ -322,11 +348,12 @@ def check_args_order(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> 
         return []
 
     sig_names = [a.name for a in entity.args]
-    doc_names = [a.name for a in parsed_doc.args if a.name in sig_names]
+    bare_sig_names = [_bare(name) for name in sig_names]
+    documented = [a.name for a in parsed_doc.args if _bare(a.name) in bare_sig_names]
 
-    if doc_names != sig_names[: len(doc_names)]:
+    if [_bare(name) for name in documented] != bare_sig_names[: len(documented)]:
         expected = ", ".join(sig_names)
-        got = ", ".join(doc_names)
+        got = ", ".join(documented)
         return [make_error(entity, "args_order", f"Args order in docstring differs from signature. Expected: {expected}. Got: {got}.")]
     return []
 
@@ -348,9 +375,9 @@ def check_duplicate_arg(entity: CodeEntity, parsed_doc: ParsedDocstring | None) 
     seen: set[str] = set()
     errors: list[LintError] = []
     for arg in parsed_doc.args:
-        if arg.name in seen:
+        if _bare(arg.name) in seen:
             errors.append(make_error(entity, "duplicate_arg", f"Arg '{arg.name}' documented more than once in 'Args:'."))
-        seen.add(arg.name)
+        seen.add(_bare(arg.name))
     return errors
 
 

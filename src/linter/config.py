@@ -54,6 +54,7 @@ POLICIES_REGISTRY = {
     "notes_section": "Note section",
     "todo_section": "Todo section",
     "documented_types": "Type in Args and Attributes entries and on the Returns and Yields lines",
+    "documented_stars": "Stars of *args and **kwargs in their Args entries",
     "returns_descriptions": "Description on the Returns and Yields lines",
 }
 
@@ -372,6 +373,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         notes_section (Policy): Policy for the presence of the Note section.
         todo_section (Policy): Policy for the presence of the Todo section.
         documented_types (Policy): Policy for the type in Args, Attributes, Returns and Yields.
+        documented_stars (Policy): Policy for the stars of *args and **kwargs entries.
         returns_descriptions (Policy): Policy for the description on the Returns and Yields lines.
         overrides (list[ConfigOverride]): Per-path settings applied in declaration order.
 
@@ -413,6 +415,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     notes_section: Policy = Policy.OPTIONAL
     todo_section: Policy = Policy.OPTIONAL
     documented_types: Policy = Policy.REQUIRED
+    documented_stars: Policy = Policy.REQUIRED
     returns_descriptions: Policy = Policy.REQUIRED
     overrides: list[ConfigOverride] = field(default_factory=lambda: [])  # noqa: PIE807
 

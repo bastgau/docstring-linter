@@ -42,6 +42,7 @@ One more policy governs what an entry declares:
 |---|---|---|
 | `documented_types` | `"required"` | Type in `Args:` and `Attributes:` entries and on the `Returns:` and `Yields:` lines |
 | `returns_descriptions` | `"required"` | Description on the `Returns:` and `Yields:` lines |
+| `documented_stars` | `"required"` | Stars of `*args` and `**kwargs` in their `Args:` entries |
 
 The two halves are independent. The policy answers "must this be documented", the rule answers "is what is documented correct". Under `"optional"`, nothing forces you to document, but everything you do document is still checked. Under `"forbidden"`, the section is rejected and the content rule is not run, to avoid reporting the same block twice.
 
@@ -462,6 +463,31 @@ The description of an entry is never optional: an `Args:`, `Attributes:`, `Raise
 
 ---
 
+### documented_stars
+
+Governs the stars of `*args` and `**kwargs` in their `Args:` entries. A plain parameter documented with a star is reported whatever the value.
+
+```toml
+[tool.docstring-linter]
+documented_stars = "required"
+```
+
+```python
+def group(*renderables: str, fit: bool = True) -> None:
+    """Group renderables.
+
+    Args:
+        *renderables (str): Items to group.   # required (default)
+        renderables (str): Items to group.    # forbidden
+        fit (bool): Fit the width.
+
+    """
+```
+
+Under `"optional"` both spellings are accepted. Whatever the value, an entry written with the wrong spelling is reported once, as `Arg 'renderables' must be written '*renderables'.`, and still counts as documenting the parameter.
+
+---
+
 ### returns_descriptions
 
 Governs the description on the `Returns:` and `Yields:` lines. Both are the same slot, a function documents one or the other.
@@ -511,7 +537,7 @@ def get_name() -> str:
 | Property getter (`@property`, `@cached_property`) | No `Returns:` section required and no `imperative_mood` if `properties_as_attributes = true` |
 | Property setter or deleter | Not checked at all if `properties_as_attributes = true` |
 | First parameter of a method (`self`, `cls`, `mcs`, ...) | Ignored in parameters, except on a `@staticmethod` |
-| `*args`, `**kwargs` | Documented with their stars, `*args (str): ...` |
+| `*args`, `**kwargs` | Documented with or without their stars according to `documented_stars` |
 | Bare `raise`, `raise variable`, `raise make_error()` | Not collected: only capitalized class names count (`raise ValueError`, `raise errors.ValidationError(...)`) |
 | `raise err` inside `except (A, B) as err` | Collected as the caught types `A` and `B` |
 | Code under `if __name__ == "__main__":` | Not scanned, its `else` branch is |

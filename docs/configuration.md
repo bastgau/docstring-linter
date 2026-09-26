@@ -65,6 +65,7 @@ See the Available keys section below for the complete list of options.
 | `todo_section` | `"optional"` | Policy for the `Todo:` section. |
 | `documented_types` | `"required"` | Policy for the type in `Args:` and `Attributes:` entries and on the `Returns:` and `Yields:` lines. |
 | `returns_descriptions` | `"required"` | Policy for the description on the `Returns:` and `Yields:` lines. |
+| `documented_stars` | `"required"` | Policy for the stars of `*args` and `**kwargs` in their `Args:` entries. |
 | `exclude_empty_init_method` | `true` | Do not require a docstring on `__init__` methods with no parameter beyond `self` and a body limited to `pass` or a docstring. |
 | `exclude_empty_init_module` | `true` | Do not require a docstring on `__init__.py` files with an empty body (empty file or comments only). |
 | `ignore_placeholder_docstrings` | `false` | Skip docstrings containing only `...`. |

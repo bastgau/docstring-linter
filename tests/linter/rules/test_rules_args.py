@@ -252,6 +252,57 @@ def test_args_match_keyword_arg_missing_description() -> None:
     assert [e.message for e in errors] == ["Keyword arg 'width' missing description."]
 
 
+def _star_errors(documented: str, stars: Policy, signature: str = "*items") -> list[str]:
+    """Validate one Args entry against one starred or plain parameter and return the messages."""
+    entity = _func(args=[ArgInfo(name=signature, type_annotation="int")])
+    doc = ParsedDocstring(summary="Do something.", args=[DocstringArg(name=documented, type_annotation="int", description="Items.")])
+    cfg = _neutral(args_section=Policy.REQUIRED, documented_stars=stars, enabled_rules=["args_order", "duplicate_arg"])
+    return [e.message for e in validate_entity(entity, doc, cfg)]
+
+
+@pytest.mark.parametrize(
+    ("documented", "stars", "expected"),
+    [
+        ("*items", Policy.REQUIRED, []),
+        ("items", Policy.REQUIRED, ["Arg 'items' must be written '*items'."]),
+        ("items", Policy.FORBIDDEN, []),
+        ("*items", Policy.FORBIDDEN, ["Arg '*items' must be written 'items'."]),
+        ("items", Policy.OPTIONAL, []),
+        ("*items", Policy.OPTIONAL, []),
+    ],
+)
+def test_documented_stars_policy(documented: str, stars: Policy, expected: list[str]) -> None:
+    """Starred parameter documented with or without stars: one explicit error when the policy is not met, nothing else."""
+    assert _star_errors(documented, stars) == expected
+
+
+@pytest.mark.parametrize("stars", [Policy.REQUIRED, Policy.FORBIDDEN, Policy.OPTIONAL])
+def test_documented_stars_on_plain_parameter(stars: Policy) -> None:
+    """Plain parameter documented with a star: reported whatever the policy."""
+    assert _star_errors("*items", stars, signature="items") == ["Arg '*items' must be written 'items'."]
+
+
+def test_documented_stars_order_uses_bare_names() -> None:
+    """Starless entry in signature order: no args_order error."""
+    entity = _func(args=[ArgInfo(name="*items", type_annotation="int"), ArgInfo(name="size", type_annotation="int")])
+    doc = ParsedDocstring(
+        summary="Do something.",
+        args=[DocstringArg(name="items", type_annotation="int", description="Items."), DocstringArg(name="size", type_annotation="int", description="Size.")],
+    )
+    assert not validate_entity(entity, doc, _neutral(documented_stars=Policy.OPTIONAL, enabled_rules=["args_order"]))
+
+
+def test_documented_stars_duplicate() -> None:
+    """'items' then '*items' in the same section: reported as a duplicate."""
+    entity = _func(args=[ArgInfo(name="*items", type_annotation="int")])
+    doc = ParsedDocstring(
+        summary="Do something.",
+        args=[DocstringArg(name="items", type_annotation="int", description="Items."), DocstringArg(name="*items", type_annotation="int", description="Again.")],
+    )
+    errors = validate_entity(entity, doc, _neutral(documented_stars=Policy.OPTIONAL))
+    assert [(e.rule, e.message) for e in errors] == [("duplicate_arg", "Arg '*items' documented more than once in 'Args:'.")]
+
+
 def test_returns_match_missing_type() -> None:
     """documented_types = required, Returns section without a type: returns returns_match error."""
     entity = _func(return_type="int")

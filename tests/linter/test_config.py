@@ -277,6 +277,7 @@ def test_convention_google_sets_defaults() -> None:
     assert config.exclude_overridden is True
     assert config.properties_as_attributes is True
     assert config.init_args_location == "either"
+    assert config.documented_stars is Policy.REQUIRED
     assert "imperative_mood" not in config.enabled_rules
     assert "return_type_annotation" not in config.enabled_rules
     assert "raises_extraneous" not in config.enabled_rules

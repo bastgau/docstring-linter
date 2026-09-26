@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 538 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 549 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -281,6 +281,10 @@ This file lists the 538 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_returns_match_mismatch` | Returns section type differs from signature: returns returns_match error. |
 | `rules/test_rules_args.py` | `test_args_section_kwargs_documented_by_keyword_args` | **kwargs in the signature and a Keyword Args section: **kwargs counts as documented. |
 | `rules/test_rules_args.py` | `test_args_match_keyword_arg_missing_description` | Keyword Args entry without a description: returns args_match error, its name is not compared with the signature. |
+| `rules/test_rules_args.py` | `test_documented_stars_policy` | Starred parameter documented with or without stars: one explicit error when the policy is not met, nothing else (6 cases). |
+| `rules/test_rules_args.py` | `test_documented_stars_on_plain_parameter` | Plain parameter documented with a star: reported whatever the policy (3 cases). |
+| `rules/test_rules_args.py` | `test_documented_stars_order_uses_bare_names` | Starless entry in signature order: no args_order error. |
+| `rules/test_rules_args.py` | `test_documented_stars_duplicate` | 'items' then '*items' in the same section: reported as a duplicate. |
 | `rules/test_rules_args.py` | `test_returns_match_missing_type` | documented_types = required, Returns section without a type: returns returns_match error. |
 | `rules/test_rules_args.py` | `test_returns_match_type_optional` | documented_types = optional, Returns section without a type: no returns_match error. |
 | `rules/test_rules_args.py` | `test_returns_match_type_forbidden` | documented_types = forbidden, Returns line carrying a type: returns returns_match error. |

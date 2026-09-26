@@ -136,7 +136,7 @@ def _check_args(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: 
     """
     errors = check_args_section(entity, parsed_doc, config.args_section)
     if config.args_section is not Policy.FORBIDDEN:
-        errors.extend(check_args_match(entity, parsed_doc, config.documented_types, config.type_matching))
+        errors.extend(check_args_match(entity, parsed_doc, config.documented_types, config.type_matching, config.documented_stars))
     errors.extend(check_duplicate_arg(entity, parsed_doc))
     if config.is_rule_enabled("args_order"):
         errors.extend(check_args_order(entity, parsed_doc))
