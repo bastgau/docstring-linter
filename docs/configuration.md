@@ -68,6 +68,10 @@ See the Available keys section below for the complete list of options.
 | `exclude_empty_init_method` | `true` | Do not require a docstring on `__init__` methods with no parameter beyond `self` and a body limited to `pass` or a docstring. |
 | `exclude_empty_init_module` | `true` | Do not require a docstring on `__init__.py` files with an empty body (empty file or comments only). |
 | `ignore_placeholder_docstrings` | `false` | Skip docstrings containing only `...`. |
+| `exclude_dunder_methods` | `false` | Do not require a docstring on magic methods (`__repr__`, `__enter__`...). `__init__` keeps its own option. |
+| `exclude_private` | `false` | Do not require a docstring on private functions, methods and classes (`_name`, `__name`) nor on the members of a private class. |
+| `exclude_overridden` | `false` | Do not require a docstring on methods decorated with `@override`, which inherit the documentation of the parent method. |
+| `properties_as_attributes` | `false` | Document property getters like attributes: no `Returns:` section required, `imperative_mood` not applied. Property setters and deleters are not checked. |
 | `exclude` | see [built-in defaults](/docs/style-policies.md#default-exclusion-patterns) | Glob/literal patterns for files and directories to skip. See [matching rules](/docs/style-policies.md#default-exclusion-patterns). |
 | `workers` | `1` | Parallel workers. `0` = auto-detect CPU count. |
 | `summary_max_length` | `80` | Maximum summary line length for `summary_too_long`. |
@@ -79,7 +83,7 @@ See the Available keys section below for the complete list of options.
 | `scope.functions` | `true` | Check function docstrings. |
 | `scope.methods` | `true` | Check method docstrings. |
 
-Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five section policies, `"optional"` means the section is not required, but what the docstring does declare is still checked by the matching rule (`args_match`, `returns_match`, `yields_match`, `raises_match`, `attributes_match`). The two `exclude_empty_init_*` options only lift `docstring_exists`: a docstring that is present is always checked.
+Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five section policies, `"optional"` means the section is not required, but what the docstring does declare is still checked by the matching rule (`args_match`, `returns_match`, `yields_match`, `raises_match`, `attributes_match`). The `exclude_*` options only lift `docstring_exists`: a docstring that is present is always checked.
 
 `docstring-linter --list-rules` prints the rules, the policies, and the options that change what gets checked, each with the value it has in the current config.
 
@@ -99,6 +103,7 @@ Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five 
 | `imperative_mood` rule | enabled | disabled |
 | `return_type_annotation` rule | enabled | disabled |
 | `raises_extraneous` rule | enabled | disabled |
+| `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`, `properties_as_attributes` | `false` | `true` |
 
 `"strict"` enforces a complete house style: every type repeated in the docstring, `Returns: None` on `-> None` functions, every exception and attribute documented, a blank line before the closing quotes.
 
@@ -167,7 +172,7 @@ select = ["docstring_exists"]
 - **A single block applies to a given file**: the last declared among those matching it. The other matching blocks are ignored, blocks never accumulate. Declare the general case first and the exceptions after it, and make each block self-contained.
 - The block that applies is resolved against the base configuration, so a setting it does not declare keeps its base value, not the linter default.
 - `ignore` removes rules from the inherited set, `select` replaces that set entirely. Same meaning as at the base level.
-- An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`, `type_matching`.
+- An override may carry any policy, and the options that change what is checked on a file: `summary_max_length`, `blank_lines_before_section`, `blank_lines_before_closing_quotes`, `exclude_empty_init_method`, `exclude_empty_init_module`, `ignore_placeholder_docstrings`, `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`, `properties_as_attributes`, `type_matching`.
 - `exclude`, `workers` and `scope.*` apply to the whole run rather than individual files, so they are rejected inside an override.
 
 `docstring-linter --list-rules` prints the overrides after the base configuration, showing only what each one changes.

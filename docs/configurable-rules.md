@@ -10,7 +10,7 @@ These rules can be enabled or disabled through `select` and `ignore`.   For styl
 
 Every entity (module, class, function, method) must have a docstring.
 
-Subject to the configured scope (`modules`, `classes`, `functions`, `methods`) and the two empty `__init__` exemptions.
+Subject to the configured scope (`modules`, `classes`, `functions`, `methods`) and to the exemption options: `exclude_empty_init_method`, `exclude_empty_init_module`, `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`. An exempted entity that does have a docstring is still checked.
 
 Functions and classes defined inside `if`, `try`, `with`, `for`, `while` or `match` blocks, at module or class level, are checked like the others. Functions nested inside another function are not checked, code under `if __name__ == "__main__":` is skipped, and `@overload` stubs are skipped: only the implementation needs a docstring.
 

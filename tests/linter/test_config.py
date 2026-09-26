@@ -272,6 +272,10 @@ def test_convention_google_sets_defaults() -> None:
     assert config.attributes_section is Policy.OPTIONAL
     assert config.blank_lines_before_closing_quotes == 0
     assert config.type_matching == "lenient"
+    assert config.exclude_dunder_methods is True
+    assert config.exclude_private is True
+    assert config.exclude_overridden is True
+    assert config.properties_as_attributes is True
     assert "imperative_mood" not in config.enabled_rules
     assert "return_type_annotation" not in config.enabled_rules
     assert "raises_extraneous" not in config.enabled_rules
@@ -314,6 +318,20 @@ def test_convention_rejected_in_override() -> None:
 def test_convention_listed_in_option_values() -> None:
     """option_values: reports the active convention."""
     assert _parse_toml_config({"convention": "google"}).option_values()["convention"] == "google"
+
+
+# ---------------------------------------------------------------------------
+# docstring exemptions
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("option", ["exclude_dunder_methods", "exclude_private", "exclude_overridden", "properties_as_attributes"])
+def test_exemption_options(option: str) -> None:
+    """Exemption option: off by default, set from the file, allowed in an override."""
+    assert getattr(_parse_toml_config({}), option) is False
+    assert getattr(_parse_toml_config({option: True}), option) is True
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], option: True}]})
+    assert getattr(config.for_path("tests/test_foo.py"), option) is True
 
 
 # ---------------------------------------------------------------------------

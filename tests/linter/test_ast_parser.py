@@ -385,6 +385,12 @@ def test_is_empty_init_with_body() -> None:
     assert _is_empty_init(node) is False
 
 
+@pytest.mark.parametrize("signature", ["def __init__(self, *args): pass", "def __init__(self, **kwargs): pass"])
+def test_is_empty_init_with_star_args(signature: str) -> None:
+    """__init__ taking *args or **kwargs: has parameters, not empty."""
+    assert _is_empty_init(_parse_func(signature)) is False
+
+
 # ---------------------------------------------------------------------------
 # parse_file
 # ---------------------------------------------------------------------------
@@ -565,3 +571,12 @@ def test_parse_file_skips_main_guard_body(tmp_path: Path) -> None:
     names = {e.name for e in parse_file(str(f))}
     assert {"api", "on_import"} <= names
     assert not {"demo", "Demo", "reversed_demo"} & names
+
+
+def test_parse_file_records_decorators(tmp_path: Path) -> None:
+    """Decorators: recorded by their last name segment, sorted, attribute and call forms included."""
+    source = "import functools\n\nclass A:\n    @property\n    def size(self): pass\n    @size.setter\n    def size(self, value): pass\n    @functools.cache\n    @staticmethod\n    def m(): pass\n"
+    f = tmp_path / "sample.py"
+    f.write_text(source, encoding="utf-8")
+    decorators = [(e.name, e.decorators) for e in parse_file(str(f)) if e.name.startswith("A.")]
+    assert decorators == [("A.size", ["property"]), ("A.size", ["setter"]), ("A.m", ["cache", "staticmethod"])]

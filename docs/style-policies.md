@@ -505,6 +505,11 @@ def get_name() -> str:
 |------|----------|
 | Empty `__init__` method (`pass` only, no parameters) | Docstring not required if `exclude_empty_init_method = true` (default) |
 | Empty `__init__.py` file (empty or comments only) | Docstring not required if `exclude_empty_init_module = true` (default) |
+| Magic method other than `__init__` | Docstring not required if `exclude_dunder_methods = true` |
+| Private name, or member of a private class | Docstring not required if `exclude_private = true` |
+| Method decorated with `@override` | Docstring not required if `exclude_overridden = true` |
+| Property getter (`@property`, `@cached_property`) | No `Returns:` section required and no `imperative_mood` if `properties_as_attributes = true` |
+| Property setter or deleter | Not checked at all if `properties_as_attributes = true` |
 | First parameter of a method (`self`, `cls`, `mcs`, ...) | Ignored in parameters, except on a `@staticmethod` |
 | `*args`, `**kwargs` | Documented with their stars, `*args (str): ...` |
 | Bare `raise`, `raise variable`, `raise make_error()` | Not collected: only capitalized class names count (`raise ValueError`, `raise errors.ValidationError(...)`) |

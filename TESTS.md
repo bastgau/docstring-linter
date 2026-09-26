@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 518 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 528 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -111,6 +111,7 @@ This file lists the 518 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_is_empty_init_with_positional_arg` | __init__(self, name: str): has a real positional arg, not empty. |
 | `test_ast_parser.py` | `test_is_empty_init_with_kwonly_arg` | __init__(self, *, name: str): has a keyword-only arg, not empty. |
 | `test_ast_parser.py` | `test_is_empty_init_with_body` | __init__(self) with self.x = 1 in the body: has real statements, not empty. |
+| `test_ast_parser.py` | `test_is_empty_init_with_star_args` | __init__ taking *args or **kwargs: has parameters, not empty (2 cases). |
 
 ### _extract_class_attributes
 
@@ -142,6 +143,7 @@ This file lists the 518 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_parse_file_skips_overload_stubs` | @overload and @typing.overload stubs: not extracted, the implementation is. |
 | `test_ast_parser.py` | `test_parse_file_staticmethod_keeps_first_param` | @staticmethod: the first parameter is a regular parameter, even when named self. |
 | `test_ast_parser.py` | `test_parse_file_skips_main_guard_body` | Functions and classes under 'if __name__ == "__main__":': skipped, the else branch is kept. |
+| `test_ast_parser.py` | `test_parse_file_records_decorators` | Decorators: recorded by their last name segment, sorted, attribute and call forms included. |
 
 ## test_end_to_end.py -- lint_file on real sources
 
@@ -165,6 +167,9 @@ This file lists the 518 tests of the `docstring-linter` project. Each entry show
 | `test_end_to_end.py` | `test_propagated_exception_accepted_under_google` | Same source under convention google, blank line kept before the quotes: raises_extraneous is off, no error. |
 | `test_end_to_end.py` | `test_napoleon_sections` | Keyword Args, Warning and See Also: **kwargs documented, no unknown section, no error. |
 | `test_end_to_end.py` | `test_parameters_alias` | Parameters instead of Args: arguments count as documented, section_alias is the only error. |
+| `test_end_to_end.py` | `test_exemptions_off_by_default` | Strict default: dunder, private, overridden and property methods are all checked. |
+| `test_end_to_end.py` | `test_exemptions_enabled` | All four options on: none of those entities is reported. |
+| `test_end_to_end.py` | `test_exempted_docstring_still_checked` | Dunder with a docstring under exclude_dunder_methods: the docstring content is still checked. |
 
 ---
 
@@ -735,6 +740,12 @@ This file lists the 518 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_convention_unknown` | Convention = 'numpy': raises ValueError listing the accepted conventions. |
 | `test_config.py` | `test_convention_rejected_in_override` | Convention in an override: rejected, it sets the defaults of the whole run. |
 | `test_config.py` | `test_convention_listed_in_option_values` | option_values: reports the active convention. |
+
+### docstring exemptions
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_config.py` | `test_exemption_options` | Exemption option: off by default, set from the file, allowed in an override (4 cases). |
 
 ### type_matching
 

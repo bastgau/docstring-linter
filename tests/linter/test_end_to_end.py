@@ -434,3 +434,90 @@ def test_parameters_alias(tmp_path: Path) -> None:
             return value * 2
         '''
     assert _lint(tmp_path, source) == [("double", "section_alias")]
+
+
+_EXEMPTIONS_SOURCE = '''\
+    """Module."""
+
+    from typing import override
+
+
+    class Base:
+        """Define the base."""
+
+        def run(self) -> int:
+            """Run the job.
+
+            Returns:
+                int: Result.
+
+            """
+            return 0
+
+
+    class Child(Base):
+        """Define the child."""
+
+        def __repr__(self) -> str:
+            return "Child"
+
+        def _cache_key(self) -> str:
+            return "key"
+
+        @override
+        def run(self) -> int:
+            return 1
+
+        @property
+        def size(self) -> int:
+            """The number of items."""
+            return 1
+
+        @size.setter
+        def size(self, value: int) -> None:
+            pass
+
+
+    def _helper(value):
+        return value
+
+
+    class _Private:
+        def method(self):
+            pass
+    '''
+
+
+def test_exemptions_off_by_default(tmp_path: Path) -> None:
+    """Strict default: dunder, private, overridden and property methods are all checked."""
+    errors = _lint(tmp_path, _EXEMPTIONS_SOURCE)
+    assert {
+        ("Child.__repr__", "docstring_exists"),
+        ("Child._cache_key", "docstring_exists"),
+        ("Child.run", "docstring_exists"),
+        ("Child.size", "returns_section"),
+        ("_helper", "docstring_exists"),
+        ("_Private.method", "docstring_exists"),
+    } <= set(errors)
+
+
+def test_exemptions_enabled(tmp_path: Path) -> None:
+    """All four options on: none of those entities is reported."""
+    config = _parse_toml_config({"exclude_dunder_methods": True, "exclude_private": True, "exclude_overridden": True, "properties_as_attributes": True, "ignore": ["return_type_annotation"]})
+    assert not _lint(tmp_path, _EXEMPTIONS_SOURCE, config)
+
+
+def test_exempted_docstring_still_checked(tmp_path: Path) -> None:
+    """Dunder with a docstring under exclude_dunder_methods: the docstring content is still checked."""
+    source = '''\
+        """Module."""
+
+
+        class Box:
+            """Store a value."""
+
+            def __len__(self) -> int:
+                """Count the values."""
+                return 1
+        '''
+    assert _lint(tmp_path, source, _parse_toml_config({"exclude_dunder_methods": True})) == [("Box.__len__", "returns_section")]

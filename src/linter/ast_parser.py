@@ -289,6 +289,7 @@ def _parse_function(
         raises=raises,
         is_empty_init=is_empty_init,
         is_generator=is_generator,
+        decorators=sorted(_decorator_names(node)),
     )
 
 
@@ -450,7 +451,7 @@ def _is_empty_init(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
 
     """
     real_args = (node.args.posonlyargs + node.args.args)[1:]
-    if real_args or node.args.kwonlyargs:
+    if real_args or node.args.kwonlyargs or node.args.vararg or node.args.kwarg:
         return False
 
     for stmt in node.body:

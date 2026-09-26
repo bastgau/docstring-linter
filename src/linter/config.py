@@ -65,6 +65,10 @@ OPTIONS_REGISTRY = {
     "exclude_empty_init_method": "Docstring optional on __init__ methods with no parameter and an empty body",
     "exclude_empty_init_module": "Docstring optional on __init__.py modules with an empty body",
     "ignore_placeholder_docstrings": "Skip docstrings containing only '...'",
+    "exclude_dunder_methods": "Docstring optional on magic methods other than __init__",
+    "exclude_private": "Docstring optional on private names and on members of private classes",
+    "exclude_overridden": "Docstring optional on methods decorated with @override",
+    "properties_as_attributes": "Property getters documented like attributes, setters and deleters not checked",
     "summary_max_length": "Maximum summary line length for summary_too_long",
     "blank_lines_before_section": "Blank lines expected before a section header",
     "blank_lines_before_closing_quotes": "Blank lines expected before the closing triple quotes",
@@ -184,6 +188,10 @@ CONVENTIONS: dict[str, Convention] = {
             "attributes_section": Policy.OPTIONAL,
             "blank_lines_before_closing_quotes": 0,
             "type_matching": "lenient",
+            "exclude_dunder_methods": True,
+            "exclude_private": True,
+            "exclude_overridden": True,
+            "properties_as_attributes": True,
         },
         disabled_rules=frozenset({"imperative_mood", "return_type_annotation", "raises_extraneous"}),
     ),
@@ -204,6 +212,10 @@ SETTING_KEYS: frozenset[str] = frozenset(
         "exclude_empty_init_method",
         "exclude_empty_init_module",
         "ignore_placeholder_docstrings",
+        "exclude_dunder_methods",
+        "exclude_private",
+        "exclude_overridden",
+        "properties_as_attributes",
         "summary_max_length",
         "blank_lines_before_section",
         "blank_lines_before_closing_quotes",
@@ -225,6 +237,10 @@ OVERRIDABLE_OPTIONS: frozenset[str] = frozenset(
         "exclude_empty_init_method",
         "exclude_empty_init_module",
         "ignore_placeholder_docstrings",
+        "exclude_dunder_methods",
+        "exclude_private",
+        "exclude_overridden",
+        "properties_as_attributes",
         "type_matching",
     }
 )
@@ -247,6 +263,10 @@ BOOL_OPTIONS: frozenset[str] = frozenset(
         "exclude_empty_init_method",
         "exclude_empty_init_module",
         "ignore_placeholder_docstrings",
+        "exclude_dunder_methods",
+        "exclude_private",
+        "exclude_overridden",
+        "properties_as_attributes",
     }
 )
 
@@ -320,6 +340,10 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         exclude_empty_init_method (bool): Whether a docstring is optional on empty __init__ methods.
         exclude_empty_init_module (bool): Whether a docstring is optional on empty __init__.py modules.
         ignore_placeholder_docstrings (bool): Skip placeholder docstrings like \"\"\"...\"\"\".
+        exclude_dunder_methods (bool): Whether a docstring is optional on magic methods other than __init__.
+        exclude_private (bool): Whether a docstring is optional on private names and members of private classes.
+        exclude_overridden (bool): Whether a docstring is optional on methods decorated with @override.
+        properties_as_attributes (bool): Whether property getters are documented like attributes.
         exclude_patterns (list[str]): Glob patterns for files to exclude.
         enabled_rules (list[str]): List of enabled rule identifiers.
         output_format (str): Output format -- traceback, text, json, or github-annotations.
@@ -356,6 +380,10 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     exclude_empty_init_method: bool = True
     exclude_empty_init_module: bool = True
     ignore_placeholder_docstrings: bool = False
+    exclude_dunder_methods: bool = False
+    exclude_private: bool = False
+    exclude_overridden: bool = False
+    properties_as_attributes: bool = False
     exclude_patterns: list[str] = field(default_factory=lambda: [".venv", ".git", "__pycache__", ".tox", ".mypy_cache", ".ruff_cache", ".pytest_cache"])
     enabled_rules: list[str] = field(default_factory=lambda: [r for r in RULES_REGISTRY if r not in OFF_BY_DEFAULT])
     output_format: str = "traceback"
@@ -429,6 +457,10 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
             "exclude_empty_init_method": str(self.exclude_empty_init_method).lower(),
             "exclude_empty_init_module": str(self.exclude_empty_init_module).lower(),
             "ignore_placeholder_docstrings": str(self.ignore_placeholder_docstrings).lower(),
+            "exclude_dunder_methods": str(self.exclude_dunder_methods).lower(),
+            "exclude_private": str(self.exclude_private).lower(),
+            "exclude_overridden": str(self.exclude_overridden).lower(),
+            "properties_as_attributes": str(self.properties_as_attributes).lower(),
             "summary_max_length": str(self.summary_max_length),
             "blank_lines_before_section": str(self.blank_lines_before_section),
             "blank_lines_before_closing_quotes": str(self.blank_lines_before_closing_quotes),

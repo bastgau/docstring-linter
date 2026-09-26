@@ -56,6 +56,39 @@ __all__ = [
 ]
 
 
+_PROPERTY_GETTERS = frozenset({"property", "cached_property"})
+_PROPERTY_ACCESSORS = frozenset({"setter", "deleter"})
+
+
+def _is_docstring_optional(entity: CodeEntity, config: LinterConfig) -> bool:
+    """Check whether the options exempt an entity from having a docstring.
+
+    A docstring that is present is still checked, whatever the exemption.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        config (LinterConfig): Linter configuration.
+
+    Returns:
+        bool: True if a missing docstring must not be reported.
+
+    """
+    if entity.node_type is NodeType.MODULE:
+        return entity.is_empty_init_module and config.exclude_empty_init_module
+
+    parts = entity.name.split(".")
+    is_dunder = parts[-1].startswith("__") and parts[-1].endswith("__")
+    # _name and __name are private, __name__ is a magic method
+    is_private = any(part.startswith("_") and not (part.startswith("__") and part.endswith("__")) for part in parts)
+
+    return (
+        (entity.is_empty_init and config.exclude_empty_init_method)
+        or (is_dunder and parts[-1] != "__init__" and config.exclude_dunder_methods)
+        or (is_private and config.exclude_private)
+        or ("override" in entity.decorators and config.exclude_overridden)
+    )
+
+
 def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-branches,too-many-statements
     entity: CodeEntity,
     parsed_doc: ParsedDocstring | None,
@@ -74,9 +107,13 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
     """
     errors: list[LintError] = []
 
-    docstring_optional = (entity.is_empty_init and config.exclude_empty_init_method) or (entity.is_empty_init_module and config.exclude_empty_init_module)
+    # Sphinx documents a property from its getter, setters and deleters carry nothing to check
+    if config.properties_as_attributes and not _PROPERTY_ACCESSORS.isdisjoint(entity.decorators):
+        return errors
 
-    if config.is_rule_enabled("docstring_exists") and not docstring_optional:
+    is_getter = config.properties_as_attributes and not _PROPERTY_GETTERS.isdisjoint(entity.decorators)
+
+    if config.is_rule_enabled("docstring_exists") and not _is_docstring_optional(entity, config):
         errors.extend(check_docstring_exists(entity))
 
     if not entity.docstring or not entity.docstring.strip():
@@ -114,7 +151,9 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
         if config.is_rule_enabled("args_order"):
             errors.extend(check_args_order(entity, parsed_doc))
 
-        errors.extend(check_returns_section(entity, parsed_doc, config.returns_section))
+        # a property getter is documented like an attribute, without Returns section
+        if not is_getter:
+            errors.extend(check_returns_section(entity, parsed_doc, config.returns_section))
 
         if config.returns_section is not Policy.FORBIDDEN:
             errors.extend(check_returns_match(entity, parsed_doc, config.returns_descriptions, config.documented_types, config.type_matching))
@@ -159,7 +198,7 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
 
     errors.extend(check_blank_lines(entity, config.blank_lines_before_section, config.blank_lines_before_closing_quotes))
 
-    if config.is_rule_enabled("imperative_mood") and entity.node_type in (NodeType.FUNCTION, NodeType.METHOD):
+    if config.is_rule_enabled("imperative_mood") and entity.node_type in (NodeType.FUNCTION, NodeType.METHOD) and not is_getter:
         errors.extend(check_imperative_mood(entity, parsed_doc))
 
     errors.extend(check_summary_on_first_line(entity, config.summary_on_first_line))
