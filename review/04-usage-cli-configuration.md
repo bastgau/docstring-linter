@@ -30,7 +30,7 @@ Scénario : un projet existant, documenté en Google style "classique", lance l'
 |---|---|---|---|
 | UX-01 | Critique | Aucune suppression inline | Reporté |
 | UX-02 | Haute | Défauts très opinionnés, pas de preset | Corrigé |
-| UX-03 | Haute | Pas de baseline ni de mode "diff" | Non traité |
+| UX-03 | Haute | Pas de baseline ni de mode "diff" | Reporté |
 | UX-04 | Haute | Portée non réglable (privé, dunder, overload, property, override) | Partiel |
 | UX-05 | Moyenne | Toutes les erreurs pointent la ligne `def` | Non traité |
 | UX-06 | Critique | Codes de sortie (voir BUG-01 à BUG-04) | Partiel |
@@ -89,7 +89,7 @@ convention = "google"   # permissive defaults matching the Google guide
 
 ### UX-03 - Baseline / mode diff [Déduit] - Haute
 
-**Statut : Non traité.**
+**Statut : Reporté.** Conception proposée (options `--baseline` et `--generate-baseline`, empreinte sans numéro de ligne, fichier JSON, pas de réécriture automatique), à reprendre plus tard.
 
 Pour adopter l'outil sur une base existante, il faut soit tout corriger, soit exclure massivement. pydoclint propose `--baseline` et `--generate-baseline` [Vérifié via `--help`].
 
