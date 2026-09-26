@@ -83,7 +83,7 @@ Proposition : `os.walk` avec élagage de `dirnames` sur les motifs d'exclusion, 
 
 ### PERF-05 - Pas de cache [Déduit] - Basse
 
-**Statut : Non traité.**
+**Statut : Écarté.** Mesures [Vérifié] : lire et hacher les fichiers coûte 0,08 s sur la stdlib contre 4,5 s d'analyse séquentielle (1,8 à 2,0 s avec les workers par défaut), mais pre-commit ne passe que des fichiers modifiés et la CI part d'un checkout neuf, donc le gain réel est faible [Déduit]. Un cache fiable demanderait une clé incluant la config effective par fichier et le code du linter (version figée, OPS-04). À réévaluer avec une intégration éditeur ou des monorepos très volumineux.
 
 ruff met en cache les résultats par fichier. Pour ce linter, le temps actuel ne le justifie pas. À réévaluer seulement si l'outil vise des monorepos de plusieurs dizaines de milliers de fichiers.
 

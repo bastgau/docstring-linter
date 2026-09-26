@@ -74,7 +74,7 @@ One-line pitch + badges
 
 ### DOC-03 - Fichiers annexes périmés [Vérifié] - Moyenne
 
-**Statut : Partiel.** `TESTS.md` tenu à jour à chaque commit (588 tests), toujours maintenu à la main. Restent : `TODO.md` (items `RULES.md` et version périmés, rédigé en français), commentaires de section en français dans `.pre-commit-config.yaml`, `.vulture` périmé.
+**Statut : Partiel.** `TESTS.md` tenu à jour à chaque commit (590 tests), toujours maintenu à la main. Restent : `TODO.md` (items `RULES.md` et version périmés, rédigé en français), commentaires de section en français dans `.pre-commit-config.yaml`, `.vulture` périmé.
 
 - `TESTS.md` : "369 tests" contre 372 exécutés. 680 lignes maintenues à la main, redondantes avec les docstrings des tests (constat déjà noté dans `TODO.md`). Recommandation : le générer (`pytest --collect-only` + docstrings) ou le supprimer.
 - `TODO.md` :
