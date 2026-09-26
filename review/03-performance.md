@@ -89,7 +89,7 @@ ruff met en cache les résultats par fichier. Pour ce linter, le temps actuel ne
 
 ### PERF-06 - Python 3.14 free-threaded [Non vérifié] - Basse
 
-**Statut : Non traité.**
+**Statut : Écarté.** Mesuré avec Python 3.14.7 free-threaded (`uv python install 3.14t`), 4 CPU [Vérifié] : sans GIL, 4 threads font jeu égal avec 4 processus (stdlib 1,63 s contre 1,56 s, `rich` 0,14 s contre 0,15 s) ; avec GIL, les threads sont plus lents que le séquentiel. Résultats identiques sous 3.14t (52 697 erreurs sur la stdlib, 1 990 sur `rich`).
 
 Sur un build free-threaded, un `ThreadPoolExecutor` éviterait le coût de démarrage et la sérialisation. Piste exploratoire uniquement, pas prioritaire.
 

@@ -56,11 +56,11 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 |---|---|---|---|---|---|---|
 | 01 - Bugs (BUG) | 23 | 0 | 0 | 0 | 0 | 23 |
 | 02 - Architecture (ARCH) | 2 | 7 | 1 | 0 | 0 | 10 |
-| 03 - Performance (PERF) | 3 | 1 | 0 | 1 | 1 | 6 |
+| 03 - Performance (PERF) | 3 | 1 | 0 | 2 | 0 | 6 |
 | 04 - Usage (UX) | 2 | 6 | 4 | 1 | 0 | 13 |
 | 05 - Documentation (DOC) | 5 | 2 | 1 | 1 | 1 | 10 |
 | 06 - Packaging et CI (OPS) | 2 | 2 | 6 | 3 | 0 | 13 |
-| **Total** | **37** | **18** | **12** | **6** | **2** | **75** |
+| **Total** | **37** | **18** | **12** | **7** | **1** | **75** |
 
 Mesures sur la révision `0f8fdae` [Vérifié] :
 
