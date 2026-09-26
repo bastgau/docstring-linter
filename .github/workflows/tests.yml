@@ -2,7 +2,13 @@ name: Tests
 
 on:
   workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        required: false
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   GROUP: "github-tests"

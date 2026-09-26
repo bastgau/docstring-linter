@@ -19,7 +19,8 @@ jobs:
     needs: lint
     uses: ./.github/workflows/tests.yml
     name: Tests
-    secrets: inherit
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   guard:
     needs: tests
