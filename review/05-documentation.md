@@ -30,7 +30,7 @@ Points forts : la référence des règles est riche, avec des exemples "Bad / Go
 | DOC-07 | Moyenne | Limitations connues non documentées | Corrigé |
 | DOC-08 | Moyenne | Sémantique de `exclude` fausse dans la doc | Partiel |
 | DOC-09 | Basse | Descriptions internes incohérentes | Corrigé |
-| DOC-10 | Basse | Documentation non générée depuis les registres | Non traité |
+| DOC-10 | Basse | Documentation non générée depuis les registres | Écarté |
 
 ### DOC-01 - README [Vérifié] - Haute
 
@@ -74,7 +74,7 @@ One-line pitch + badges
 
 ### DOC-03 - Fichiers annexes périmés [Vérifié] - Moyenne
 
-**Statut : Partiel.** `TESTS.md` tenu à jour à chaque commit (576 tests), toujours maintenu à la main. Restent : `TODO.md` (items `RULES.md` et version périmés, rédigé en français), commentaires de section en français dans `.pre-commit-config.yaml`, `.vulture` périmé.
+**Statut : Partiel.** `TESTS.md` tenu à jour à chaque commit (582 tests), toujours maintenu à la main. Restent : `TODO.md` (items `RULES.md` et version périmés, rédigé en français), commentaires de section en français dans `.pre-commit-config.yaml`, `.vulture` périmé.
 
 - `TESTS.md` : "369 tests" contre 372 exécutés. 680 lignes maintenues à la main, redondantes avec les docstrings des tests (constat déjà noté dans `TODO.md`). Recommandation : le générer (`pytest --collect-only` + docstrings) ou le supprimer.
 - `TODO.md` :
@@ -133,7 +133,7 @@ Tant que ces points ne sont pas corrigés, une section "Known limitations" évit
 
 ### DOC-10 - Documentation non générée [Vérifié] - Basse
 
-**Statut : Non traité.**
+**Statut : Écarté.** Remplacé par le test de cohérence qui exige un titre dans `docs/` pour chaque règle et politique (`6bfff7a`, voir ARCH-02).
 
 Registres (`RULES_REGISTRY`, `POLICIES_REGISTRY`, `OPTIONS_REGISTRY`) et pages `docs/` sont maintenus séparément. Proposition déjà esquissée dans `TODO.md` : générer le squelette (tableaux, valeurs par défaut) depuis le registre unique d'ARCH-02 / ARCH-05, garder les exemples à la main, et vérifier en CI que le fichier committé est à jour.
 

@@ -42,7 +42,7 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 
 ## Suivi des corrections
 
-État à la révision `23fc020` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
+État à la révision `10cd726` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
 
 | Statut | Signification |
 |---|---|
@@ -55,16 +55,16 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | Rapport | Corrigé | Partiel | Reporté | Écarté | Non traité | Total |
 |---|---|---|---|---|---|---|
 | 01 - Bugs (BUG) | 23 | 0 | 0 | 0 | 0 | 23 |
-| 02 - Architecture (ARCH) | 1 | 7 | 1 | 0 | 1 | 10 |
+| 02 - Architecture (ARCH) | 2 | 7 | 1 | 0 | 0 | 10 |
 | 03 - Performance (PERF) | 1 | 1 | 0 | 0 | 4 | 6 |
 | 04 - Usage (UX) | 2 | 6 | 4 | 1 | 0 | 13 |
-| 05 - Documentation (DOC) | 5 | 2 | 0 | 0 | 3 | 10 |
+| 05 - Documentation (DOC) | 5 | 2 | 0 | 1 | 2 | 10 |
 | 06 - Packaging et CI (OPS) | 2 | 2 | 6 | 3 | 0 | 13 |
-| **Total** | **34** | **18** | **11** | **4** | **8** | **75** |
+| **Total** | **35** | **18** | **11** | **5** | **6** | **75** |
 
-Mesures sur la révision `23fc020` [Vérifié] :
+Mesures sur la révision `10cd726` [Vérifié] :
 
-- Tests : 576 (372 à la revue), couverture branches 96 % (94,39 %).
+- Tests : 582 (372 à la revue), couverture branches 96 % (94,39 %).
 - `rich` 15.0.0 : 1 990 erreurs avec les défauts (`strict`), 758 avec `convention = "google"`, contre 2 410 à la revue. Les 2 erreurs de plus depuis `89c4a28` sont deux `raise` nus réels, dans `console.py` et `live.py`. Les 100 fichiers restent signalés, notamment parce que 95 modules n'ont pas de docstring.
 - Les fichiers de reproduction de l'annexe du rapport 01 ne produisent plus que les erreurs attendues : avec `convention = "google"` et une ligne vide avant `"""`, il reste `hidden_in_if` (sans docstring) et `Child.run` (surcharge sans `@override`).
 
@@ -111,7 +111,7 @@ En revanche, l'outil n'est pas encore prêt pour un usage hors du dépôt lui-m�
 | P1 | DOC-01 à DOC-03 | README (installation, positionnement), docs obsolètes | S | Corrigé, Corrigé, Partiel |
 | P1 | OPS-05, OPS-06 | Publication PyPI, flux de release beta | S | Reporté, Écarté |
 | P2 | UX-03, UX-08 | Baseline, autofix des règles de mise en page | L | Reporté |
-| P2 | ARCH-02, ARCH-03, PERF-01 | Registre de règles déclaratif, modèle ligne à ligne du docstring, passe AST unique | L | Non traité, Partiel, Corrigé |
+| P2 | ARCH-02, ARCH-03, PERF-01 | Registre de règles déclaratif, modèle ligne à ligne du docstring, passe AST unique | L | Corrigé, Partiel, Corrigé |
 
 Effort : S = moins d'une journée, M = 1 à 3 jours, L = plus.
 

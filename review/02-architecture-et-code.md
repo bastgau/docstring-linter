@@ -41,7 +41,7 @@ cli.main
 | ID | Gravité | Sujet | Statut |
 |---|---|---|---|
 | ARCH-01 | Moyenne | Couche d'extraction AST trop superficielle | Corrigé |
-| ARCH-02 | Moyenne | Règles non déclaratives, dispatcher monolithique, registres dupliqués | Non traité |
+| ARCH-02 | Moyenne | Règles non déclaratives, dispatcher monolithique, registres dupliqués | Corrigé |
 | ARCH-03 | Moyenne | Docstring re-parsé par chaque règle de structure, 3 définitions d'un en-tête | Partiel |
 | ARCH-04 | Moyenne | Abstraction multi-style creuse | Partiel |
 | ARCH-05 | Moyenne | Options énumérées à la main à 5 endroits | Partiel |
@@ -100,7 +100,7 @@ class _BodyScanner(ast.NodeVisitor):
 
 ### ARCH-02 - Règles non déclaratives [Vérifié] - Moyenne
 
-**Statut : Non traité.** Les registres restent séparés. Sous-points réglés : description de `section_order` (`acdcf43`), commentaire sur `--select` (`89c4a28`). Le message pour les identifiants de politiques est écarté (UX-12).
+**Statut : Corrigé.** `6bfff7a` : tests de cohérence (`tests/linter/test_registries.py`) entre registres, catégories, `ALWAYS_ON`, champs de `LinterConfig`, titres de `docs/` et règles émises, qui échouent sur une règle ou une politique ajoutée à moitié [Vérifié]. `10cd726` : `validate_entity` découpé en `_check_summary`, `_check_function`, `_check_class` et `_check_layout`, sans `noqa` ; sorties identiques sur `rich` et la stdlib [Vérifié]. Décision : table déclarative écartée tant qu'il n'y a qu'un style. Sous-points antérieurs : `section_order` (`acdcf43`), `--select` (`89c4a28`), UX-12 écarté.
 
 Ajouter une règle impose de toucher au moins 4 endroits : `RULES_REGISTRY`, `RULES_CATEGORIES`, `ALWAYS_ON` (`config.py:83-156`), `validate_entity` (`rules/__init__.py:59-165`, marqué `noqa: C901, PLR0912, PLR0915`), plus la doc. Les politiques ajoutent `POLICIES_REGISTRY`, un champ `LinterConfig` et un appel dans le dispatcher.
 
@@ -243,7 +243,7 @@ Proposition : erreurs de configuration validées une fois dans `main()` ; au niv
 
 ### ARCH-10 - Tests [Vérifié] - Moyenne
 
-**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 576 tests, couverture branches 96 %. Seuil de couverture toujours à 85, pas de test de corpus ni de test de complétude des registres.
+**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 582 tests, couverture branches 96 %. Seuil de couverture toujours à 85, pas de test de corpus ni de test de complétude des registres.
 
 État : 372 tests, 1,45 s, 94,39 % de couverture branches, seuil CI 85 %.
 
