@@ -257,7 +257,7 @@ def test_cli_github_annotations_valid_file(tmp_path: Path) -> None:
         cwd=tmp_path,
     )
     assert result.returncode == 0
-    assert "1 files checked, 0 errors." in result.stdout
+    assert "1 file checked, 0 errors." in result.stdout
 
 
 def test_cli_github_annotations_invalid_file(tmp_path: Path) -> None:

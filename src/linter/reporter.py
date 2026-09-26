@@ -1,10 +1,12 @@
 """Reporter for the docstring linter.
 
-Format lint results for CLI output with ANSI colors
+Format lint results for CLI output, with ANSI colors on a terminal,
 and JSON export for CI/CD integration.
 """
 
 import json
+import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,8 +17,25 @@ if TYPE_CHECKING:
     from linter.models import LintError
 
 
+# ANSI codes only reach a terminal, and never when NO_COLOR holds a value (https://no-color.org)
+_USE_COLOR = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
+
+def _ansi(code: str) -> str:
+    """Return an ANSI escape sequence, or nothing when colors are off.
+
+    Args:
+        code (str): SGR parameter, such as '91' for red.
+
+    Returns:
+        str: The escape sequence, or an empty string.
+
+    """
+    return f"\033[{code}m" if _USE_COLOR else ""
+
+
 class Colors:
-    """Define ANSI color codes for terminal output.
+    """Define ANSI color codes for terminal output, empty when colors are off.
 
     Attributes:
         RED (str): Red color code.
@@ -31,15 +50,54 @@ class Colors:
 
     """
 
-    RED = "\033[91m"
-    YELLOW = "\033[93m"
-    GREEN = "\033[92m"
-    CYAN = "\033[96m"
-    BLUE = "\033[94m"
-    WHITE = "\033[97m"
-    BOLD = "\033[1m"
-    DIM = "\033[2m"
-    RESET = "\033[0m"
+    RED = _ansi("91")
+    YELLOW = _ansi("93")
+    GREEN = _ansi("92")
+    CYAN = _ansi("96")
+    BLUE = _ansi("94")
+    WHITE = _ansi("97")
+    BOLD = _ansi("1")
+    DIM = _ansi("2")
+    RESET = _ansi("0")
+
+
+def _files(count: int) -> str:
+    """Return a file count with the matching singular or plural noun.
+
+    Args:
+        count (int): Number of files.
+
+    Returns:
+        str: '1 file' or 'N files'.
+
+    """
+    return f"{count} file" if count == 1 else f"{count} files"
+
+
+def _escape_data(text: str) -> str:
+    """Escape the message of a GitHub workflow command, as @actions/core does.
+
+    Args:
+        text (str): Message text.
+
+    Returns:
+        str: Text with %, carriage returns and line feeds percent-encoded.
+
+    """
+    return text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def _escape_property(text: str) -> str:
+    """Escape a property value of a GitHub workflow command, as @actions/core does.
+
+    Args:
+        text (str): Property value, such as a file path.
+
+    Returns:
+        str: Text escaped like a message, plus colons and commas.
+
+    """
+    return _escape_data(text).replace(":", "%3A").replace(",", "%2C")
 
 
 def report_cli(errors: list[LintError], files_checked: int) -> None:
@@ -54,7 +112,7 @@ def report_cli(errors: list[LintError], files_checked: int) -> None:
 
     """
     if not errors:
-        print(f"{files_checked} files checked, 0 errors.")
+        print(f"{_files(files_checked)} checked, 0 errors.")
         return
 
     by_file: dict[str, list[LintError]] = {}
@@ -73,7 +131,7 @@ def report_cli(errors: list[LintError], files_checked: int) -> None:
     print(
         f"{Colors.RED}{Colors.BOLD}✗ {error_count} error{'s' if error_count > 1 else ''}{Colors.RESET} "
         f"{Colors.DIM}in {file_count} file{'s' if file_count > 1 else ''} "
-        f"({files_checked} files checked).{Colors.RESET}\n"
+        f"({_files(files_checked)} checked).{Colors.RESET}\n"
     )
 
 
@@ -92,7 +150,7 @@ def report_traceback(errors: list[LintError], files_checked: int) -> None:
 
     """
     if not errors:
-        print(f"{files_checked} files checked, 0 errors.")
+        print(f"{_files(files_checked)} checked, 0 errors.")
         return
 
     by_entity: dict[tuple[str, int, str], list[LintError]] = {}
@@ -112,7 +170,7 @@ def report_traceback(errors: list[LintError], files_checked: int) -> None:
     print(
         f"{Colors.RED}{Colors.BOLD}✗ {error_count} error{'s' if error_count > 1 else ''}{Colors.RESET} "
         f"{Colors.DIM}in {file_count} file{'s' if file_count > 1 else ''} "
-        f"({files_checked} files checked).{Colors.RESET}\n"
+        f"({_files(files_checked)} checked).{Colors.RESET}\n"
     )
 
 
@@ -160,14 +218,14 @@ def report_github_annotations(errors: list[LintError], files_checked: int) -> No
 
     """
     for e in sorted(errors, key=lambda e: (e.filepath, e.line)):
-        print(f"::error file={e.filepath},line={e.line},title={e.rule}::{e.message}")
+        print(f"::error file={_escape_property(e.filepath)},line={e.line},title={_escape_property(e.rule)}::{_escape_data(e.message)}")
 
     error_count = len(errors)
     file_count = len({e.filepath for e in errors})
     if error_count == 0:
-        print(f"{files_checked} files checked, 0 errors.")
+        print(f"{_files(files_checked)} checked, 0 errors.")
     else:
-        print(f"{error_count} error{'s' if error_count > 1 else ''} in {file_count} file{'s' if file_count > 1 else ''} ({files_checked} files checked).")
+        print(f"{error_count} error{'s' if error_count > 1 else ''} in {file_count} file{'s' if file_count > 1 else ''} ({_files(files_checked)} checked).")
 
 
 def report_policies(registry: dict[str, str], values: dict[str, str]) -> None:

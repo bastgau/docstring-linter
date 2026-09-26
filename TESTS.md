@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 554 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 561 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -662,6 +662,10 @@ This file lists the 554 tests of the `docstring-linter` project. Each entry show
 | `test_reporter.py` | `test_report_policies_optional_value` | Policy set to optional shows its value on the matching line. |
 | `test_reporter.py` | `test_report_options_all_options_present` | All option identifiers and their values appear in output. |
 | `test_reporter.py` | `test_report_options_value_on_matching_line` | Each option value is printed on the line of its option. |
+| `test_reporter.py` | `test_report_single_file_singular` | One file checked: the summary says '1 file checked'. |
+| `test_reporter.py` | `test_report_github_annotations_escaped` | Message and properties escaped as @actions/core does: %, line breaks, and in properties ':' and ','. |
+| `test_reporter.py` | `test_report_no_color_when_not_a_terminal` | Output captured, not a terminal: no ANSI escape sequence at all. |
+| `test_reporter.py` | `test_colors_follow_terminal_and_no_color` | Colors on a terminal only, and off when NO_COLOR holds a non-empty value (4 cases). |
 
 ---
 

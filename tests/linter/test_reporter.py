@@ -1,15 +1,18 @@
 """Tests for reporter module."""
 
+import importlib
+import io
 import json
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import pytest
 from linter.config import ConfigOverride, Policy
 from linter.models import LintError, NodeType
 from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_traceback
 
-if TYPE_CHECKING:
-    import pytest
+from linter import reporter
 
 
 def _error(rule: str = "args_match", line: int = 10, filepath: str = "src/foo.py") -> LintError:
@@ -330,3 +333,49 @@ def test_report_overrides_shows_paths_and_delta(capsys: pytest.CaptureFixture[st
     assert "imperative_mood" in out
     assert "optional" in out
     assert "(base: required)" in out
+
+
+# ---------------------------------------------------------------------------
+# output details: plural, GitHub escaping, colors
+# ---------------------------------------------------------------------------
+
+
+def test_report_single_file_singular(capsys: pytest.CaptureFixture[str]) -> None:
+    """One file checked: the summary says '1 file checked'."""
+    report_cli([], 1)
+    assert capsys.readouterr().out.strip() == "1 file checked, 0 errors."
+
+
+def test_report_github_annotations_escaped(capsys: pytest.CaptureFixture[str]) -> None:
+    """Message and properties escaped as @actions/core does: %, line breaks, and in properties ':' and ','."""
+    error = LintError(filepath="src/a,b:c.py", line=3, entity_name="f", node_type=NodeType.FUNCTION, rule="summary_final_period", message="Got: '100%'\nnext")
+    report_github_annotations([error], 1)
+    first = capsys.readouterr().out.splitlines()[0]
+    assert first == "::error file=src/a%2Cb%3Ac.py,line=3,title=summary_final_period::Got: '100%25'%0Anext"
+
+
+def test_report_no_color_when_not_a_terminal(capsys: pytest.CaptureFixture[str]) -> None:
+    """Output captured, not a terminal: no ANSI escape sequence at all."""
+    report_cli([_error()], 1)
+    assert "\033[" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(("isatty", "no_color", "colored"), [(True, None, True), (True, "1", False), (True, "", True), (False, None, False)])
+def test_colors_follow_terminal_and_no_color(monkeypatch: pytest.MonkeyPatch, isatty: bool, no_color: str | None, colored: bool) -> None:  # noqa: FBT001
+    """Colors on a terminal only, and off when NO_COLOR holds a non-empty value."""
+
+    class _Stream(io.StringIO):
+        def isatty(self) -> bool:
+            return isatty
+
+    monkeypatch.setattr(sys, "stdout", _Stream())
+    if no_color is None:
+        monkeypatch.delenv("NO_COLOR", raising=False)
+    else:
+        monkeypatch.setenv("NO_COLOR", no_color)
+    try:
+        importlib.reload(reporter)
+        assert (reporter.Colors.RED == "\033[91m") is colored
+    finally:
+        monkeypatch.undo()
+        importlib.reload(reporter)

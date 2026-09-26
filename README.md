@@ -74,6 +74,8 @@ Command-line options always override configuration file values.
 
 ## Output formats
 
+Colors are only used when the output is a terminal, and never when the `NO_COLOR` environment variable is set to a non-empty value.
+
 `traceback` is the default. It prints one location header per entity, in the same shape as a Python traceback, which editors turn into a clickable link:
 
 ```
