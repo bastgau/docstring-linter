@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 from linter.config import (
     ALWAYS_ON,
-    OFF_BY_DEFAULT,
     OPTIONS_REGISTRY,
     RULES_REGISTRY,
     DocstringStyle,
@@ -27,19 +26,9 @@ def test_default_config_style() -> None:
     assert LinterConfig().style == DocstringStyle.GOOGLE
 
 
-def test_default_config_rules_exclude_off_by_default() -> None:
-    """Default config: OFF_BY_DEFAULT rules are not in enabled_rules."""
-    config = LinterConfig()
-    for rule in OFF_BY_DEFAULT:
-        assert rule not in config.enabled_rules
-
-
-def test_default_config_all_other_rules_enabled() -> None:
-    """Default config: all rules except OFF_BY_DEFAULT are enabled."""
-    config = LinterConfig()
-    for rule in RULES_REGISTRY:
-        if rule not in OFF_BY_DEFAULT:
-            assert rule in config.enabled_rules
+def test_default_config_all_rules_enabled() -> None:
+    """Default config, strict convention: every rule is enabled."""
+    assert LinterConfig().enabled_rules == list(RULES_REGISTRY)
 
 
 def test_default_config_exclude_patterns_include_common_dirs() -> None:

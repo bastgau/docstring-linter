@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 590 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 589 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -32,8 +32,7 @@ This file lists the 590 tests of the `docstring-linter` project. Each entry show
 | `test_docstring_parser.py` | `test_parse_attributes_without_type` | Attribute without type annotation: type_annotation is None. |
 | `test_docstring_parser.py` | `test_parse_attributes_multiline_description` | Attribute with continuation line: description is concatenated. |
 | `test_docstring_parser.py` | `test_parse_attributes_multiple` | Multiple attributes: all are returned in order. |
-| `test_docstring_parser.py` | `test_parse_example_section` | Docstring with Example section: examples list is populated. |
-| `test_docstring_parser.py` | `test_parse_examples_section` | Docstring with Examples section (plural): examples list is populated. |
+| `test_docstring_parser.py` | `test_parse_examples_section_kept_apart` | Examples section: its content leaks into neither the description nor the args. |
 | `test_docstring_parser.py` | `test_parse_unknown_section_ignored` | Unknown section name: not parsed, does not affect other fields. |
 | `test_docstring_parser.py` | `test_unknown_section_detected` | Section name not in known list: captured in unknown_sections. |
 | `test_docstring_parser.py` | `test_unknown_section_known_not_flagged` | Known section: not captured in unknown_sections. |
@@ -322,6 +321,7 @@ This file lists the 590 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_returns_none_optional_accepts_both` | Policy optional: section present or absent, no error either way. |
 | `rules/test_rules_args.py` | `test_returns_none_skips_init` | __init__ -> None is not covered by the returns_none policy. |
 | `rules/test_rules_args.py` | `test_returns_none_skips_generator` | Generator is not covered by the returns_none policy. |
+| `rules/test_rules_args.py` | `test_returns_none_skipped_when_returns_section_forbidden` | returns_section forbidden: the returns_none policy is not applied. |
 
 ### init_returns_none (policy)
 
@@ -331,6 +331,7 @@ This file lists the 590 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_args.py` | `test_init_returns_none_required_present` | Policy required, __init__ with Returns: None section: no error. |
 | `rules/test_rules_args.py` | `test_init_returns_none_forbidden_present` | Policy forbidden (default), __init__ with Returns: None section: returns init_returns_none error. |
 | `rules/test_rules_args.py` | `test_init_returns_none_optional_accepts_both` | Policy optional: section present or absent on __init__, no error either way. |
+| `rules/test_rules_args.py` | `test_init_returns_none_skipped_when_returns_section_forbidden` | returns_section forbidden: the init_returns_none policy is not applied. |
 
 ### raises_section (policy) / raises_match
 
@@ -613,6 +614,7 @@ This file lists the 590 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
+| `test_cli.py` | `test_list_rules_google_convention_disabled_rules` | --list-rules with the google convention: its disabled rules are counted and labelled as disabled by default. |
 | `test_cli.py` | `test_main_invalid_config_value` | Invalid value in the config file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_missing_config_file` | --config pointing to a missing file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_statistics_rejected_with_json` | --statistics with a machine-readable format: error on stderr and exit 2. |
@@ -702,8 +704,7 @@ This file lists the 590 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `test_config.py` | `test_default_config_style` | Default config: style is GOOGLE. |
-| `test_config.py` | `test_default_config_rules_exclude_off_by_default` | Default config: OFF_BY_DEFAULT rules are not in enabled_rules. |
-| `test_config.py` | `test_default_config_all_other_rules_enabled` | Default config: all rules except OFF_BY_DEFAULT are enabled. |
+| `test_config.py` | `test_default_config_all_rules_enabled` | Default config, strict convention: every rule is enabled. |
 | `test_config.py` | `test_default_config_exclude_patterns_include_common_dirs` | Default config: exclude_patterns includes .venv, .git, __pycache__, .tox. |
 
 ### is_rule_enabled
@@ -770,6 +771,7 @@ This file lists the 590 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_for_path_applies_matching_override` | Matching override: the policy is overridden, the base config is left untouched. |
 | `test_config.py` | `test_for_path_ignores_non_matching_override` | Override whose patterns do not match: the base config is returned as is. |
 | `test_config.py` | `test_for_path_last_override_wins` | Two matching overrides: the last declared one wins. |
+| `test_config.py` | `test_for_path_earlier_override_not_merged` | Two matching overrides: only the last one applies, the earlier keys are dropped. |
 | `test_config.py` | `test_for_path_ignore_removes_from_inherited_rules` | Ignore key in an override: the rule is removed from the inherited set. |
 | `test_config.py` | `test_for_path_select_replaces_inherited_rules` | Select key in an override: the inherited set is replaced by the listed rules. |
 | `test_config.py` | `test_for_path_override_select_all` | Select = ['ALL'] in an override: every rule is enabled on the matching files. |
@@ -836,7 +838,7 @@ This file lists the 590 tests of the `docstring-linter` project. Each entry show
 | Fichier | Fonction | Description |
 |---|---|---|
 | `test_registries.py` | `test_every_rule_in_exactly_one_category` | Each rule of RULES_REGISTRY appears in one category of RULES_CATEGORIES, and nothing else does. |
-| `test_registries.py` | `test_rule_subsets_are_registered_rules` | ALWAYS_ON and OFF_BY_DEFAULT only name registered rules. |
+| `test_registries.py` | `test_rule_subsets_are_registered_rules` | ALWAYS_ON and the rules each convention disables only name registered rules, never an always-on one. |
 | `test_registries.py` | `test_every_policy_is_a_config_field` | Each policy of POLICIES_REGISTRY is a LinterConfig field holding a Policy. |
 | `test_registries.py` | `test_every_rule_and_policy_documented` | Each rule and policy has a heading of its own in the docs pages. |
 | `test_registries.py` | `test_every_rule_reported_by_the_rules_package` | Each rule identifier is written as a string literal in the rules package, where errors are made. |

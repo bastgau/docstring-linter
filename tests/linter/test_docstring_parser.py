@@ -219,16 +219,11 @@ def test_parse_attributes_multiple() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_parse_example_section() -> None:
-    """Docstring with Example section: examples list is populated."""
-    result = PARSER.parse("Do something.\n\nExample:\n    >>> f(1)\n    1\n")
-    assert len(result.examples) == 1
-
-
-def test_parse_examples_section() -> None:
-    """Docstring with Examples section (plural): examples list is populated."""
-    result = PARSER.parse("Do something.\n\nExamples:\n    >>> f(1)\n    1\n")
-    assert len(result.examples) == 1
+def test_parse_examples_section_kept_apart() -> None:
+    """Examples section: its content leaks into neither the description nor the args."""
+    result = PARSER.parse("Do something.\n\nExamples:\n    x: 1\n    >>> f(1)\n")
+    assert result.description is None
+    assert not result.args
 
 
 def test_parse_unknown_section_ignored() -> None:

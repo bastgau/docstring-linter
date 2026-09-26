@@ -356,7 +356,7 @@ def report_rules(categories: dict[str, list[str]], registry: dict[str, str], off
     Args:
         categories (dict[str, list[str]]): Category name to rule identifiers.
         registry (dict[str, str]): Rule identifier to description.
-        off_by_default (frozenset[str]): Rules disabled by default.
+        off_by_default (frozenset[str]): Rules the active convention disables by default.
         always_on (frozenset[str]): Rules that cannot be disabled, listed after the categories.
         enabled (frozenset[str]): Rules enabled in the current config.
 

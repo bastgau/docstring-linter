@@ -68,7 +68,6 @@ fail_under = 85
 target-version = "py314"
 line-length = 200
 src = ["src/linter", "tests"]
-exclude = [".vulture"]
 
 [tool.ruff.lint]
 select = ["ALL"]

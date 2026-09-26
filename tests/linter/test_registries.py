@@ -4,7 +4,7 @@ import dataclasses
 import re
 from pathlib import Path
 
-from linter.config import ALWAYS_ON, OFF_BY_DEFAULT, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, LinterConfig, Policy
+from linter.config import ALWAYS_ON, CONVENTIONS, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, LinterConfig, Policy
 
 _ROOT = Path(__file__).resolve().parents[2]
 
@@ -26,9 +26,11 @@ def test_every_rule_in_exactly_one_category() -> None:
 
 
 def test_rule_subsets_are_registered_rules() -> None:
-    """ALWAYS_ON and OFF_BY_DEFAULT only name registered rules."""
+    """ALWAYS_ON and the rules each convention disables only name registered rules, never an always-on one."""
     assert ALWAYS_ON.issubset(RULES_REGISTRY)
-    assert OFF_BY_DEFAULT.issubset(RULES_REGISTRY)
+    for convention in CONVENTIONS.values():
+        assert convention.disabled_rules.issubset(RULES_REGISTRY)
+        assert convention.disabled_rules.isdisjoint(ALWAYS_ON)
 
 
 def test_every_policy_is_a_config_field() -> None:

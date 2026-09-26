@@ -148,7 +148,7 @@ run_tool() {
         docstring-linter) run_check "docstring-linter" "uv run docstring-linter $scope" uv run docstring-linter "${py_files[@]}" ;;
       esac
       ;;
-    vulture)   run_check "vulture"  "uv run vulture <directory>" uv run vulture "${TARGETS[@]}" "$ROOT_DIR/.vulture" ;;
+    vulture)   run_check "vulture"  "uv run vulture <directory>" uv run vulture "${TARGETS[@]}" ;;
     pytest)    run_check "pytest"   "uv run pytest"              uv run pytest --no-cov ;;
     coverage)  run_check "coverage" "uv run pytest --cov"        uv run pytest --cov --cov-branch --cov-report=term-missing -q --no-header ;;
     shellcheck)

@@ -172,7 +172,6 @@ class ParsedDocstring:  # pylint: disable=too-many-instance-attributes
         yields (DocstringReturn | None): Parsed Yields section.
         raises (list[DocstringRaise]): Parsed Raises section.
         attributes (list[DocstringAttribute]): Parsed Attributes section.
-        examples (list[str]): Parsed Examples section content.
         unknown_sections (list[str]): Section names not recognized by the parser.
 
     """
@@ -185,7 +184,6 @@ class ParsedDocstring:  # pylint: disable=too-many-instance-attributes
     yields: DocstringReturn | None = None
     raises: list[DocstringRaise] = field(default_factory=lambda: [])
     attributes: list[DocstringAttribute] = field(default_factory=lambda: [])
-    examples: list[str] = field(default_factory=lambda: [])
     unknown_sections: list[str] = field(default_factory=lambda: [])
 
 

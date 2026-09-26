@@ -142,8 +142,6 @@ RULES_REGISTRY = {
     "blank_lines": "Blank line counts must match blank_lines_before_section and blank_lines_before_closing_quotes",
 }
 
-# Rules disabled by default; users opt in with select in the config file
-OFF_BY_DEFAULT: frozenset[str] = frozenset()
 
 # Rules that report an outright docstring defect; select / ignore do not apply to them
 ALWAYS_ON: frozenset[str] = frozenset(
@@ -401,7 +399,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     properties_as_attributes: bool = False
     sections_optional_on_one_liners: bool = False
     exclude_patterns: list[str] = field(default_factory=lambda: [".venv", ".git", "__pycache__", ".tox", ".mypy_cache", ".ruff_cache", ".pytest_cache"])
-    enabled_rules: list[str] = field(default_factory=lambda: [r for r in RULES_REGISTRY if r not in OFF_BY_DEFAULT])
+    enabled_rules: list[str] = field(default_factory=lambda: list(RULES_REGISTRY))
     output_format: str = "traceback"
     workers: int = 0
     summary_max_length: int = 80

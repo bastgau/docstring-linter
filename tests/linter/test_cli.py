@@ -407,6 +407,20 @@ def test_list_rules_output(capsys: pytest.CaptureFixture[str], monkeypatch: pyte
             assert f"{rule} " in configurable
 
 
+def test_list_rules_google_convention_disabled_rules(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """--list-rules with the google convention: its disabled rules are counted and labelled as disabled by default."""
+    config = tmp_path / "linter.toml"
+    config.write_text('convention = "google"\n', encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["docstring-linter", "--list-rules", "--config", str(config)])
+    with pytest.raises(SystemExit):
+        main()
+
+    out = capsys.readouterr().out
+    assert "3 disabled by default" in out
+    for rule in ("imperative_mood", "return_type_annotation", "raises_extraneous"):
+        assert "(disabled by default)" in next(line for line in out.splitlines() if f" {rule} " in line)
+
+
 def test_main_invalid_config_value(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
     """Invalid value in the config file: prints a configuration error and exits with 2."""
     f = tmp_path / "bad.toml"
