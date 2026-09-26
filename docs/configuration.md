@@ -8,6 +8,10 @@ Configuration is loaded in this order (first match wins):
 2. Auto-discovery. Starting from the current directory and walking upward one directory at a time, `pyproject.toml` (with a `[tool.docstring-linter]` section) is checked before `.docstring-linter.toml` in each directory. The first match stops the search.
 3. Built-in defaults
 
+The search starts from the current directory, not from the linted files. When linting from elsewhere, pass the file with `--config`.
+
+Path patterns (`exclude`, `--exclude` and the `paths` of an override) are relative to the directory holding the config file, whatever the current directory. With the built-in defaults, they are relative to the current directory.
+
 ### pyproject.toml
 
 ```toml
@@ -197,7 +201,7 @@ paths = ["example/**", "docs/**"]
 select = ["docstring_exists"]
 ```
 
-- `paths` is required and matched with `PurePath.full_match`, so `tests/**` covers the whole tree. A path given on the command line as an absolute path is matched relative to the current directory as well.
+- `paths` is required and matched with `PurePath.full_match` against the file path relative to the config file directory, so `tests/**` covers the whole tree. A file outside that directory matches no override.
 - **A single block applies to a given file**: the last declared among those matching it. The other matching blocks are ignored, blocks never accumulate. Declare the general case first and the exceptions after it, and make each block self-contained.
 - The block that applies is resolved against the base configuration, so a setting it does not declare keeps its base value, not the linter default.
 - `ignore` removes rules from the inherited set, `select` replaces that set entirely. Same meaning as at the base level.

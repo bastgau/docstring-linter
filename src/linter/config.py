@@ -282,26 +282,25 @@ BOOL_OPTIONS: frozenset[str] = frozenset(
 )
 
 
-def path_matches(filepath: str, patterns: list[str]) -> bool:
+def path_matches(filepath: str, patterns: list[str], base_dir: Path) -> bool:
     """Check whether a file path fully matches one of the glob patterns.
 
-    The path is matched as given, then relative to the current directory,
-    so that an absolute path on the command line behaves like a relative one.
+    The path is matched relative to the base directory.
 
     Args:
         filepath (str): Path of the file.
         patterns (list[str]): Glob patterns matched with PurePath.full_match.
+        base_dir (Path): Absolute directory the patterns are relative to.
 
     Returns:
-        bool: True if one of the patterns matches.
+        bool: True if one of the patterns matches, False for a file outside the base directory.
 
     """
-    candidates = [PurePath(filepath)]
     absolute = Path(filepath).resolve()
-    if absolute.is_relative_to(Path.cwd()):
-        candidates.append(PurePath(absolute.relative_to(Path.cwd())))
-
-    return any(candidate.full_match(pattern) for pattern in patterns for candidate in candidates)
+    if not absolute.is_relative_to(base_dir):
+        return False
+    relative = PurePath(absolute.relative_to(base_dir))
+    return any(relative.full_match(pattern) for pattern in patterns)
 
 
 @dataclass
@@ -321,17 +320,18 @@ class ConfigOverride:
     ignore: list[str] = field(default_factory=lambda: [])  # noqa: PIE807
     values: dict[str, object] = field(default_factory=lambda: {})  # noqa: PIE807
 
-    def matches(self, filepath: str) -> bool:
+    def matches(self, filepath: str, base_dir: Path) -> bool:
         """Check whether a file path matches one of the patterns.
 
         Args:
             filepath (str): Path of the file being linted.
+            base_dir (Path): Absolute directory the patterns are relative to.
 
         Returns:
             bool: True if the override applies to that file.
 
         """
-        return path_matches(filepath, self.paths)
+        return path_matches(filepath, self.paths, base_dir)
 
 
 @dataclass
@@ -382,6 +382,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
         documented_stars (Policy): Policy for the stars of *args and **kwargs entries.
         returns_descriptions (Policy): Policy for the description on the Returns and Yields lines.
         overrides (list[ConfigOverride]): Per-path settings applied in declaration order.
+        base_dir (Path): Absolute directory the path patterns are relative to: the config file directory, or the current directory.
 
     """
 
@@ -425,6 +426,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
     documented_stars: Policy = Policy.REQUIRED
     returns_descriptions: Policy = Policy.REQUIRED
     overrides: list[ConfigOverride] = field(default_factory=lambda: [])  # noqa: PIE807
+    base_dir: Path = field(default_factory=lambda: Path.cwd().resolve())
 
     def for_path(self, filepath: str) -> LinterConfig:
         """Return the config applying to a file, overrides included.
@@ -439,7 +441,7 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
             LinterConfig: This config when no override matches, a resolved copy otherwise.
 
         """
-        matching = [override for override in self.overrides if override.matches(filepath)]
+        matching = [override for override in self.overrides if override.matches(filepath, self.base_dir)]
         if not matching:
             return self
 
@@ -529,16 +531,16 @@ def load_config(config_path: str | None = None) -> tuple[LinterConfig, Path | No
     with toml_path.open("rb") as f:
         data = tomllib.load(f)
 
-    if toml_path.name != "pyproject.toml":
-        return _parse_toml_config(data), toml_path
+    if toml_path.name == "pyproject.toml":
+        data = data.get("tool", {}).get("docstring-linter", {})
+        if not data:
+            # discovery only returns a pyproject.toml carrying the section, so this is an explicit path
+            msg = f"{toml_path}: no [tool.docstring-linter] section."
+            raise ValueError(msg)
 
-    tool_config = data.get("tool", {}).get("docstring-linter", {})
-    if not tool_config:
-        # discovery only returns a pyproject.toml carrying the section, so this is an explicit path
-        msg = f"{toml_path}: no [tool.docstring-linter] section."
-        raise ValueError(msg)
-
-    return _parse_toml_config(tool_config), toml_path
+    config = _parse_toml_config(data)
+    config.base_dir = toml_path.parent.resolve()
+    return config, toml_path
 
 
 def _find_config(explicit_path: str | None = None) -> Path | None:

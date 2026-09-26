@@ -98,7 +98,7 @@ def test_collect_python_files_finds_all_py(tmp_path: Path) -> None:
     sub = tmp_path / "sub"
     sub.mkdir()
     (sub / "c.py").write_text("", encoding="utf-8")
-    files = collect_python_files([str(tmp_path)], [])
+    files = collect_python_files([str(tmp_path)], [], tmp_path)
     names = {Path(f).name for f in files}
     assert names == {"a.py", "b.py", "c.py"}
 
@@ -107,7 +107,7 @@ def test_collect_python_files_exclude_pattern(tmp_path: Path) -> None:
     """Directory with exclusion pattern: matching files are not collected."""
     (tmp_path / "main.py").write_text("", encoding="utf-8")
     (tmp_path / "test_main.py").write_text("", encoding="utf-8")
-    files = collect_python_files([str(tmp_path)], ["test_*"])
+    files = collect_python_files([str(tmp_path)], ["test_*"], tmp_path)
     names = {Path(f).name for f in files}
     assert "main.py" in names
     assert "test_main.py" not in names

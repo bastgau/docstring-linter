@@ -579,6 +579,22 @@ def test_for_path_override_select_all() -> None:
     assert config.for_path("tests/test_foo.py").enabled_rules == sorted(RULES_REGISTRY)
 
 
+def test_for_path_patterns_relative_to_base_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run from a subdirectory: the override pattern is matched relative to base_dir, not to the current directory."""
+    (tmp_path / "src").mkdir()
+    monkeypatch.chdir(tmp_path / "src")
+    config = _parse_toml_config({"overrides": [{"paths": ["src/**"], "args_section": "optional"}]})
+    config.base_dir = tmp_path
+    assert config.for_path("foo.py").args_section is Policy.OPTIONAL
+
+
+def test_for_path_file_outside_base_dir(tmp_path: Path) -> None:
+    """File outside base_dir: no override applies, even with a catch-all pattern."""
+    config = _parse_toml_config({"overrides": [{"paths": ["**"], "args_section": "optional"}]})
+    config.base_dir = tmp_path / "project"
+    assert config.for_path(str(tmp_path / "other" / "foo.py")) is config
+
+
 # ---------------------------------------------------------------------------
 # load_config
 # ---------------------------------------------------------------------------
@@ -594,6 +610,15 @@ def test_load_config_explicit_directory(tmp_path: Path) -> None:
     """Explicit path that is a directory: raises ValueError."""
     with pytest.raises(ValueError, match="config file not found"):
         load_config(str(tmp_path))
+
+
+def test_load_config_base_dir_is_config_directory(tmp_path: Path) -> None:
+    """Explicit config file: base_dir is the resolved directory holding it."""
+    (tmp_path / "tools").mkdir()
+    f = tmp_path / "tools" / "linter.toml"
+    f.write_text("", encoding="utf-8")
+    config, _ = load_config(str(tmp_path / "tools" / ".." / "tools" / "linter.toml"))
+    assert config.base_dir == (tmp_path / "tools").resolve()
 
 
 def test_load_config_toml_without_section(tmp_path: Path) -> None:

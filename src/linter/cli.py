@@ -19,12 +19,13 @@ from linter.reporter import report_cli, report_github_annotations, report_json, 
 from linter.rules import validate_entity
 
 
-def collect_python_files(paths: list[str], exclude_patterns: list[str]) -> list[str]:
+def collect_python_files(paths: list[str], exclude_patterns: list[str], base_dir: Path) -> list[str]:
     """Collect all .py files from given paths, respecting exclusions.
 
     Args:
         paths (list[str]): File or directory paths to scan.
         exclude_patterns (list[str]): Glob patterns to exclude.
+        base_dir (Path): Absolute directory the patterns are relative to.
 
     Returns:
         list[str]: Sorted list of Python file paths.
@@ -35,24 +36,25 @@ def collect_python_files(paths: list[str], exclude_patterns: list[str]) -> list[
     for path_str in paths:
         path = Path(path_str)
         if path.is_file() and path.suffix == ".py":
-            if not _is_excluded(path, exclude_patterns):
+            if not _is_excluded(path, exclude_patterns, base_dir):
                 files.append(str(path))
         elif path.is_dir():
-            files.extend(sorted(str(py_file) for py_file in path.rglob("*.py") if not _is_excluded(py_file, exclude_patterns)))
+            files.extend(sorted(str(py_file) for py_file in path.rglob("*.py") if not _is_excluded(py_file, exclude_patterns, base_dir)))
 
     return files
 
 
-def _is_excluded(path: Path, patterns: list[str]) -> bool:
+def _is_excluded(path: Path, patterns: list[str], base_dir: Path) -> bool:
     """Check if a file path matches any exclusion pattern.
 
     A pattern matches the end of the path (test_*.py), the whole path
-    relative to the current directory (tests/**), or, when it carries no
+    relative to the base directory (tests/**), or, when it carries no
     wildcard, any directory or file name along the path (.venv).
 
     Args:
         path (Path): File path to check.
         patterns (list[str]): Glob patterns to match against.
+        base_dir (Path): Absolute directory the whole-path patterns are relative to.
 
     Returns:
         bool: True if the path matches any exclusion pattern.
@@ -64,7 +66,7 @@ def _is_excluded(path: Path, patterns: list[str]) -> bool:
         # literal patterns (no glob chars) are also matched against directory parts
         if "*" not in pattern and "?" not in pattern and pattern in path.parts:
             return True
-    return path_matches(str(path), patterns)
+    return path_matches(str(path), patterns, base_dir)
 
 
 def lint_file(filepath: str, config: LinterConfig) -> list[LintError]:
@@ -206,7 +208,7 @@ def run(paths: list[str], config: LinterConfig, *, statistics: bool = False) -> 
             print(f"Path not found: {path}", file=sys.stderr)
         return 2
 
-    files = collect_python_files(paths, config.exclude_patterns)
+    files = collect_python_files(paths, config.exclude_patterns, config.base_dir)
     if not files:
         print("No Python files found.")
         return 0

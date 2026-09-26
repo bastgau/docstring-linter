@@ -39,21 +39,21 @@ def test_collect_single_file(tmp_path: Path) -> None:
     """Single .py file path: returns that file."""
     f = tmp_path / "foo.py"
     f.write_text("", encoding="utf-8")
-    assert collect_python_files([str(f)], []) == [str(f)]
+    assert collect_python_files([str(f)], [], tmp_path) == [str(f)]
 
 
 def test_collect_non_py_file_ignored(tmp_path: Path) -> None:
     """Non-.py file: not collected."""
     f = tmp_path / "foo.txt"
     f.write_text("", encoding="utf-8")
-    assert not collect_python_files([str(f)], [])
+    assert not collect_python_files([str(f)], [], tmp_path)
 
 
 def test_collect_excluded_file_skipped(tmp_path: Path) -> None:
     """Single file matching exclusion pattern: not collected."""
     f = tmp_path / "test_foo.py"
     f.write_text("", encoding="utf-8")
-    assert not collect_python_files([str(f)], ["test_*"])
+    assert not collect_python_files([str(f)], ["test_*"], tmp_path)
 
 
 def test_collect_directory_recursive(tmp_path: Path) -> None:
@@ -62,7 +62,7 @@ def test_collect_directory_recursive(tmp_path: Path) -> None:
     sub = tmp_path / "pkg"
     sub.mkdir()
     (sub / "b.py").write_text("", encoding="utf-8")
-    files = collect_python_files([str(tmp_path)], [])
+    files = collect_python_files([str(tmp_path)], [], tmp_path)
     assert len(files) == 2
 
 
@@ -71,7 +71,7 @@ def test_collect_venv_excluded_by_literal_pattern(tmp_path: Path) -> None:
     venv = tmp_path / ".venv" / "lib"
     venv.mkdir(parents=True)
     (venv / "foo.py").write_text("", encoding="utf-8")
-    assert not collect_python_files([str(tmp_path)], [".venv"])
+    assert not collect_python_files([str(tmp_path)], [".venv"], tmp_path)
 
 
 def test_collect_pycache_excluded_by_literal_pattern(tmp_path: Path) -> None:
@@ -80,7 +80,7 @@ def test_collect_pycache_excluded_by_literal_pattern(tmp_path: Path) -> None:
     cache.mkdir(parents=True)
     (cache / "foo.cpython-314.pyc").write_text("", encoding="utf-8")
     (tmp_path / "src" / "foo.py").write_text("", encoding="utf-8")
-    files = collect_python_files([str(tmp_path)], ["__pycache__"])
+    files = collect_python_files([str(tmp_path)], ["__pycache__"], tmp_path)
     assert all("__pycache__" not in f for f in files)
 
 
@@ -91,7 +91,7 @@ def test_collect_recursive_glob_excluded(tmp_path: Path, monkeypatch: pytest.Mon
     (tmp_path / "tests" / "unit" / "test_a.py").write_text("", encoding="utf-8")
     (tmp_path / "tests" / "conftest.py").write_text("", encoding="utf-8")
     (tmp_path / "main.py").write_text("", encoding="utf-8")
-    assert collect_python_files(["."], ["tests/**"]) == ["main.py"]
+    assert collect_python_files(["."], ["tests/**"], tmp_path) == ["main.py"]
 
 
 def test_collect_directory_glob_excluded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -100,7 +100,7 @@ def test_collect_directory_glob_excluded(tmp_path: Path, monkeypatch: pytest.Mon
     (tmp_path / "src" / "gen").mkdir(parents=True)
     (tmp_path / "src" / "gen" / "model.py").write_text("", encoding="utf-8")
     (tmp_path / "src" / "app.py").write_text("", encoding="utf-8")
-    assert collect_python_files(["src"], ["src/gen/*.py"]) == ["src/app.py"]
+    assert collect_python_files(["src"], ["src/gen/*.py"], tmp_path) == ["src/app.py"]
 
 
 # ---------------------------------------------------------------------------
@@ -278,6 +278,25 @@ def test_run_with_json_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]
     run([str(f)], config)
     report = json.loads(capsys.readouterr().out)
     assert report["summary"]["total_errors"] == 0
+
+
+def test_main_from_subdirectory_uses_config_directory(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run from src/ with the config at the root: exclude and override patterns still apply from the root."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.docstring-linter]\nexclude = ["src/gen/*.py"]\n\n[[tool.docstring-linter.overrides]]\npaths = ["src/**"]\nignore = ["docstring_exists"]\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "src" / "gen").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("def f():\n    pass\n", encoding="utf-8")
+    (tmp_path / "src" / "gen" / "model.py").write_text("def f():\n    pass\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path / "src")
+    monkeypatch.setattr(sys, "argv", ["docstring-linter", ".", "--format", "text"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 0
+    assert "1 file checked, 0 errors." in capsys.readouterr().out
 
 
 def test_list_rules_output(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:

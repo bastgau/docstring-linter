@@ -620,7 +620,7 @@ A pattern excludes a file when one of these holds:
 
 - it has no wildcard and names a directory or file anywhere in the path: `.venv` excludes `src/.venv/foo.py`;
 - it matches the end of the path: `test_*.py` excludes `tests/unit/test_foo.py`;
-- it matches the whole path, relative to the current directory: `tests/**` excludes every file under `tests/`, `src/gen/*.py` the files directly in `src/gen/`.
+- it matches the whole path, relative to the directory holding the config file (the current directory without a config file): `tests/**` excludes every file under `tests/`, `src/gen/*.py` the files directly in `src/gen/`.
 
 Test files are linted like any other file; exclude them explicitly with `exclude = ["test_*", "*_test.py"]` if desired.
 

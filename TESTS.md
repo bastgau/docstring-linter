@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 572 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 576 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -609,6 +609,7 @@ This file lists the 572 tests of the `docstring-linter` project. Each entry show
 | `test_cli.py` | `test_main_invalid_config_value` | Invalid value in the config file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_missing_config_file` | --config pointing to a missing file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_statistics_rejected_with_json` | --statistics with a machine-readable format: error on stderr and exit 2. |
+| `test_cli.py` | `test_main_from_subdirectory_uses_config_directory` | Run from src/ with the config at the root: exclude and override patterns still apply from the root. |
 | `test_cli.py` | `test_list_rules_output` | --list-rules: every rule appears, always-on rules in their own section after the categories. |
 
 ---
@@ -763,6 +764,8 @@ This file lists the 572 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_for_path_ignore_removes_from_inherited_rules` | Ignore key in an override: the rule is removed from the inherited set. |
 | `test_config.py` | `test_for_path_select_replaces_inherited_rules` | Select key in an override: the inherited set is replaced by the listed rules. |
 | `test_config.py` | `test_for_path_override_select_all` | Select = ['ALL'] in an override: every rule is enabled on the matching files. |
+| `test_config.py` | `test_for_path_patterns_relative_to_base_dir` | Run from a subdirectory: the override pattern is matched relative to base_dir, not to the current directory. |
+| `test_config.py` | `test_for_path_file_outside_base_dir` | File outside base_dir: no override applies, even with a catch-all pattern. |
 
 ### convention
 
@@ -810,6 +813,7 @@ This file lists the 572 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_load_config_toml_with_section` | pyproject.toml with [tool.docstring-linter] section: config is populated. |
 | `test_config.py` | `test_load_config_missing_explicit_file` | Explicit path that does not exist: raises ValueError naming the path. |
 | `test_config.py` | `test_load_config_explicit_directory` | Explicit path that is a directory: raises ValueError. |
+| `test_config.py` | `test_load_config_base_dir_is_config_directory` | Explicit config file: base_dir is the resolved directory holding it. |
 | `test_config.py` | `test_load_config_auto_discover` | No explicit path: load_config walks up directories to find pyproject.toml. |
 | `test_config.py` | `test_load_config_standalone_toml` | .docstring-linter.toml with flat config: parsed directly without [tool.docstring-linter]. |
 | `test_config.py` | `test_load_config_custom_named_toml` | Explicitly passed non-pyproject.toml file: parsed directly regardless of name. |
