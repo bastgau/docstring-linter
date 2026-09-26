@@ -42,7 +42,7 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 
 ## Suivi des corrections
 
-État à la révision `8a9e4b4` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
+État à la révision `6962065` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
 
 | Statut | Signification |
 |---|---|
@@ -62,9 +62,9 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | 06 - Packaging et CI (OPS) | 4 | 0 | 6 | 3 | 0 | 13 |
 | **Total** | **45** | **9** | **13** | **8** | **0** | **75** |
 
-Mesures sur la révision `8a9e4b4` [Vérifié] :
+Mesures sur la révision `6962065` [Vérifié] :
 
-- Tests : 585 (372 à la revue), couverture branches 96 % (94,39 %).
+- Tests : 586 (372 à la revue), couverture branches 96 % (94,39 %).
 - `rich` 15.0.0 : 1 990 erreurs avec les défauts (`strict`), 758 avec `convention = "google"`, contre 2 410 à la revue. Les 2 erreurs de plus depuis `89c4a28` sont deux `raise` nus réels, dans `console.py` et `live.py`. Les 100 fichiers restent signalés, notamment parce que 95 modules n'ont pas de docstring.
 - Les fichiers de reproduction de l'annexe du rapport 01 ne produisent plus que les erreurs attendues : avec `convention = "google"` et une ligne vide avant `"""`, il reste `hidden_in_if` (sans docstring) et `Child.run` (surcharge sans `@override`).
 

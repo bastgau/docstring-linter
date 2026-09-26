@@ -145,7 +145,7 @@ Détail dans BUG-01 à BUG-04. Contrat proposé et à documenter :
 
 ### UX-07 - Sorties [Vérifié] - Moyenne
 
-**Statut : Partiel.** Couleurs désactivées hors terminal et avec `NO_COLOR` (`0355225`), `--statistics` (`9c90fd5`). `--select`/`--ignore` en CLI écartés. Restent : ligne `Config:` sur stdout, pas de SARIF ni de niveau `warning`.
+**Statut : Partiel.** Couleurs désactivées hors terminal et avec `NO_COLOR` (`0355225`), `--statistics` (`9c90fd5`), ligne `Config:` sur stderr (`6962065`). Décisions : `--select`/`--ignore` en CLI et niveau `warning` des annotations écartés ; sortie SARIF reportée (suivie dans `TODO.md`).
 
 - Codes ANSI toujours émis, même vers un pipe ou un fichier (`reporter.py:18-30`) ; pas de `NO_COLOR` ni `--no-color`. Vérifié : la sortie redirigée contient `\x1b[1m`, `\x1b[96m`, etc.
 
