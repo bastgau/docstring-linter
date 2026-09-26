@@ -19,13 +19,17 @@ from linter.reporter import report_cli, report_github_annotations, report_json, 
 from linter.rules import validate_entity
 
 
-def collect_python_files(paths: list[str], exclude_patterns: list[str], base_dir: Path) -> list[str]:
+def collect_python_files(paths: list[str], exclude_patterns: list[str], base_dir: Path, *, force_exclude: bool = False) -> list[str]:
     """Collect all .py files from given paths, respecting exclusions.
+
+    A file given explicitly is always collected, unless force_exclude is set.
+    Exclusions always apply to the files found in a directory.
 
     Args:
         paths (list[str]): File or directory paths to scan.
         exclude_patterns (list[str]): Glob patterns to exclude.
         base_dir (Path): Absolute directory the patterns are relative to.
+        force_exclude (bool): Apply the exclusions to explicitly given files too.
 
     Returns:
         list[str]: Sorted list of Python file paths.
@@ -38,7 +42,7 @@ def collect_python_files(paths: list[str], exclude_patterns: list[str], base_dir
     for path_str in paths:
         path = Path(path_str)
         if path.is_file() and path.suffix == ".py":
-            if not _is_excluded(path, exclude_patterns, base_dir):
+            if not (force_exclude and _is_excluded(path, exclude_patterns, base_dir)):
                 files.append(str(path))
         elif path.is_dir():
             found: list[Path] = []
@@ -203,13 +207,14 @@ def _report(errors: list[LintError], files_checked: int, output_format: str, *, 
         report_traceback(errors, files_checked)
 
 
-def run(paths: list[str], config: LinterConfig, *, statistics: bool = False) -> int:
+def run(paths: list[str], config: LinterConfig, *, statistics: bool = False, force_exclude: bool = False) -> int:
     """Collect files, lint them, and report results.
 
     Args:
         paths (list[str]): File or directory paths to lint.
         config (LinterConfig): Linter configuration.
         statistics (bool): Report the number of errors per rule instead of each error.
+        force_exclude (bool): Apply the exclusions to explicitly given files too.
 
     Returns:
         int: Exit code -- 0 if no errors, 1 on lint errors, 2 if a path is missing or a file could not be analysed.
@@ -221,7 +226,7 @@ def run(paths: list[str], config: LinterConfig, *, statistics: bool = False) -> 
             print(f"Path not found: {path}", file=sys.stderr)
         return 2
 
-    files = collect_python_files(paths, config.exclude_patterns, config.base_dir)
+    files = collect_python_files(paths, config.exclude_patterns, config.base_dir, force_exclude=force_exclude)
     if not files:
         print("No Python files found.")
         return 0
@@ -264,6 +269,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--style", choices=[s.value for s in DocstringStyle], default=None, help=argparse.SUPPRESS)
     parser.add_argument("--format", choices=["traceback", "text", "json", "github-annotations"], default=None, help="Output format (default: traceback).")
     parser.add_argument("--exclude", nargs="*", default=None, help="Glob patterns to exclude (overrides pyproject.toml).")
+    parser.add_argument("--force-exclude", action="store_true", help="Apply the exclusions to files given explicitly too, as pre-commit does.")
     parser.add_argument("--statistics", action="store_true", help="Report the number of errors per rule instead of each error (traceback and text formats).")
     parser.add_argument("--workers", type=int, default=None, help="Number of parallel workers (0 = auto, the default; 1 = sequential). Overrides pyproject.toml.")
     return parser
@@ -306,7 +312,7 @@ def _main() -> int:
         else:
             print("Config: defaults (no config file found)")
 
-    return run(args.paths, config, statistics=args.statistics)
+    return run(args.paths, config, statistics=args.statistics, force_exclude=args.force_exclude)
 
 
 def main() -> None:

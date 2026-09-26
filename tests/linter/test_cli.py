@@ -54,11 +54,18 @@ def test_collect_non_py_file_ignored(tmp_path: Path) -> None:
     assert not collect_python_files([str(f)], [], tmp_path)
 
 
-def test_collect_excluded_file_skipped(tmp_path: Path) -> None:
-    """Single file matching exclusion pattern: not collected."""
+def test_collect_explicit_file_kept_despite_exclusion(tmp_path: Path) -> None:
+    """File given explicitly and matching an exclusion pattern: still collected."""
     f = tmp_path / "test_foo.py"
     f.write_text("", encoding="utf-8")
-    assert not collect_python_files([str(f)], ["test_*"], tmp_path)
+    assert collect_python_files([str(f)], ["test_*"], tmp_path) == [str(f)]
+
+
+def test_collect_explicit_file_skipped_with_force_exclude(tmp_path: Path) -> None:
+    """File given explicitly and matching an exclusion pattern, with force_exclude: not collected."""
+    f = tmp_path / "test_foo.py"
+    f.write_text("", encoding="utf-8")
+    assert not collect_python_files([str(f)], ["test_*"], tmp_path, force_exclude=True)
 
 
 def test_collect_directory_recursive(tmp_path: Path) -> None:
@@ -348,6 +355,25 @@ def test_main_from_subdirectory_uses_config_directory(tmp_path: Path, capsys: py
 
     assert exc.value.code == 0
     assert "1 file checked, 0 errors." in capsys.readouterr().out
+
+
+def test_main_force_exclude_flag(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Excluded file passed explicitly: linted by default, skipped with --force-exclude."""
+    (tmp_path / "pyproject.toml").write_text('[tool.docstring-linter]\nexclude = ["gen/**"]\n', encoding="utf-8")
+    (tmp_path / "gen").mkdir()
+    (tmp_path / "gen" / "model.py").write_text("def f():\n    pass\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    monkeypatch.setattr(sys, "argv", ["docstring-linter", "gen/model.py", "--format", "text"])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 1
+
+    monkeypatch.setattr(sys, "argv", ["docstring-linter", "gen/model.py", "--format", "text", "--force-exclude"])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    assert "No Python files found." in capsys.readouterr().out
 
 
 def test_main_closed_output_pipe_exits_quietly(tmp_path: Path) -> None:

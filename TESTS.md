@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 588 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 590 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -559,7 +559,8 @@ This file lists the 588 tests of the `docstring-linter` project. Each entry show
 |---|---|---|
 | `test_cli.py` | `test_collect_single_file` | Single .py file path: returns that file. |
 | `test_cli.py` | `test_collect_non_py_file_ignored` | Non-.py file: not collected. |
-| `test_cli.py` | `test_collect_excluded_file_skipped` | Single file matching exclusion pattern: not collected. |
+| `test_cli.py` | `test_collect_explicit_file_kept_despite_exclusion` | File given explicitly and matching an exclusion pattern: still collected. |
+| `test_cli.py` | `test_collect_explicit_file_skipped_with_force_exclude` | File given explicitly and matching an exclusion pattern, with force_exclude: not collected. |
 | `test_cli.py` | `test_collect_directory_recursive` | Directory with nested .py files: all collected. |
 | `test_cli.py` | `test_collect_venv_excluded_by_literal_pattern` | File inside a .venv directory: excluded by literal pattern matching path parts. |
 | `test_cli.py` | `test_collect_literal_excluded_directory_not_walked` | Directory named by a literal pattern: skipped during the walk, its content is never listed. |
@@ -616,6 +617,7 @@ This file lists the 588 tests of the `docstring-linter` project. Each entry show
 | `test_cli.py` | `test_main_missing_config_file` | --config pointing to a missing file: prints a configuration error and exits with 2. |
 | `test_cli.py` | `test_main_statistics_rejected_with_json` | --statistics with a machine-readable format: error on stderr and exit 2. |
 | `test_cli.py` | `test_main_from_subdirectory_uses_config_directory` | Run from src/ with the config at the root: exclude and override patterns still apply from the root. |
+| `test_cli.py` | `test_main_force_exclude_flag` | Excluded file passed explicitly: linted by default, skipped with --force-exclude. |
 | `test_cli.py` | `test_main_closed_output_pipe_exits_quietly` | Output pipe closed before the report is written: exit 1 without a traceback. |
 | `test_cli.py` | `test_list_rules_output` | --list-rules: every rule appears, always-on rules in their own section after the categories. |
 

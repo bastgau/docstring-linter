@@ -1,6 +1,6 @@
 - id: docstring-linter
   name: docstring-linter
   description: Validate Python docstrings against style conventions.
-  entry: docstring-linter
+  entry: docstring-linter --force-exclude
   language: python
   types: [python]

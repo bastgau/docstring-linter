@@ -84,6 +84,7 @@ docstring-linter src/ --config pyproject.toml
 | Option | Description |
 |--------|-------------|
 | `--exclude` | Glob patterns to exclude. Overrides config file. |
+| `--force-exclude` | Apply the exclusions to files named on the command line too. Without it, a file named explicitly is always linted. |
 | `--workers` | Number of parallel workers. `0` (default) = one per usable CPU, sequential below 50 files; `1` = sequential. |
 | `--format` | Output format: `traceback` (default), `text`, `json`, or `github-annotations`. |
 | `--statistics` | Report the number of errors per rule instead of each error. Only with the `traceback` and `text` formats. |
@@ -193,6 +194,8 @@ repos:
         files: ^src/
         language_version: python3.14  # when python3.14 is not the default interpreter
 ```
+
+The hook runs with `--force-exclude`, so the `exclude` patterns of the configuration still apply to the files pre-commit passes.
 
 Then install the hook:
 

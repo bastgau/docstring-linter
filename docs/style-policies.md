@@ -622,6 +622,8 @@ A pattern excludes a file when one of these holds:
 - it matches the end of the path: `test_*.py` excludes `tests/unit/test_foo.py`;
 - it matches the whole path, relative to the directory holding the config file (the current directory without a config file): `tests/**` excludes every file under `tests/`, `src/gen/*.py` the files directly in `src/gen/`.
 
+These rules apply to the files found in a directory. A file named on the command line is always linted, unless `--force-exclude` is given: the pre-commit hook passes it, since pre-commit names every changed file explicitly.
+
 Test files are linted like any other file; exclude them explicitly with `exclude = ["test_*", "*_test.py"]` if desired.
 
 Override defaults in `pyproject.toml`:
