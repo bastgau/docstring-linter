@@ -1,7 +1,7 @@
 {
   "pythonVersion": "3.14",
   "venvPath": ".",
-  "venv": "/workspaces/docstring-linter/.venv",
+  "venv": ".venv",
   "include": [
     "src/linter"
   ],

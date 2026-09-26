@@ -17,7 +17,7 @@ repos:
       - id: mixed-line-ending
         args: ['--fix=lf']
         stages: [pre-commit]
-        groups: [locals]
+        groups: [local]
       - id: check-json
         stages: [pre-commit]
         groups: [local,github-src]
@@ -131,6 +131,7 @@ repos:
         language: system
         stages: [pre-commit]
         types: [python]
+        files: ^src/
         groups: [local,github-src]
 
   # ── Docstring linters (src/) ──────────────────────────────────────────────────
