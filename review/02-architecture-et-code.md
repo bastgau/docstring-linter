@@ -49,7 +49,7 @@ cli.main
 | ARCH-07 | Moyenne | Modèle `CodeEntity` trop pauvre | Partiel |
 | ARCH-08 | Haute | `ValueError` comme fourre-tout au niveau fichier | Corrigé |
 | ARCH-09 | Basse | Code mort ou trompeur | Corrigé |
-| ARCH-10 | Moyenne | Tests unitaires qui contournent l'AST | Partiel |
+| ARCH-10 | Moyenne | Tests unitaires qui contournent l'AST | Corrigé |
 
 ### ARCH-01 - Extraction AST superficielle [Vérifié] - Moyenne
 
@@ -243,7 +243,7 @@ Proposition : erreurs de configuration validées une fois dans `main()` ; au niv
 
 ### ARCH-10 - Tests [Vérifié] - Moyenne
 
-**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 586 tests, couverture branches 96 %. Tests de cohérence des registres ajoutés (`6bfff7a`, voir ARCH-02). Restent : seuil de couverture à 85, pas de test de corpus.
+**Statut : Corrigé.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST), tests de cohérence des registres et de `TESTS.md` (`6bfff7a`, `2ecc362`) ; 586 tests, couverture branches 96,24 %. `5779bbd` : seuil `fail_under` relevé de 85 à 90 [Vérifié]. Décision : pas de test de corpus (stdlib instable d'une version corrective à l'autre, code tiers à éviter, cas de l'annexe déjà couverts par `test_end_to_end.py`).
 
 État : 372 tests, 1,45 s, 94,39 % de couverture branches, seuil CI 85 %.
 

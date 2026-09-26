@@ -55,16 +55,16 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | Rapport | Corrigé | Partiel | Reporté | Écarté | Non traité | Total |
 |---|---|---|---|---|---|---|
 | 01 - Bugs (BUG) | 23 | 0 | 0 | 0 | 0 | 23 |
-| 02 - Architecture (ARCH) | 5 | 4 | 1 | 0 | 0 | 10 |
+| 02 - Architecture (ARCH) | 6 | 3 | 1 | 0 | 0 | 10 |
 | 03 - Performance (PERF) | 3 | 0 | 0 | 3 | 0 | 6 |
 | 04 - Usage (UX) | 3 | 5 | 4 | 1 | 0 | 13 |
 | 05 - Documentation (DOC) | 7 | 0 | 2 | 1 | 0 | 10 |
 | 06 - Packaging et CI (OPS) | 4 | 0 | 6 | 3 | 0 | 13 |
-| **Total** | **45** | **9** | **13** | **8** | **0** | **75** |
+| **Total** | **46** | **8** | **13** | **8** | **0** | **75** |
 
 Mesures sur la révision `6962065` [Vérifié] :
 
-- Tests : 586 (372 à la revue), couverture branches 96 % (94,39 %).
+- Tests : 586 (372 à la revue), couverture branches 96,24 % (94,39 %), seuil CI 90 % (85 % à la revue).
 - `rich` 15.0.0 : 1 990 erreurs avec les défauts (`strict`), 758 avec `convention = "google"`, contre 2 410 à la revue. Les 2 erreurs de plus depuis `89c4a28` sont deux `raise` nus réels, dans `console.py` et `live.py`. Les 100 fichiers restent signalés, notamment parce que 95 modules n'ont pas de docstring.
 - Les fichiers de reproduction de l'annexe du rapport 01 ne produisent plus que les erreurs attendues : avec `convention = "google"` et une ligne vide avant `"""`, il reste `hidden_in_if` (sans docstring) et `Child.run` (surcharge sans `@override`).
 
