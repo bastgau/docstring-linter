@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 577 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 582 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -822,6 +822,16 @@ This file lists the 577 tests of the `docstring-linter` project. Each entry show
 | `test_config.py` | `test_load_config_pyproject_takes_priority_over_standalone` | Both pyproject.toml and .docstring-linter.toml present: pyproject.toml wins. |
 
 ---
+
+## test_registries.py -- registry consistency
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_registries.py` | `test_every_rule_in_exactly_one_category` | Each rule of RULES_REGISTRY appears in one category of RULES_CATEGORIES, and nothing else does. |
+| `test_registries.py` | `test_rule_subsets_are_registered_rules` | ALWAYS_ON and OFF_BY_DEFAULT only name registered rules. |
+| `test_registries.py` | `test_every_policy_is_a_config_field` | Each policy of POLICIES_REGISTRY is a LinterConfig field holding a Policy. |
+| `test_registries.py` | `test_every_rule_and_policy_documented` | Each rule and policy has a heading of its own in the docs pages. |
+| `test_registries.py` | `test_every_rule_reported_by_the_rules_package` | Each rule identifier is written as a string literal in the rules package, where errors are made. |
 
 ## test_models.py -- models
 
