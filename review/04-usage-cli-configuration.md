@@ -36,7 +36,7 @@ Scénario : un projet existant, documenté en Google style "classique", lance l'
 | UX-06 | Critique | Codes de sortie (voir BUG-01 à BUG-04) | Partiel |
 | UX-07 | Moyenne | Sorties : couleurs forcées, pas de `--quiet`, `--statistics`, `--select` | Partiel |
 | UX-08 | Moyenne | Pas d'autofix | Non traité |
-| UX-09 | Moyenne | Chemins relatifs au répertoire courant, pas au fichier de config | Non traité |
+| UX-09 | Moyenne | Chemins relatifs au répertoire courant, pas au fichier de config | Corrigé |
 | UX-10 | Haute | Hook pre-commit inutilisable sans Python 3.14 par défaut | Partiel |
 | UX-11 | Moyenne | GitHub Action : injection, build à chaque run, Python à fournir | Partiel |
 | UX-12 | Basse | Identifiants de politiques affichés comme des règles | Écarté |
@@ -173,7 +173,7 @@ Un `--fix` limité aux règles de mise en page serait un différenciateur fort (
 
 ### UX-09 - Chemins relatifs au CWD [Déduit] - Moyenne
 
-**Statut : Non traité.**
+**Statut : Corrigé.** `23fc020`. `exclude`, `--exclude` et les `paths` des overrides sont résolus depuis le dossier du fichier de config (y compris avec `--config`), depuis le répertoire courant sans config. Lancé depuis `src/`, le cas de reproduction donne le même résultat que depuis la racine [Vérifié]. Décision : la config reste cherchée depuis le répertoire courant (documenté), pas de config par fichier comme ruff.
 
 `ConfigOverride.matches` (`config.py:213-231`) et `exclude` comparent au répertoire courant, pas au répertoire du fichier de config. Lancer `docstring-linter .` depuis `src/` avec un override `paths = ["src/**"]` ne l'applique pas. ruff résout les chemins relativement au fichier de configuration [Non vérifié].
 

@@ -243,7 +243,7 @@ Proposition : erreurs de configuration validées une fois dans `main()` ; au niv
 
 ### ARCH-10 - Tests [Vérifié] - Moyenne
 
-**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 572 tests, couverture branches 96 %. Seuil de couverture toujours à 85, pas de test de corpus ni de test de complétude des registres.
+**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 576 tests, couverture branches 96 %. Seuil de couverture toujours à 85, pas de test de corpus ni de test de complétude des registres.
 
 État : 372 tests, 1,45 s, 94,39 % de couverture branches, seuil CI 85 %.
 
