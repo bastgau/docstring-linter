@@ -78,7 +78,7 @@ See the Available keys section below for the complete list of options.
 | `exclude_overridden` | `false` | Do not require a docstring on methods decorated with `@override`, which inherit the documentation of the parent method. |
 | `sections_optional_on_one_liners` | `false` | Do not require the `Args:`, `Returns:`, `Yields:` and `Raises:` sections (nor `Returns: None`) on a one-line docstring, when the function or method has every parameter and its return annotated. A docstring of more than one line keeps every required section. |
 | `properties_as_attributes` | `false` | Document property getters like attributes: no `Returns:` section required, `imperative_mood` not applied. Property setters and deleters are not checked. |
-| `exclude` | see [built-in defaults](/docs/style-policies.md#default-exclusion-patterns) | Glob/literal patterns for files and directories to skip. See [matching rules](/docs/style-policies.md#default-exclusion-patterns). |
+| `exclude` | see [Exclusion patterns](#exclusion-patterns) | Glob/literal patterns for files and directories to skip, replacing the defaults. |
 | `workers` | `0` | Parallel workers. `0` = one per usable CPU, sequential below 50 files where starting the processes costs more than it saves. Any other value is used as is, `1` being sequential. |
 | `summary_max_length` | `80` | Maximum summary line length for `summary_too_long`. |
 | `blank_lines_before_section` | `1` | Blank lines expected before a section header, checked by `blank_lines`. |
@@ -93,6 +93,37 @@ See the Available keys section below for the complete list of options.
 Every policy accepts `"required"`, `"forbidden"`, or `"optional"`. For the five section policies, `"optional"` means the section is not required, but what the docstring does declare is still checked by the matching rule (`args_match`, `returns_match`, `yields_match`, `raises_match`, `attributes_match`). The `exclude_*` options only lift `docstring_exists`: a docstring that is present is always checked.
 
 `docstring-linter --list-rules` prints the rules, the policies, and the options that change what gets checked, each with the value it has in the current config.
+
+### Exclusion patterns
+
+The following patterns are excluded by default when scanning directories:
+
+| Pattern | Type | Excludes |
+|---------|------|----------|
+| `.git` | literal | git metadata directory |
+| `.mypy_cache` | literal | mypy cache directory |
+| `.pytest_cache` | literal | pytest cache directory |
+| `.ruff_cache` | literal | ruff cache directory |
+| `.tox` | literal | tox test environments |
+| `.venv` | literal | virtual environment directory |
+| `__pycache__` | literal | Python bytecode cache |
+
+Setting `exclude` replaces this list entirely: `exclude = ["migrations"]` excludes `migrations` only, and `.venv` or `.git` are scanned again. Repeat the defaults to keep them:
+
+```toml
+[tool.docstring-linter]
+exclude = [".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox", ".venv", "__pycache__", "migrations"]
+```
+
+A pattern excludes a file when one of these holds:
+
+- it has no wildcard and names a directory or file anywhere in the path: `.venv` excludes `src/.venv/foo.py`;
+- it matches the end of the path: `test_*.py` excludes `tests/unit/test_foo.py`;
+- it matches the whole path, relative to the directory holding the config file (the current directory without a config file): `tests/**` excludes every file under `tests/`, `src/gen/*.py` the files directly in `src/gen/`.
+
+These rules apply to the files found in a directory. A file named on the command line is always linted, unless `--force-exclude` is given: the pre-commit hook passes it, since pre-commit names every changed file explicitly.
+
+Test files are linted like any other file; add `"test_*"` and `"*_test.py"` to `exclude` to skip them.
 
 ### Conventions
 

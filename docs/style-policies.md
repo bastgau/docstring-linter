@@ -598,37 +598,4 @@ from .core import main
 exclude_empty_init_module = false   # check empty __init__.py files too
 ```
 
-This option only covers the empty case. To skip every `__init__.py` regardless of its content, use `exclude = ["__init__.py"]`.
-
-## Exclusion Patterns
-
-### Default Exclusion Patterns
-
-The following patterns are excluded by default when scanning directories:
-
-| Pattern | Type | Excludes |
-|---------|------|----------|
-| `.git` | literal | git metadata directory |
-| `.mypy_cache` | literal | mypy cache directory |
-| `.pytest_cache` | literal | pytest cache directory |
-| `.ruff_cache` | literal | ruff cache directory |
-| `.tox` | literal | tox test environments |
-| `.venv` | literal | virtual environment directory |
-| `__pycache__` | literal | Python bytecode cache |
-
-A pattern excludes a file when one of these holds:
-
-- it has no wildcard and names a directory or file anywhere in the path: `.venv` excludes `src/.venv/foo.py`;
-- it matches the end of the path: `test_*.py` excludes `tests/unit/test_foo.py`;
-- it matches the whole path, relative to the directory holding the config file (the current directory without a config file): `tests/**` excludes every file under `tests/`, `src/gen/*.py` the files directly in `src/gen/`.
-
-These rules apply to the files found in a directory. A file named on the command line is always linted, unless `--force-exclude` is given: the pre-commit hook passes it, since pre-commit names every changed file explicitly.
-
-Test files are linted like any other file; exclude them explicitly with `exclude = ["test_*", "*_test.py"]` if desired.
-
-Override defaults in `pyproject.toml`:
-
-```toml
-[tool.docstring-linter]
-exclude = [".venv", "__pycache__", "migrations"]
-```
+This option only covers the empty case. To skip every `__init__.py` regardless of its content, add `"__init__.py"` to `exclude` (see [Exclusion patterns](/docs/configuration.md#exclusion-patterns)).
