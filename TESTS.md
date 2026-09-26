@@ -828,6 +828,9 @@ This file lists the test functions of the `docstring-linter` project, a parametr
 | `test_registries.py` | `test_every_policy_is_a_config_field` | Each policy of POLICIES_REGISTRY is a LinterConfig field holding a Policy. |
 | `test_registries.py` | `test_every_rule_and_policy_documented` | Each rule and policy has a heading of its own in the docs pages. |
 | `test_registries.py` | `test_every_rule_reported_by_the_rules_package` | Each rule identifier is written as a string literal in the rules package, where errors are made. |
+| `test_registries.py` | `test_every_listed_option_is_a_typed_config_field` | Each option shown by --list-rules is a LinterConfig field, typed unless it is the convention or a scope flag. |
+| `test_registries.py` | `test_every_config_key_documented` | The key table of docs/configuration.md has one row per accepted key, scope flags spelled out. |
+| `test_registries.py` | `test_override_options_documented` | The override section of docs/configuration.md names exactly the options an override may carry. |
 | `test_registries.py` | `test_every_test_function_listed_in_tests_md` | TESTS.md has one row per test function of tests/linter, and no row for a missing one. |
 
 ## test_models.py -- models

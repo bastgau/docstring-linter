@@ -5,7 +5,20 @@ import dataclasses
 import re
 from pathlib import Path
 
-from linter.config import ALWAYS_ON, CONVENTIONS, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, LinterConfig, Policy
+from linter.config import (
+    ALWAYS_ON,
+    CONFIG_KEYS,
+    CONVENTIONS,
+    OPTIONS_REGISTRY,
+    OVERRIDABLE_OPTIONS,
+    POLICIES_REGISTRY,
+    RULES_CATEGORIES,
+    RULES_REGISTRY,
+    SCOPE_KEYS,
+    TYPED_OPTIONS,
+    LinterConfig,
+    Policy,
+)
 
 _ROOT = Path(__file__).resolve().parents[2]
 
@@ -52,6 +65,31 @@ def test_every_rule_reported_by_the_rules_package() -> None:
     source = "".join(path.read_text(encoding="utf-8") for path in (_ROOT / "src" / "linter" / "rules").glob("*.py"))
     missing = [rule for rule in RULES_REGISTRY if f'"{rule}"' not in source]
     assert not missing
+
+
+def test_every_listed_option_is_a_typed_config_field() -> None:
+    """Each option shown by --list-rules is a LinterConfig field, typed unless it is the convention or a scope flag."""
+    fields = {field.name for field in dataclasses.fields(LinterConfig)}
+    scope_options = {f"scope.{key}" for key in SCOPE_KEYS}
+    assert {f"check_{key}" for key in SCOPE_KEYS} <= fields
+    assert set(OPTIONS_REGISTRY) - scope_options <= fields
+    # workers is typed but not listed: it changes how the run goes, not what is checked
+    assert set(OPTIONS_REGISTRY) - scope_options - {"convention"} == TYPED_OPTIONS - {"workers"}
+
+
+def test_every_config_key_documented() -> None:
+    """The key table of docs/configuration.md has one row per accepted key, scope flags spelled out."""
+    text = (_ROOT / "docs" / "configuration.md").read_text(encoding="utf-8")
+    table = text[text.index("### Available keys") : text.index("### Exclusion patterns")]
+    rows = set(re.findall(r"^\| `([\w.]+)` \|", table, flags=re.MULTILINE))
+    assert rows == (CONFIG_KEYS - {"scope", "overrides"}) | {f"scope.{key}" for key in SCOPE_KEYS}
+
+
+def test_override_options_documented() -> None:
+    """The override section of docs/configuration.md names exactly the options an override may carry."""
+    text = (_ROOT / "docs" / "configuration.md").read_text(encoding="utf-8")
+    line = next(line for line in text.splitlines() if line.startswith("- An override may carry"))
+    assert set(re.findall(r"`(\w+)`", line)) == OVERRIDABLE_OPTIONS
 
 
 def test_every_test_function_listed_in_tests_md() -> None:

@@ -189,56 +189,6 @@ CONVENTIONS: dict[str, Convention] = {
 }
 
 
-# Keys accepted in the config file besides the policies
-SETTING_KEYS: frozenset[str] = frozenset(
-    {
-        "convention",
-        "scope",
-        "select",
-        "ignore",
-        "exclude",
-        "workers",
-        "overrides",
-        "exclude_empty_init_method",
-        "exclude_empty_init_module",
-        "ignore_placeholder_docstrings",
-        "exclude_dunder_methods",
-        "exclude_private",
-        "exclude_overridden",
-        "properties_as_attributes",
-        "sections_optional_on_one_liners",
-        "summary_max_length",
-        "blank_lines_before_section",
-        "blank_lines_before_closing_quotes",
-        "type_matching",
-        "init_args_location",
-    }
-)
-
-CONFIG_KEYS: frozenset[str] = SETTING_KEYS | frozenset(POLICIES_REGISTRY)
-
-SCOPE_KEYS: frozenset[str] = frozenset({"modules", "classes", "functions", "methods"})
-
-
-# Options an override may carry: those that change what gets checked on a file
-OVERRIDABLE_OPTIONS: frozenset[str] = frozenset(
-    {
-        "summary_max_length",
-        "blank_lines_before_section",
-        "blank_lines_before_closing_quotes",
-        "exclude_empty_init_method",
-        "exclude_empty_init_module",
-        "ignore_placeholder_docstrings",
-        "exclude_dunder_methods",
-        "exclude_private",
-        "exclude_overridden",
-        "properties_as_attributes",
-        "sections_optional_on_one_liners",
-        "type_matching",
-        "init_args_location",
-    }
-)
-
 # Options taking one value among a fixed list
 CHOICE_OPTIONS: dict[str, tuple[str, ...]] = {
     "type_matching": ("strict", "equivalent", "lenient"),
@@ -253,6 +203,7 @@ INT_OPTIONS: dict[str, int] = {
     "blank_lines_before_closing_quotes": 0,
 }
 
+# Boolean options
 BOOL_OPTIONS: frozenset[str] = frozenset(
     {
         "exclude_empty_init_method",
@@ -265,6 +216,19 @@ BOOL_OPTIONS: frozenset[str] = frozenset(
         "sections_optional_on_one_liners",
     }
 )
+
+# Every option with a typed value, validated by _parse_option
+TYPED_OPTIONS: frozenset[str] = frozenset(INT_OPTIONS) | BOOL_OPTIONS | frozenset(CHOICE_OPTIONS)
+
+# Options an override may carry: the typed options that change what gets checked on a file
+OVERRIDABLE_OPTIONS: frozenset[str] = TYPED_OPTIONS - {"workers"}
+
+# Keys accepted in the config file besides the policies
+SETTING_KEYS: frozenset[str] = TYPED_OPTIONS | {"convention", "scope", "select", "ignore", "exclude", "overrides"}
+
+CONFIG_KEYS: frozenset[str] = SETTING_KEYS | frozenset(POLICIES_REGISTRY)
+
+SCOPE_KEYS: frozenset[str] = frozenset({"modules", "classes", "functions", "methods"})
 
 
 def path_matches(filepath: str, patterns: list[str], base_dir: Path) -> bool:
@@ -453,26 +417,12 @@ class LinterConfig:  # pylint: disable=too-many-instance-attributes
             dict[str, str]: Option identifier to its configured value.
 
         """
-        return {
-            "convention": self.convention,
-            "exclude_empty_init_method": str(self.exclude_empty_init_method).lower(),
-            "exclude_empty_init_module": str(self.exclude_empty_init_module).lower(),
-            "ignore_placeholder_docstrings": str(self.ignore_placeholder_docstrings).lower(),
-            "exclude_dunder_methods": str(self.exclude_dunder_methods).lower(),
-            "exclude_private": str(self.exclude_private).lower(),
-            "exclude_overridden": str(self.exclude_overridden).lower(),
-            "properties_as_attributes": str(self.properties_as_attributes).lower(),
-            "sections_optional_on_one_liners": str(self.sections_optional_on_one_liners).lower(),
-            "summary_max_length": str(self.summary_max_length),
-            "blank_lines_before_section": str(self.blank_lines_before_section),
-            "blank_lines_before_closing_quotes": str(self.blank_lines_before_closing_quotes),
-            "type_matching": self.type_matching,
-            "init_args_location": self.init_args_location,
-            "scope.modules": str(self.check_modules).lower(),
-            "scope.classes": str(self.check_classes).lower(),
-            "scope.functions": str(self.check_functions).lower(),
-            "scope.methods": str(self.check_methods).lower(),
-        }
+        values: dict[str, str] = {}
+        for key in OPTIONS_REGISTRY:
+            # scope.modules is stored as check_modules
+            value = getattr(self, f"check_{key.removeprefix('scope.')}" if key.startswith("scope.") else key)
+            values[key] = str(value).lower() if isinstance(value, bool) else str(value)
+        return values
 
     def is_rule_enabled(self, rule: str) -> bool:
         """Check if a specific rule is enabled.
@@ -856,7 +806,7 @@ def _parse_toml_config(data: dict[str, object]) -> LinterConfig:
     for key, value in data.items():
         if key in POLICIES_REGISTRY:
             setattr(config, key, _parse_policy(key, value))
-        elif key in INT_OPTIONS or key in BOOL_OPTIONS or key in CHOICE_OPTIONS:
+        elif key in TYPED_OPTIONS:
             setattr(config, key, _parse_option(key, value))
 
     if "exclude" in data:
