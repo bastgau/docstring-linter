@@ -35,7 +35,7 @@ Scénario : un projet existant, documenté en Google style "classique", lance l'
 | UX-05 | Moyenne | Toutes les erreurs pointent la ligne `def` | Reporté |
 | UX-06 | Critique | Codes de sortie (voir BUG-01 à BUG-04) | Partiel |
 | UX-07 | Moyenne | Sorties : couleurs forcées, pas de `--quiet`, `--statistics`, `--select` | Partiel |
-| UX-08 | Moyenne | Pas d'autofix | Non traité |
+| UX-08 | Moyenne | Pas d'autofix | Reporté |
 | UX-09 | Moyenne | Chemins relatifs au répertoire courant, pas au fichier de config | Corrigé |
 | UX-10 | Haute | Hook pre-commit inutilisable sans Python 3.14 par défaut | Partiel |
 | UX-11 | Moyenne | GitHub Action : injection, build à chaque run, Python à fournir | Partiel |
@@ -165,7 +165,7 @@ Détail dans BUG-01 à BUG-04. Contrat proposé et à documenter :
 
 ### UX-08 - Pas d'autofix [Vérifié] - Moyenne
 
-**Statut : Non traité.**
+**Statut : Reporté.** Approche proposée : `--fix` et `--diff`, d'abord les règles de mise en page (texte du docstring seul), correction du texte source du littéral (positions AST et `ast.get_source_segment`, vérifiées), fichier inchangé si l'AST hors docstrings diffère après correction.
 
 Beaucoup de règles sont mécaniques : `blank_lines`, `summary_final_period`, `section_capitalization`, `entry_spacing`, `returns_none`, `section_order`, et la synchronisation des types depuis la signature. ruff propose des corrections pour une partie de ses règles `D` [Vérifié : `ruff rule --all` indique "Fix is always/sometimes available" pour certaines]. pydoclint ne corrige pas [Non vérifié].
 

@@ -48,7 +48,7 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 |---|---|
 | Corrigé | Proposition appliquée, revérifiée sur le code actuel. |
 | Partiel | Une partie appliquée ; le reste est détaillé sous le point. |
-| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version, baseline, PyPI, ligne des erreurs). |
+| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version, baseline, PyPI, ligne des erreurs, autofix). |
 | Écarté | Décision de ne pas appliquer. |
 | Non traité | Pas encore discuté. |
 
@@ -57,10 +57,10 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | 01 - Bugs (BUG) | 23 | 0 | 0 | 0 | 0 | 23 |
 | 02 - Architecture (ARCH) | 1 | 7 | 1 | 0 | 1 | 10 |
 | 03 - Performance (PERF) | 1 | 1 | 0 | 0 | 4 | 6 |
-| 04 - Usage (UX) | 2 | 6 | 3 | 1 | 1 | 13 |
+| 04 - Usage (UX) | 2 | 6 | 4 | 1 | 0 | 13 |
 | 05 - Documentation (DOC) | 5 | 2 | 0 | 0 | 3 | 10 |
 | 06 - Packaging et CI (OPS) | 2 | 2 | 6 | 3 | 0 | 13 |
-| **Total** | **34** | **18** | **10** | **4** | **9** | **75** |
+| **Total** | **34** | **18** | **11** | **4** | **8** | **75** |
 
 Mesures sur la révision `23fc020` [Vérifié] :
 
@@ -110,7 +110,7 @@ En revanche, l'outil n'est pas encore prêt pour un usage hors du dépôt lui-m�
 | P1 | BUG-18, BUG-19 | Sections Napoleon à deux mots, `Returns:` sans type | M | Corrigé |
 | P1 | DOC-01 à DOC-03 | README (installation, positionnement), docs obsolètes | S | Corrigé, Corrigé, Partiel |
 | P1 | OPS-05, OPS-06 | Publication PyPI, flux de release beta | S | Reporté, Écarté |
-| P2 | UX-03, UX-08 | Baseline, autofix des règles de mise en page | L | Reporté, Non traité |
+| P2 | UX-03, UX-08 | Baseline, autofix des règles de mise en page | L | Reporté |
 | P2 | ARCH-02, ARCH-03, PERF-01 | Registre de règles déclaratif, modèle ligne à ligne du docstring, passe AST unique | L | Non traité, Partiel, Corrigé |
 
 Effort : S = moins d'une journée, M = 1 à 3 jours, L = plus.
