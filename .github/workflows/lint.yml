@@ -44,4 +44,4 @@ jobs:
       - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
         name: Execute Prek
         with:
-          extra-args: --group ${{ env.GROUP }} --all-files
+          extra-args: --verbose --group ${{ env.GROUP }} --all-files
