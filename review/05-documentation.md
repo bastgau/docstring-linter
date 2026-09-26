@@ -25,7 +25,7 @@ Points forts : la référence des règles est riche, avec des exemples "Bad / Go
 | DOC-02 | Moyenne | Support NumPy / Sphinx / PEP 257 annoncé dans le code | Corrigé |
 | DOC-03 | Moyenne | Fichiers annexes périmés, langues mélangées | Partiel |
 | DOC-04 | Haute | Aucun positionnement ni comparaison | Corrigé |
-| DOC-05 | Moyenne | Pas de CHANGELOG, CONTRIBUTING, guide "ajouter une règle" | Non traité |
+| DOC-05 | Moyenne | Pas de CHANGELOG, CONTRIBUTING, guide "ajouter une règle" | Reporté |
 | DOC-06 | Basse | Liens absolus `/docs/...` | Non traité |
 | DOC-07 | Moyenne | Limitations connues non documentées | Corrigé |
 | DOC-08 | Moyenne | Sémantique de `exclude` fausse dans la doc | Partiel |
@@ -91,7 +91,7 @@ Aucune mention de ruff, pydoclint, pydocstyle, darglint ou docsig. Un visiteur n
 
 ### DOC-05 - Contribution et historique [Vérifié] - Moyenne
 
-**Statut : Non traité.**
+**Statut : Reporté.** Approche proposée : `CHANGELOG.md` tenu à la main (Keep a Changelog, section Unreleased avec les changements de comportement de cette branche), `CONTRIBUTING.md` court (installation, commits, vérifications, ajout d'une règle, `TESTS.md`), pas de `SECURITY.md`, workflow de release inchangé jusqu'au lot 0. À noter : `RELEASE.md` annonce une pré-release pour les tags beta, que le workflow ne produit pas (OPS-06, déduit).
 
 - Pas de `CHANGELOG.md` : les notes de release sont la liste brute des sujets de commits (`publish-release.yml`). Les changements de comportement (nouvelles politiques, règles devenues always-on) ne sont pas signalés comme tels.
 - Pas de `CONTRIBUTING.md` : ajouter une règle implique 4 à 6 fichiers (ARCH-02) et des conventions strictes (commitlint : sujet en minuscules, 15 caractères minimum, corps interdit).
