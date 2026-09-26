@@ -1,5 +1,6 @@
-"""Consistency tests between the rule and policy registries, the config, the rules package and the docs."""
+"""Consistency tests between the rule and policy registries, the config, the rules package, the docs and TESTS.md."""
 
+import ast
 import dataclasses
 import re
 from pathlib import Path
@@ -51,3 +52,17 @@ def test_every_rule_reported_by_the_rules_package() -> None:
     source = "".join(path.read_text(encoding="utf-8") for path in (_ROOT / "src" / "linter" / "rules").glob("*.py"))
     missing = [rule for rule in RULES_REGISTRY if f'"{rule}"' not in source]
     assert not missing
+
+
+def test_every_test_function_listed_in_tests_md() -> None:
+    """TESTS.md has one row per test function of tests/linter, and no row for a missing one."""
+    tests_dir = _ROOT / "tests" / "linter"
+    functions = {
+        (path.relative_to(tests_dir).as_posix(), node.name)
+        for path in tests_dir.rglob("test_*.py")
+        for node in ast.parse(path.read_text(encoding="utf-8")).body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("test_")
+    }
+    rows = set(re.findall(r"^\| `([\w/]+\.py)` \| `(\w+)` \|", (_ROOT / "TESTS.md").read_text(encoding="utf-8"), flags=re.MULTILINE))
+    assert sorted(functions - rows) == []
+    assert sorted(rows - functions) == []

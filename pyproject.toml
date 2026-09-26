@@ -72,8 +72,8 @@ src = ["src/linter", "tests"]
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "D203",   # en conflit avec D211 (on garde D211 : blank-line-before-class)
-    "D213",   # en conflit avec D212 (on garde D212 : multi-line-summary-first-line)
+    "D203",   # conflicts with D211 (D211 kept: blank-line-before-class)
+    "D213",   # conflicts with D212 (D212 kept: multi-line-summary-first-line)
     "COM812", # missing-trailing-comma
     "CPY001", # missing copyright notice at top of file
 ]

@@ -1,5 +1,5 @@
 repos:
-  # ── Hooks génériques ─────────────────────────────────────────────────────────
+  # ── Generic hooks ────────────────────────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -61,7 +61,7 @@ repos:
         files: \.env(-example)?$
         groups: [local,github-src]
 
-  # ── Fichiers interdits ───────────────────────────────────────────────────────
+  # ── Forbidden files ──────────────────────────────────────────────────────────
   - repo: local
     hooks:
       - id: forbid-files
@@ -188,7 +188,7 @@ repos:
         files: ^tests/
         groups: [local,github-tests]
 
-  # ── Tests & qualite ──────────────────────────────────────────────────────────
+  # ── Tests & quality ──────────────────────────────────────────────────────────
   - repo: local
     hooks:
       - id: pytest-coverage-all-files

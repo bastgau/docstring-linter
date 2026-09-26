@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 589 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the test functions of the `docstring-linter` project, a parametrized test counting once. Each entry shows the test file, the function name, and a description of the case covered. `tests/linter/test_registries.py` checks that every test function has its row. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -544,8 +544,8 @@ This file lists the 589 tests of the `docstring-linter` project. Each entry show
 | `rules/test_rules_validate.py` | `test_empty_init_method_docstring_still_checked` | Empty __init__ with exclude_empty_init_method=True: an existing docstring is still checked. |
 | `rules/test_rules_validate.py` | `test_empty_init_module_excluded_when_configured` | Empty __init__.py with exclude_empty_init_module=True: no errors even with missing docstring. |
 | `rules/test_rules_validate.py` | `test_empty_init_module_not_excluded_when_flag_false` | Empty __init__.py with exclude_empty_init_module=False: docstring_exists is still checked. |
-| `rules/test_rules_validate.py` | `test_docstring_placeholder_ignored_when_configured` | Placeholder '...' with ignore_placeholder_docstrings=True: no errors. |
-| `rules/test_rules_validate.py` | `test_docstring_placeholder_error_when_not_ignored` | Placeholder '...' without ignore flag: returns docstring_exists error. |
+| `rules/test_rules_docstring.py` | `test_docstring_placeholder_ignored_when_configured` | Placeholder '...' with ignore_placeholder_docstrings=True: no errors. |
+| `rules/test_rules_docstring.py` | `test_docstring_placeholder_error_when_not_ignored` | Placeholder '...' without ignore flag: returns docstring_exists error. |
 | `rules/test_rules_validate.py` | `test_disabled_rule_not_checked` | When all rules are disabled: no error for missing docstring. |
 | `rules/test_rules_validate.py` | `test_imperative_mood_skipped_for_module` | Module node type: imperative_mood rule is not applied (plural nouns like 'Rules' are valid). |
 | `rules/test_rules_validate.py` | `test_method_node_type_triggers_function_rules` | METHOD node type: function-level rules like return_type_annotation are applied. |
@@ -842,6 +842,7 @@ This file lists the 589 tests of the `docstring-linter` project. Each entry show
 | `test_registries.py` | `test_every_policy_is_a_config_field` | Each policy of POLICIES_REGISTRY is a LinterConfig field holding a Policy. |
 | `test_registries.py` | `test_every_rule_and_policy_documented` | Each rule and policy has a heading of its own in the docs pages. |
 | `test_registries.py` | `test_every_rule_reported_by_the_rules_package` | Each rule identifier is written as a string literal in the rules package, where errors are made. |
+| `test_registries.py` | `test_every_test_function_listed_in_tests_md` | TESTS.md has one row per test function of tests/linter, and no row for a missing one. |
 
 ## test_models.py -- models
 
