@@ -47,6 +47,8 @@ Les règles, bien qu'elles re-découpent chacune le docstring (ARCH-03), ne pès
 
 Proposition : le `_BodyScanner` d'ARCH-01, qui collecte `raises` et `yields` en une passe et s'arrête aux portées imbriquées. Gain attendu : environ la moitié du temps d'extraction, soit 30 à 35 % du temps total [Déduit du profil, non mesuré].
 
+Mise à jour après le lot 3 [Vérifié] : le parcours unique élagué (`_scan_body`) est en place. Gain mesuré sur la stdlib, 3 exécutions alternées : 4,76 s en moyenne avant, 4,46 s après, soit environ 6 %, dans le bruit de mesure. L'estimation ci-dessus était fausse : le surcoût d'instrumentation de cProfile gonflait la part des appels `ast.iter_child_nodes`. La performance reste sans enjeu.
+
 ### PERF-02 - `workers = 1` par défaut [Vérifié] - Basse
 
 Le mode auto donne 2,4x sur 4 CPU pour la stdlib. Pour pre-commit (quelques fichiers), le séquentiel reste préférable à cause du coût de démarrage des process.

@@ -190,6 +190,8 @@ def process() -> None:
 
 Every parameter of the signature must be documented in the `Args:` section.
 
+The first parameter of a method (`self`, `cls`, `mcs`, whatever its name) is not documented, except on a `@staticmethod`. On a plain function, every parameter counts, including one named `self` or `cls`.
+
 ```toml
 [tool.docstring-linter]
 args_section = "required"

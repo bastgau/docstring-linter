@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 394 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 415 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -57,14 +57,15 @@ This file lists the 394 tests of the `docstring-linter` project. Each entry show
 
 | Fichier | Fonction | Description |
 |---|---|---|
-| `test_ast_parser.py` | `test_extract_args_no_args` | Only self in signature: returns empty list because self is always skipped. |
+| `test_ast_parser.py` | `test_extract_args_no_args` | Method with only self in its signature: returns empty list because the first parameter is skipped. |
 | `test_ast_parser.py` | `test_extract_args_positional_with_type_and_default` | Positional arg with type annotation and default value: all three fields are populated. |
 | `test_ast_parser.py` | `test_extract_args_positional_without_type` | Positional arg with no type annotation: type_annotation is None. |
 | `test_ast_parser.py` | `test_extract_args_positional_without_default` | Positional arg with no default value: default is None. |
 | `test_ast_parser.py` | `test_extract_args_keyword_only` | Keyword-only arg (after bare *): extracted with correct name and type. |
 | `test_ast_parser.py` | `test_extract_args_keyword_only_with_default` | Keyword-only arg with a default value: default is correctly extracted. |
-| `test_ast_parser.py` | `test_extract_args_skips_self_and_cls` | Both self and cls are always excluded from the result, regardless of position. |
-| `test_ast_parser.py` | `test_extract_args_skips_cls_in_kwonly` | Keyword-only arg named cls is excluded, just like in positional position. |
+| `test_ast_parser.py` | `test_extract_args_skips_first_param_whatever_its_name` | Method: the first positional parameter is dropped by position, not by name. |
+| `test_ast_parser.py` | `test_extract_args_keeps_self_and_cls_names_on_functions` | Plain function: parameters named self or cls are regular parameters. |
+| `test_ast_parser.py` | `test_extract_args_skips_only_the_first_param` | Method with a second parameter named cls: only the first parameter is dropped. |
 | `test_ast_parser.py` | `test_extract_args_mixed_positional_and_keyword_only` | Mix of positional and keyword-only args: both are returned in declaration order. |
 | `test_ast_parser.py` | `test_extract_args_vararg_and_kwarg` | *args and **kwargs are extracted with their stars in the name. |
 | `test_ast_parser.py` | `test_extract_args_vararg_without_annotation` | *args without annotation: type_annotation is None. |
@@ -73,7 +74,7 @@ This file lists the 394 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_extract_args_positional_only_default_alignment` | Defaults align by the end of posonlyargs + args combined. |
 | `test_ast_parser.py` | `test_extract_args_positional_only_with_default` | Positional-only arg with a default: default is correctly extracted. |
 
-### _extract_raises
+### _scan_body -- raises
 
 | Fichier | Fonction | Description |
 |---|---|---|
@@ -83,6 +84,12 @@ This file lists the 394 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_extract_raises_bare_raise_ignored` | Bare re-raise (raise with no argument): ignored because there is no exception type. |
 | `test_ast_parser.py` | `test_extract_raises_deduplicates` | Same exception raised twice: appears only once in the result list. |
 | `test_ast_parser.py` | `test_extract_raises_multiple_distinct` | Two different exceptions raised: both are present in the result. |
+| `test_ast_parser.py` | `test_scan_body_reraise_of_caught_name` | Raise err inside 'except ValueError as err': reported as ValueError, not as err. |
+| `test_ast_parser.py` | `test_scan_body_reraise_of_caught_tuple` | Raise err inside 'except (KeyError, mod.Error) as err': every caught type is reported. |
+| `test_ast_parser.py` | `test_scan_body_dotted_exception` | Raise errors.ValidationError(...): reported by its last name segment. |
+| `test_ast_parser.py` | `test_scan_body_lowercase_attribute_ignored` | Raise self.error: not an exception class name, ignored. |
+| `test_ast_parser.py` | `test_scan_body_nested_function_ignored` | Raise and yield inside a nested function or lambda: not attributed to the outer function. |
+| `test_ast_parser.py` | `test_scan_body_source_order` | Several raises: reported in source order, with the line of the first occurrence. |
 
 ### _is_empty_init
 
@@ -104,6 +111,7 @@ This file lists the 394 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_extract_class_attributes_skips_dunder` | Dunder assignments like __slots__ are not treated as attributes. |
 | `test_ast_parser.py` | `test_extract_class_attributes_skips_constants` | All-uppercase names (constants) are not treated as attributes. |
 | `test_ast_parser.py` | `test_extract_class_attributes_none` | Class with no attributes: returns empty list. |
+| `test_ast_parser.py` | `test_extract_class_attributes_ignores_nested_function` | self.x assigned inside a function nested in __init__: not a class attribute. |
 
 ### parse_file
 
@@ -117,6 +125,24 @@ This file lists the 394 tests of the `docstring-linter` project. Each entry show
 | `test_ast_parser.py` | `test_is_generator_with_yield` | Function with yield: is_generator is True. |
 | `test_ast_parser.py` | `test_is_generator_with_yield_from` | Function with yield from: is_generator is True. |
 | `test_ast_parser.py` | `test_is_generator_without_yield` | Function without yield: is_generator is False. |
+| `test_ast_parser.py` | `test_is_generator_nested_generator_not_propagated` | Function defining a nested generator: the outer function is not a generator. |
+| `test_ast_parser.py` | `test_parse_file_functions_under_compound_statements` | Functions defined under if, else, try, except, with and match: all extracted. |
+| `test_ast_parser.py` | `test_parse_file_method_under_if_in_class` | Method defined under an if inside a class body: extracted as a method of that class. |
+| `test_ast_parser.py` | `test_parse_file_skips_overload_stubs` | @overload and @typing.overload stubs: not extracted, the implementation is. |
+| `test_ast_parser.py` | `test_parse_file_staticmethod_keeps_first_param` | @staticmethod: the first parameter is a regular parameter, even when named self. |
+
+## test_end_to_end.py -- lint_file on real sources
+
+| Fichier | Fonction | Description |
+|---|---|---|
+| `test_end_to_end.py` | `test_nested_generator_does_not_make_outer_a_generator` | Function defining a nested generator: documented with Returns, no error. |
+| `test_end_to_end.py` | `test_reraise_of_caught_exception` | Raise err inside 'except ValueError as err': ValueError documented, no error. |
+| `test_end_to_end.py` | `test_dotted_exception` | Raise errors.ValidationError: documented by short or dotted name, no error. |
+| `test_end_to_end.py` | `test_undocumented_dotted_exception_reported` | Raise errors.ValidationError without Raises section: reported by raises_section. |
+| `test_end_to_end.py` | `test_function_under_if_is_linted` | Function defined under an if block: linted like a top-level function. |
+| `test_end_to_end.py` | `test_metaclass_first_parameter_not_required` | Metaclass __new__(mcs, ...): mcs is not required in Args. |
+| `test_end_to_end.py` | `test_staticmethod_first_parameter_required` | @staticmethod: the first parameter must be documented like any other. |
+| `test_end_to_end.py` | `test_overload_stubs_not_linted` | @overload stubs without docstring: only the documented implementation is linted. |
 
 ---
 

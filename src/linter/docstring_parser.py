@@ -64,7 +64,7 @@ class GoogleStyleParser(BaseDocstringParser):
     ARG_NO_TYPE_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*:\s*(.*)$")
     ARG_NO_COLON_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*\(([^)]+)\)\s*$")
     RETURN_PATTERN = re.compile(r"^\s{4}([^:]+?)\s*:\s*(.*)$")
-    RAISE_PATTERN = re.compile(r"^\s{4}(\w+)\s*:\s*(.*)$")
+    RAISE_PATTERN = re.compile(r"^\s{4}([\w.]+)\s*:\s*(.*)$")
 
     @property
     def style(self) -> DocstringStyle:

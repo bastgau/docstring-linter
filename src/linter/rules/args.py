@@ -362,7 +362,8 @@ def check_raises_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None,
     if policy is Policy.OPTIONAL:
         return []
 
-    documented = {r.exception_type for r in parsed_doc.raises}
+    # the code side already holds the last segment of a dotted name
+    documented = {r.exception_type.rsplit(".", 1)[-1] for r in parsed_doc.raises}
     return [make_error(entity, "raises_section", f"'{exc}' raised in code but not documented in 'Raises:'.") for exc in sorted({r.exception_type for r in entity.raises} - documented)]
 
 
@@ -384,6 +385,7 @@ def check_raises_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -
         return []
 
     code_raises = {r.exception_type for r in entity.raises}
-    errors = [make_error(entity, "raises_match", f"'{exc}' documented in 'Raises:' but not raised in code.") for exc in sorted({r.exception_type for r in parsed_doc.raises} - code_raises)]
+    never_raised = sorted({r.exception_type for r in parsed_doc.raises if r.exception_type.rsplit(".", 1)[-1] not in code_raises})
+    errors = [make_error(entity, "raises_match", f"'{exc}' documented in 'Raises:' but not raised in code.") for exc in never_raised]
     errors.extend(make_error(entity, "raises_match", f"'{doc_raise.exception_type}' missing description in 'Raises:'.") for doc_raise in parsed_doc.raises if not doc_raise.description)
     return errors
