@@ -74,7 +74,7 @@ One-line pitch + badges
 
 ### DOC-03 - Fichiers annexes périmés [Vérifié] - Moyenne
 
-**Statut : Partiel.** `TESTS.md` tenu à jour à chaque commit (565 tests), toujours maintenu à la main. Restent : `TODO.md` (items `RULES.md` et version périmés, rédigé en français), commentaires de section en français dans `.pre-commit-config.yaml`, `.vulture` périmé.
+**Statut : Partiel.** `TESTS.md` tenu à jour à chaque commit (572 tests), toujours maintenu à la main. Restent : `TODO.md` (items `RULES.md` et version périmés, rédigé en français), commentaires de section en français dans `.pre-commit-config.yaml`, `.vulture` périmé.
 
 - `TESTS.md` : "369 tests" contre 372 exécutés. 680 lignes maintenues à la main, redondantes avec les docstrings des tests (constat déjà noté dans `TODO.md`). Recommandation : le générer (`pytest --collect-only` + docstrings) ou le supprimer.
 - `TODO.md` :
@@ -105,7 +105,7 @@ Le README utilise `/docs/configuration.md`. Ces liens fonctionnent sur GitHub ma
 
 ### DOC-07 - Limitations non documentées [Vérifié] - Moyenne
 
-**Statut : Corrigé.** `8e448bb`. Section "Known limitations" du README : 9 points, revérifiés sur le code (fonctions imbriquées, `raise` indirects ou nus, attributs hors `__init__` ou en affectation multiple, alias de types, `@override`, ligne `def`, Google seul, pas de `# noqa` ni de baseline).
+**Statut : Corrigé.** `8e448bb`. Section "Known limitations" du README : 9 points, revérifiés sur le code (fonctions imbriquées, `raise` indirects, attributs hors `__init__`, alias de types, `@override`, ligne `def`, Google seul, pas de `# noqa` ni de baseline). Le `raise` nu dans un `except` typé et l'affectation multiple `self.a, self.b = ...` ont ensuite été corrigés (`1ce67fb`) et retirés de la liste.
 
 Non mentionnées nulle part :
 

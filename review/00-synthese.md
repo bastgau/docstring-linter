@@ -42,7 +42,7 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 
 ## Suivi des corrections
 
-État à la révision `8e448bb` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
+État à la révision `1ce67fb` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
 
 | Statut | Signification |
 |---|---|
@@ -62,10 +62,10 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | 06 - Packaging et CI (OPS) | 2 | 2 | 5 | 3 | 1 | 13 |
 | **Total** | **33** | **18** | **7** | **4** | **13** | **75** |
 
-Mesures sur la révision `89c4a28`, sans changement de code depuis [Vérifié] :
+Mesures sur la révision `1ce67fb` [Vérifié] :
 
-- Tests : 565 (372 à la revue), couverture branches 96 % (94,39 %).
-- `rich` 15.0.0 : 1 988 erreurs avec les défauts (`strict`), 758 avec `convention = "google"`, contre 2 410 à la revue. Les 100 fichiers restent signalés, notamment parce que 95 modules n'ont pas de docstring.
+- Tests : 572 (372 à la revue), couverture branches 96 % (94,39 %).
+- `rich` 15.0.0 : 1 990 erreurs avec les défauts (`strict`), 758 avec `convention = "google"`, contre 2 410 à la revue. Les 2 erreurs de plus depuis `89c4a28` sont deux `raise` nus réels, dans `console.py` et `live.py`. Les 100 fichiers restent signalés, notamment parce que 95 modules n'ont pas de docstring.
 - Les fichiers de reproduction de l'annexe du rapport 01 ne produisent plus que les erreurs attendues : avec `convention = "google"` et une ligne vide avant `"""`, il reste `hidden_in_if` (sans docstring) et `Child.run` (surcharge sans `@override`).
 
 Principaux points ouverts : `# noqa` (UX-01, ARCH-06), lot 0 (OPS-01 à OPS-03, matrice de versions), baseline (UX-03), publication PyPI (OPS-05).
