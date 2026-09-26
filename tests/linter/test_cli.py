@@ -4,11 +4,15 @@ import argparse
 import json
 import subprocess
 import sys
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from linter.cli import _resolve_workers, collect_python_files, lint_file, main, merge_cli_into_config, run  # pyright: ignore[reportPrivateUsage]
 from linter.config import ALWAYS_ON, RULES_CATEGORIES, RULES_REGISTRY, DocstringStyle, LinterConfig
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 _VALID_SOURCE = '''\
 """Module docstring."""
@@ -73,6 +77,31 @@ def test_collect_venv_excluded_by_literal_pattern(tmp_path: Path) -> None:
     venv.mkdir(parents=True)
     (venv / "foo.py").write_text("", encoding="utf-8")
     assert not collect_python_files([str(tmp_path)], [".venv"], tmp_path)
+
+
+def test_collect_literal_excluded_directory_not_walked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Directory named by a literal pattern: skipped during the walk, its content is never listed."""
+    (tmp_path / ".venv" / "lib").mkdir(parents=True)
+    (tmp_path / ".venv" / "lib" / "foo.py").write_text("", encoding="utf-8")
+    (tmp_path / "main.py").write_text("", encoding="utf-8")
+    walked: list[Path] = []
+    real_walk = Path.walk
+
+    def spy_walk(self: Path) -> Iterator[tuple[Path, list[str], list[str]]]:
+        for entry in real_walk(self):
+            walked.append(entry[0])
+            yield entry
+
+    monkeypatch.setattr(Path, "walk", spy_walk)
+    assert collect_python_files([str(tmp_path)], [".venv"], tmp_path) == [str(tmp_path / "main.py")]
+    assert walked == [tmp_path]
+
+
+def test_collect_directory_named_like_a_module(tmp_path: Path) -> None:
+    """Directory whose name ends with .py: walked into, never collected as a file."""
+    (tmp_path / "pkg.py").mkdir()
+    (tmp_path / "pkg.py" / "mod.py").write_text("", encoding="utf-8")
+    assert collect_python_files([str(tmp_path)], [], tmp_path) == [str(tmp_path / "pkg.py" / "mod.py")]
 
 
 def test_collect_pycache_excluded_by_literal_pattern(tmp_path: Path) -> None:

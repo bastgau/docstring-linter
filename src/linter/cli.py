@@ -32,6 +32,8 @@ def collect_python_files(paths: list[str], exclude_patterns: list[str], base_dir
 
     """
     files: list[str] = []
+    # a pattern without wildcard excludes that name at any depth: such directories are not walked at all
+    skipped_dirs = {pattern for pattern in exclude_patterns if "*" not in pattern and "?" not in pattern}
 
     for path_str in paths:
         path = Path(path_str)
@@ -39,7 +41,11 @@ def collect_python_files(paths: list[str], exclude_patterns: list[str], base_dir
             if not _is_excluded(path, exclude_patterns, base_dir):
                 files.append(str(path))
         elif path.is_dir():
-            files.extend(sorted(str(py_file) for py_file in path.rglob("*.py") if not _is_excluded(py_file, exclude_patterns, base_dir)))
+            found: list[Path] = []
+            for dirpath, dirnames, filenames in path.walk():
+                dirnames[:] = [name for name in dirnames if name not in skipped_dirs]
+                found.extend(dirpath / name for name in filenames if name.endswith(".py"))
+            files.extend(sorted(str(py_file) for py_file in found if not _is_excluded(py_file, exclude_patterns, base_dir)))
 
     return files
 

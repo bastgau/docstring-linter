@@ -1,6 +1,6 @@
 # Test Plan
 
-This file lists the 586 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
+This file lists the 588 tests of the `docstring-linter` project. Each entry shows the test file, the function name, and a description of the case covered. Tests are organized by tested module and by rule or feature.
 
 ## test_parser.py -- GoogleStyleParser
 
@@ -562,6 +562,8 @@ This file lists the 586 tests of the `docstring-linter` project. Each entry show
 | `test_cli.py` | `test_collect_excluded_file_skipped` | Single file matching exclusion pattern: not collected. |
 | `test_cli.py` | `test_collect_directory_recursive` | Directory with nested .py files: all collected. |
 | `test_cli.py` | `test_collect_venv_excluded_by_literal_pattern` | File inside a .venv directory: excluded by literal pattern matching path parts. |
+| `test_cli.py` | `test_collect_literal_excluded_directory_not_walked` | Directory named by a literal pattern: skipped during the walk, its content is never listed. |
+| `test_cli.py` | `test_collect_directory_named_like_a_module` | Directory whose name ends with .py: walked into, never collected as a file. |
 | `test_cli.py` | `test_collect_pycache_excluded_by_literal_pattern` | File inside __pycache__: excluded by literal pattern matching path parts. |
 | `test_cli.py` | `test_collect_recursive_glob_excluded` | Pattern tests/**: every file under tests/ is excluded, at any depth. |
 | `test_cli.py` | `test_collect_directory_glob_excluded` | Pattern src/gen/*.py: files directly under src/gen/ are excluded, others kept. |
