@@ -11,7 +11,7 @@
 | OPS-05 | Haute | Absent de PyPI malgré le job de publication | Reporté |
 | OPS-06 | Haute | Flux de release beta cassé, changelog beta incorrect | Écarté |
 | OPS-07 | Moyenne | Chaîne d'approvisionnement de la CI | Corrigé |
-| OPS-08 | Basse | Erreurs dans `.pre-commit-config.yaml` | Partiel |
+| OPS-08 | Basse | Erreurs dans `.pre-commit-config.yaml` | Corrigé |
 | OPS-09 | Basse | `pyrightconfig.json` lié au devcontainer | Écarté |
 | OPS-10 | Basse | Résidus de template dans `pyproject.toml` | Partiel |
 | OPS-11 | Moyenne | CI mono-version, mono-OS | Reporté |
@@ -135,7 +135,7 @@ Et pour le changelog beta, prendre le tag précédent quel qu'il soit : `git des
 
 ### OPS-08 - `.pre-commit-config.yaml` [Vérifié] - Basse
 
-**Statut : Partiel.** `651718b`. `groups: [local]` et `files: ^src/` corrigés. Les commentaires de section restent en français.
+**Statut : Corrigé.** `651718b` : `groups: [local]` et `files: ^src/`. `2ecc362` : commentaires de section en anglais.
 
 - Hook `mixed-line-ending` : `groups: [locals]` au lieu de `[local]`, il ne s'exécute donc jamais dans le groupe `local`.
 - Hook `pyright-src` : pas de filtre `files: ^src/`, contrairement aux autres hooks "src" ; il reçoit aussi les fichiers de `tests/` quand ils sont modifiés.

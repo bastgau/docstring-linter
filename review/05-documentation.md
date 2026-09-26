@@ -23,7 +23,7 @@ Points forts : la référence des règles est riche, avec des exemples "Bad / Go
 |---|---|---|---|
 | DOC-01 | Haute | README : pas d'installation, exemple de sortie faux | Corrigé |
 | DOC-02 | Moyenne | Support NumPy / Sphinx / PEP 257 annoncé dans le code | Corrigé |
-| DOC-03 | Moyenne | Fichiers annexes périmés, langues mélangées | Partiel |
+| DOC-03 | Moyenne | Fichiers annexes périmés, langues mélangées | Corrigé |
 | DOC-04 | Haute | Aucun positionnement ni comparaison | Corrigé |
 | DOC-05 | Moyenne | Pas de CHANGELOG, CONTRIBUTING, guide "ajouter une règle" | Reporté |
 | DOC-06 | Basse | Liens absolus `/docs/...` | Reporté |
@@ -74,7 +74,7 @@ One-line pitch + badges
 
 ### DOC-03 - Fichiers annexes périmés [Vérifié] - Moyenne
 
-**Statut : Partiel.** `TESTS.md` tenu à jour à chaque commit (589 tests), toujours maintenu à la main. `.vulture` supprimé (`183aa75`). Restent : `TODO.md` (items `RULES.md` et version périmés, rédigé en français), commentaires de section en français dans `.pre-commit-config.yaml`.
+**Statut : Corrigé.** `.vulture` supprimé (`183aa75`). `2ecc362` : `TODO.md` mis à jour (item `RULES.md` retiré, item version renvoyant à OPS-04) et traduit en anglais ; commentaires de `.pre-commit-config.yaml` et `pyproject.toml` en anglais ; `TESTS.md` reste manuel mais un test vérifie qu'il liste chaque fonction de test et aucune fonction absente [Vérifié : il a trouvé deux lignes attribuées au mauvais fichier, corrigées].
 
 - `TESTS.md` : "369 tests" contre 372 exécutés. 680 lignes maintenues à la main, redondantes avec les docstrings des tests (constat déjà noté dans `TODO.md`). Recommandation : le générer (`pytest --collect-only` + docstrings) ou le supprimer.
 - `TODO.md` :
