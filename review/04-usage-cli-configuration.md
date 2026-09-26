@@ -33,7 +33,7 @@ Scénario : un projet existant, documenté en Google style "classique", lance l'
 | UX-03 | Haute | Pas de baseline ni de mode "diff" | Reporté |
 | UX-04 | Haute | Portée non réglable (privé, dunder, overload, property, override) | Partiel |
 | UX-05 | Moyenne | Toutes les erreurs pointent la ligne `def` | Reporté |
-| UX-06 | Critique | Codes de sortie (voir BUG-01 à BUG-04) | Partiel |
+| UX-06 | Critique | Codes de sortie (voir BUG-01 à BUG-04) | Corrigé |
 | UX-07 | Moyenne | Sorties : couleurs forcées, pas de `--quiet`, `--statistics`, `--select` | Partiel |
 | UX-08 | Moyenne | Pas d'autofix | Reporté |
 | UX-09 | Moyenne | Chemins relatifs au répertoire courant, pas au fichier de config | Corrigé |
@@ -132,7 +132,7 @@ private_attributes = false
 
 ### UX-06 - Codes de sortie [Vérifié] - Critique
 
-**Statut : Partiel.** `b2fd640`. Codes 0, 1 et 2 en place et documentés dans le README (`a1fb08e`). Pas de code 3 (voir ARCH-08).
+**Statut : Corrigé.** `b2fd640` : codes 0, 1 et 2. `8a9e4b4` : code 3 pour une erreur interne (voir ARCH-08), priorité 3 > 2 > 1 > 0 ; tableau du README complété.
 
 Détail dans BUG-01 à BUG-04. Contrat proposé et à documenter :
 

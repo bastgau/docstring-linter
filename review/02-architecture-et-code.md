@@ -47,7 +47,7 @@ cli.main
 | ARCH-05 | Moyenne | Options énumérées à la main à 5 endroits | Partiel |
 | ARCH-06 | Haute | Always-on sans échappatoire | Reporté |
 | ARCH-07 | Moyenne | Modèle `CodeEntity` trop pauvre | Partiel |
-| ARCH-08 | Haute | `ValueError` comme fourre-tout au niveau fichier | Partiel |
+| ARCH-08 | Haute | `ValueError` comme fourre-tout au niveau fichier | Corrigé |
 | ARCH-09 | Basse | Code mort ou trompeur | Corrigé |
 | ARCH-10 | Moyenne | Tests unitaires qui contournent l'AST | Partiel |
 
@@ -226,7 +226,7 @@ Champs à ajouter : `decorators: list[str]`, `docstring_line: int | None`, `pare
 
 ### ARCH-08 - `ValueError` fourre-tout [Vérifié] - Haute
 
-**Statut : Partiel.** `b2fd640`. Configuration validée une fois dans `main()` ; au niveau fichier, seuls `SyntaxError`, `UnicodeDecodeError` et `OSError` sont attrapés. Pas de code 3 pour une erreur interne, qui remonte en traceback.
+**Statut : Corrigé.** `b2fd640` : configuration validée une fois dans `main()`, `SyntaxError`, `UnicodeDecodeError` et `OSError` en code 2. `8a9e4b4` : toute autre exception est attrapée fichier par fichier, nommée sur stderr avec sa trace, les autres fichiers sont analysés, code 3. Reproduit avant/après avec un fichier qui fait lever `RecursionError` à `ast.parse` parmi 61 : avant, run arrêté sans sortie, code 1, fichier non nommé ; après, 62 fichiers analysés, fichier nommé, code 3 [Vérifié].
 
 `_lint_file_safe` (`cli.py:127-143`) attrape `ValueError` en supposant une erreur de configuration. En pratique, elle couvre `UnicodeDecodeError`, le style non supporté et toute `ValueError` d'un bug interne, et les convertit en succès (BUG-01, BUG-02). Une exception d'un autre type (ex. `RecursionError` sur un fichier très imbriqué [Déduit]) arrête tout le run avec une traceback, y compris en mode parallèle via `future.result()`.
 
@@ -243,7 +243,7 @@ Proposition : erreurs de configuration validées une fois dans `main()` ; au niv
 
 ### ARCH-10 - Tests [Vérifié] - Moyenne
 
-**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 584 tests, couverture branches 96 %. Tests de cohérence des registres ajoutés (`6bfff7a`, voir ARCH-02). Restent : seuil de couverture à 85, pas de test de corpus.
+**Statut : Partiel.** `tests/linter/test_end_to_end.py` (34 tests passant par le vrai parsing AST) ; 585 tests, couverture branches 96 %. Tests de cohérence des registres ajoutés (`6bfff7a`, voir ARCH-02). Restent : seuil de couverture à 85, pas de test de corpus.
 
 État : 372 tests, 1,45 s, 94,39 % de couverture branches, seuil CI 85 %.
 
