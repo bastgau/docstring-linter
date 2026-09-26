@@ -27,7 +27,7 @@ Points forts : la référence des règles est riche, avec des exemples "Bad / Go
 | DOC-04 | Haute | Aucun positionnement ni comparaison | Corrigé |
 | DOC-05 | Moyenne | Pas de CHANGELOG, CONTRIBUTING, guide "ajouter une règle" | Non traité |
 | DOC-06 | Basse | Liens absolus `/docs/...` | Non traité |
-| DOC-07 | Moyenne | Limitations connues non documentées | Non traité |
+| DOC-07 | Moyenne | Limitations connues non documentées | Corrigé |
 | DOC-08 | Moyenne | Sémantique de `exclude` fausse dans la doc | Partiel |
 | DOC-09 | Basse | Descriptions internes incohérentes | Corrigé |
 | DOC-10 | Basse | Documentation non générée depuis les registres | Non traité |
@@ -105,7 +105,7 @@ Le README utilise `/docs/configuration.md`. Ces liens fonctionnent sur GitHub ma
 
 ### DOC-07 - Limitations non documentées [Vérifié] - Moyenne
 
-**Statut : Non traité.** La plupart des limitations listées sont corrigées (BUG-09 à BUG-15). Restent non documentées : fonctions imbriquées dans une fonction jamais analysées [Vérifié] et erreurs rapportées sur la ligne `def` (UX-05).
+**Statut : Corrigé.** `8e448bb`. Section "Known limitations" du README : 9 points, revérifiés sur le code (fonctions imbriquées, `raise` indirects ou nus, attributs hors `__init__` ou en affectation multiple, alias de types, `@override`, ligne `def`, Google seul, pas de `# noqa` ni de baseline).
 
 Non mentionnées nulle part :
 
