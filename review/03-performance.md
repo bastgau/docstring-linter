@@ -75,7 +75,7 @@ if workers <= 1 or len(files) < _PARALLEL_THRESHOLD:
 
 ### PERF-04 - Parcours des répertoires exclus [Vérifié] - Basse
 
-**Statut : Non traité.**
+**Statut : Corrigé.** `d6720e3`. Parcours par `Path.walk()` qui saute les dossiers nommés par un motif littéral ; les motifs à joker filtrent toujours fichier par fichier. Listes de fichiers identiques avant et après sur ce dépôt, `rich` et la stdlib [Vérifié]. Collecte de `.` sur ce dépôt : 72 ms avant, 4 ms après (même exécution). Au passage, un dossier nommé `x.py` n'est plus pris pour un fichier (il donnait "Cannot read" et le code 2). Décision : `.gitignore` non pris en compte.
 
 `collect_python_files` fait `rglob("*.py")` puis filtre (`cli.py:40`) : les répertoires exclus (`.venv`, `node_modules`, ...) sont quand même parcourus. Sur ce dépôt, `.venv` contient 933 fichiers `.py` et le surcoût mesuré est de 0,02 s (0,205 s pour `.` contre 0,180 s pour `src tests example`). Négligeable ici, sensible sur un monorepo.
 

@@ -42,7 +42,7 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 
 ## Suivi des corrections
 
-État à la révision `af5ca24` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
+État à la révision `d6720e3` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
 
 | Statut | Signification |
 |---|---|
@@ -56,15 +56,15 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 |---|---|---|---|---|---|---|
 | 01 - Bugs (BUG) | 23 | 0 | 0 | 0 | 0 | 23 |
 | 02 - Architecture (ARCH) | 2 | 7 | 1 | 0 | 0 | 10 |
-| 03 - Performance (PERF) | 2 | 1 | 0 | 0 | 3 | 6 |
+| 03 - Performance (PERF) | 3 | 1 | 0 | 0 | 2 | 6 |
 | 04 - Usage (UX) | 2 | 6 | 4 | 1 | 0 | 13 |
 | 05 - Documentation (DOC) | 5 | 2 | 1 | 1 | 1 | 10 |
 | 06 - Packaging et CI (OPS) | 2 | 2 | 6 | 3 | 0 | 13 |
-| **Total** | **36** | **18** | **12** | **5** | **4** | **75** |
+| **Total** | **37** | **18** | **12** | **5** | **3** | **75** |
 
-Mesures sur la révision `af5ca24` [Vérifié] :
+Mesures sur la révision `d6720e3` [Vérifié] :
 
-- Tests : 586 (372 à la revue), couverture branches 96 % (94,39 %).
+- Tests : 588 (372 à la revue), couverture branches 96 % (94,39 %).
 - `rich` 15.0.0 : 1 990 erreurs avec les défauts (`strict`), 758 avec `convention = "google"`, contre 2 410 à la revue. Les 2 erreurs de plus depuis `89c4a28` sont deux `raise` nus réels, dans `console.py` et `live.py`. Les 100 fichiers restent signalés, notamment parce que 95 modules n'ont pas de docstring.
 - Les fichiers de reproduction de l'annexe du rapport 01 ne produisent plus que les erreurs attendues : avec `convention = "google"` et une ligne vide avant `"""`, il reste `hidden_in_if` (sans docstring) et `Child.run` (surcharge sans `@override`).
 
