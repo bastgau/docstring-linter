@@ -170,7 +170,7 @@ def _check_args(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: 
     return errors
 
 
-def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-branches,too-many-statements
+def validate_entity(
     entity: CodeEntity,
     parsed_doc: ParsedDocstring | None,
     config: LinterConfig,
@@ -210,12 +210,33 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
             return []
         return [make_error(entity, "docstring_exists", f"Placeholder docstring: '{entity.docstring.strip()}'.")]
 
-    errors.extend(check_summary_exists(entity, parsed_doc))
+    errors.extend(_check_summary(entity, parsed_doc, config))
 
+    if entity.node_type in (NodeType.FUNCTION, NodeType.METHOD):
+        errors.extend(_check_function(entity, parsed_doc, config, init_in_class=init_in_class, is_getter=is_getter))
+
+    if entity.node_type == NodeType.CLASS:
+        errors.extend(_check_class(entity, parsed_doc, config))
+
+    errors.extend(_check_layout(entity, parsed_doc, config, is_getter=is_getter))
+    return errors
+
+
+def _check_summary(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig) -> list[LintError]:
+    """Run the rules on the summary, the description and the free sections.
+
+    Args:
+        entity (CodeEntity): Entity carrying a docstring.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+        config (LinterConfig): Linter configuration.
+
+    Returns:
+        list[LintError]: Errors found.
+
+    """
+    errors = check_summary_exists(entity, parsed_doc)
     errors.extend(check_summary_final_period(entity, parsed_doc, config.summary_final_period))
-
     errors.extend(check_description_section(entity, parsed_doc, config.description_section))
-
     errors.extend(check_named_section(entity, ("Examples", "Example"), config.examples_section, "examples_section"))
     errors.extend(check_named_section(entity, ("Note", "Notes"), config.notes_section, "notes_section"))
     errors.extend(check_named_section(entity, ("Todo",), config.todo_section, "todo_section"))
@@ -223,47 +244,99 @@ def validate_entity(  # noqa: C901, PLR0912, PLR0915 # pylint: disable=too-many-
     if config.is_rule_enabled("summary_too_long"):
         errors.extend(check_summary_too_long(entity, parsed_doc, config.summary_max_length))
 
-    if entity.node_type in (NodeType.FUNCTION, NodeType.METHOD):
-        if config.is_rule_enabled("return_type_annotation"):
-            errors.extend(check_return_type_annotation(entity))
+    return errors
 
-        if not init_in_class:
-            errors.extend(_check_args(entity, parsed_doc, config))
-        elif has_args_section(entity.docstring):
-            where = "must be documented in the class docstring, not in '__init__'" if config.init_args_location == "class" else "are documented both in the class docstring and in '__init__'"
-            errors.append(make_error(entity, "args_section", f"Parameters of __init__ {where}."))
 
-        # a property getter is documented like an attribute, without Returns section
-        if not is_getter:
-            errors.extend(check_returns_section(entity, parsed_doc, config.returns_section))
+def _check_function(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig, *, init_in_class: bool, is_getter: bool) -> list[LintError]:
+    """Run the rules comparing a function docstring with its signature and body.
 
-        if config.returns_section is not Policy.FORBIDDEN:
-            errors.extend(check_returns_match(entity, parsed_doc, config.returns_descriptions, config.documented_types, config.type_matching))
-            errors.extend(check_returns_none(entity, parsed_doc, config.returns_none))
-            errors.extend(check_init_returns_none(entity, parsed_doc, config.init_returns_none))
+    Args:
+        entity (CodeEntity): Function or method carrying a docstring.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+        config (LinterConfig): Linter configuration.
+        init_in_class (bool): Whether the parameters of this __init__ belong to the class docstring.
+        is_getter (bool): Whether the entity is a property getter documented like an attribute.
 
-        errors.extend(check_raises_section(entity, parsed_doc, config.raises_section))
+    Returns:
+        list[LintError]: Errors found.
 
-        if config.raises_section is not Policy.FORBIDDEN:
-            errors.extend(check_raises_match(entity, parsed_doc))
+    """
+    errors: list[LintError] = []
 
-            if config.is_rule_enabled("raises_extraneous"):
-                errors.extend(check_raises_extraneous(entity, parsed_doc))
+    if config.is_rule_enabled("return_type_annotation"):
+        errors.extend(check_return_type_annotation(entity))
 
-        errors.extend(check_yields_section(entity, parsed_doc, config.yields_section))
+    if not init_in_class:
+        errors.extend(_check_args(entity, parsed_doc, config))
+    elif has_args_section(entity.docstring or ""):
+        where = "must be documented in the class docstring, not in '__init__'" if config.init_args_location == "class" else "are documented both in the class docstring and in '__init__'"
+        errors.append(make_error(entity, "args_section", f"Parameters of __init__ {where}."))
 
-        if config.yields_section is not Policy.FORBIDDEN:
-            errors.extend(check_yields_match(entity, parsed_doc, config.returns_descriptions, config.documented_types))
+    # a property getter is documented like an attribute, without Returns section
+    if not is_getter:
+        errors.extend(check_returns_section(entity, parsed_doc, config.returns_section))
 
-    if entity.node_type == NodeType.CLASS:
-        # the parameters of __init__, when the class docstring documents them
-        if entity.init_args is not None and _init_args_expected_in_class(entity.docstring, config):
-            errors.extend(_check_args(replace(entity, args=entity.init_args), parsed_doc, config))
+    if config.returns_section is not Policy.FORBIDDEN:
+        errors.extend(check_returns_match(entity, parsed_doc, config.returns_descriptions, config.documented_types, config.type_matching))
+        errors.extend(check_returns_none(entity, parsed_doc, config.returns_none))
+        errors.extend(check_init_returns_none(entity, parsed_doc, config.init_returns_none))
 
-        errors.extend(check_attributes_section(entity, parsed_doc, config.attributes_section))
+    errors.extend(check_raises_section(entity, parsed_doc, config.raises_section))
 
-        if config.attributes_section is not Policy.FORBIDDEN:
-            errors.extend(check_attributes_match(entity, parsed_doc, config.documented_types))
+    if config.raises_section is not Policy.FORBIDDEN:
+        errors.extend(check_raises_match(entity, parsed_doc))
+
+        if config.is_rule_enabled("raises_extraneous"):
+            errors.extend(check_raises_extraneous(entity, parsed_doc))
+
+    errors.extend(check_yields_section(entity, parsed_doc, config.yields_section))
+
+    if config.yields_section is not Policy.FORBIDDEN:
+        errors.extend(check_yields_match(entity, parsed_doc, config.returns_descriptions, config.documented_types))
+
+    return errors
+
+
+def _check_class(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig) -> list[LintError]:
+    """Run the rules comparing a class docstring with its attributes and __init__.
+
+    Args:
+        entity (CodeEntity): Class carrying a docstring.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+        config (LinterConfig): Linter configuration.
+
+    Returns:
+        list[LintError]: Errors found.
+
+    """
+    errors: list[LintError] = []
+
+    # the parameters of __init__, when the class docstring documents them
+    if entity.init_args is not None and _init_args_expected_in_class(entity.docstring or "", config):
+        errors.extend(_check_args(replace(entity, args=entity.init_args), parsed_doc, config))
+
+    errors.extend(check_attributes_section(entity, parsed_doc, config.attributes_section))
+
+    if config.attributes_section is not Policy.FORBIDDEN:
+        errors.extend(check_attributes_match(entity, parsed_doc, config.documented_types))
+
+    return errors
+
+
+def _check_layout(entity: CodeEntity, parsed_doc: ParsedDocstring | None, config: LinterConfig, *, is_getter: bool) -> list[LintError]:
+    """Run the rules on section headers, spacing, indentation and summary placement.
+
+    Args:
+        entity (CodeEntity): Entity carrying a docstring.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+        config (LinterConfig): Linter configuration.
+        is_getter (bool): Whether the entity is a property getter, exempt from imperative_mood.
+
+    Returns:
+        list[LintError]: Errors found.
+
+    """
+    errors: list[LintError] = []
 
     if config.is_rule_enabled("indentation"):
         errors.extend(check_indentation(entity))
