@@ -13,7 +13,7 @@
 | OPS-07 | Moyenne | Chaîne d'approvisionnement de la CI | Corrigé |
 | OPS-08 | Basse | Erreurs dans `.pre-commit-config.yaml` | Corrigé |
 | OPS-09 | Basse | `pyrightconfig.json` lié au devcontainer | Écarté |
-| OPS-10 | Basse | Résidus de template dans `pyproject.toml` | Partiel |
+| OPS-10 | Basse | Résidus de template dans `pyproject.toml` | Corrigé |
 | OPS-11 | Moyenne | CI mono-version, mono-OS | Reporté |
 | OPS-12 | Basse | Le workflow `action.yml` teste `@main`, pas le commit courant | Corrigé |
 | OPS-13 | Basse | commitlint interdit corps et trailers | Écarté |
@@ -149,7 +149,7 @@ Et pour le changelog beta, prendre le tag précédent quel qu'il soit : `git des
 
 ### OPS-10 - Résidus dans `pyproject.toml` [Vérifié] - Basse
 
-**Statut : Partiel.** `651718b`. Sections sqlfluff supprimées. `line-length = 200` et les groupes `github-src`/`github-tests` sont conservés.
+**Statut : Corrigé.** Sections sqlfluff supprimées (`651718b`). Décisions : `line-length = 200` conservé ; groupes `github-src`/`github-tests` conservés, car Dependabot met à jour les trois groupes en un commit (vérifié sur `0957240`) et `uv lock` refuse deux versions différentes d'un même outil entre groupes (vérifié sur une copie).
 
 - `[tool.sqlfluff.core]` et `[tool.sqlfluff.indentation]` (dialecte `mariadb`) : sans rapport avec le projet.
 - `[tool.pylint.format] max-module-lines = 1100` et `line-length = 200` : choix assumé, mais 200 colonnes réduit la lisibilité en revue et masque BUG-14 dans les docstrings du projet.

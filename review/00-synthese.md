@@ -59,8 +59,8 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | 03 - Performance (PERF) | 3 | 0 | 0 | 3 | 0 | 6 |
 | 04 - Usage (UX) | 2 | 6 | 4 | 1 | 0 | 13 |
 | 05 - Documentation (DOC) | 7 | 0 | 2 | 1 | 0 | 10 |
-| 06 - Packaging et CI (OPS) | 3 | 1 | 6 | 3 | 0 | 13 |
-| **Total** | **41** | **13** | **13** | **8** | **0** | **75** |
+| 06 - Packaging et CI (OPS) | 4 | 0 | 6 | 3 | 0 | 13 |
+| **Total** | **42** | **12** | **13** | **8** | **0** | **75** |
 
 Mesures sur la révision `2ecc362` [Vérifié] :
 
