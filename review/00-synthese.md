@@ -48,7 +48,7 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 |---|---|
 | Corrigé | Proposition appliquée, revérifiée sur le code actuel. |
 | Partiel | Une partie appliquée ; le reste est détaillé sous le point. |
-| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version, baseline, PyPI). |
+| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version, baseline, PyPI, ligne des erreurs). |
 | Écarté | Décision de ne pas appliquer. |
 | Non traité | Pas encore discuté. |
 
@@ -57,10 +57,10 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | 01 - Bugs (BUG) | 23 | 0 | 0 | 0 | 0 | 23 |
 | 02 - Architecture (ARCH) | 1 | 7 | 1 | 0 | 1 | 10 |
 | 03 - Performance (PERF) | 1 | 1 | 0 | 0 | 4 | 6 |
-| 04 - Usage (UX) | 2 | 6 | 2 | 1 | 2 | 13 |
+| 04 - Usage (UX) | 2 | 6 | 3 | 1 | 1 | 13 |
 | 05 - Documentation (DOC) | 5 | 2 | 0 | 0 | 3 | 10 |
 | 06 - Packaging et CI (OPS) | 2 | 2 | 6 | 3 | 0 | 13 |
-| **Total** | **34** | **18** | **9** | **4** | **10** | **75** |
+| **Total** | **34** | **18** | **10** | **4** | **9** | **75** |
 
 Mesures sur la révision `23fc020` [Vérifié] :
 

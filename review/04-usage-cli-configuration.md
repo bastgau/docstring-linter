@@ -32,7 +32,7 @@ Scénario : un projet existant, documenté en Google style "classique", lance l'
 | UX-02 | Haute | Défauts très opinionnés, pas de preset | Corrigé |
 | UX-03 | Haute | Pas de baseline ni de mode "diff" | Reporté |
 | UX-04 | Haute | Portée non réglable (privé, dunder, overload, property, override) | Partiel |
-| UX-05 | Moyenne | Toutes les erreurs pointent la ligne `def` | Non traité |
+| UX-05 | Moyenne | Toutes les erreurs pointent la ligne `def` | Reporté |
 | UX-06 | Critique | Codes de sortie (voir BUG-01 à BUG-04) | Partiel |
 | UX-07 | Moyenne | Sorties : couleurs forcées, pas de `--quiet`, `--statistics`, `--select` | Partiel |
 | UX-08 | Moyenne | Pas d'autofix | Non traité |
@@ -126,7 +126,7 @@ private_attributes = false
 
 ### UX-05 - Ligne de l'erreur [Vérifié] - Moyenne
 
-**Statut : Non traité.**
+**Statut : Reporté.** Approche proposée : niveau intermédiaire (ligne précise pour les règles de mise en page et les entrées, en-tête de section ou guillemets ouvrants sinon, `docstring_exists` et `return_type_annotation` sur le `def`), un en-tête `traceback` par ligne distincte, `# noqa` lu sur la ligne `def`/`class`.
 
 `make_error` utilise `entity.line` (`rules/_base.py:36-55`) : toutes les erreurs d'une entité pointent la ligne `def`/`class`. Pour une annotation GitHub ou un saut d'éditeur, la ligne fautive dans le docstring serait plus utile (entrée `Args:` erronée, section mal ordonnée). Dépend d'ARCH-03 (modèle ligne à ligne) et d'ARCH-07 (`docstring_line`).
 
