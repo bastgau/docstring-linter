@@ -69,7 +69,7 @@ if workers <= 1 or len(files) < _PARALLEL_THRESHOLD:
 
 ### PERF-03 - Soumission fichier par fichier [Déduit] - Basse
 
-**Statut : Partiel.** `b2fd640`. `pool.map` avec `itertools.repeat(config)` remplace les `submit` par fichier ; pas de `chunksize`, donc la configuration est encore sérialisée pour chaque fichier [Déduit].
+**Statut : Écarté.** `pool.map` avec `itertools.repeat(config)` depuis `b2fd640`. Mesures [Vérifié] : config sérialisée de 1 571 octets ; sur la stdlib, `chunksize` de 4 à 16 donne 1,27 à 1,28 s contre 1,35 s, dans la variation d'une exécution à l'autre ; aucun gain sur `rich`.
 
 `pool.submit` par fichier (`cli.py:187`) sérialise `LinterConfig` pour chaque tâche et crée un futur par fichier. `pool.map(..., chunksize=16)` réduirait les échanges inter-process. Gain probablement marginal au regard de PERF-01.
 
