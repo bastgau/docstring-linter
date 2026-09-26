@@ -48,7 +48,7 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 |---|---|
 | Corrigé | Proposition appliquée, revérifiée sur le code actuel. |
 | Partiel | Une partie appliquée ; le reste est détaillé sous le point. |
-| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version, baseline, PyPI, ligne des erreurs, autofix, CHANGELOG et CONTRIBUTING). |
+| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version, baseline, PyPI, ligne des erreurs, autofix, CHANGELOG et CONTRIBUTING, liens du README). |
 | Écarté | Décision de ne pas appliquer. |
 | Non traité | Pas encore discuté. |
 
@@ -58,9 +58,9 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | 02 - Architecture (ARCH) | 2 | 7 | 1 | 0 | 0 | 10 |
 | 03 - Performance (PERF) | 3 | 1 | 0 | 2 | 0 | 6 |
 | 04 - Usage (UX) | 2 | 6 | 4 | 1 | 0 | 13 |
-| 05 - Documentation (DOC) | 5 | 2 | 1 | 1 | 1 | 10 |
+| 05 - Documentation (DOC) | 5 | 2 | 2 | 1 | 0 | 10 |
 | 06 - Packaging et CI (OPS) | 2 | 2 | 6 | 3 | 0 | 13 |
-| **Total** | **37** | **18** | **12** | **7** | **1** | **75** |
+| **Total** | **37** | **18** | **13** | **7** | **0** | **75** |
 
 Mesures sur la révision `0f8fdae` [Vérifié] :
 

@@ -26,7 +26,7 @@ Points forts : la référence des règles est riche, avec des exemples "Bad / Go
 | DOC-03 | Moyenne | Fichiers annexes périmés, langues mélangées | Partiel |
 | DOC-04 | Haute | Aucun positionnement ni comparaison | Corrigé |
 | DOC-05 | Moyenne | Pas de CHANGELOG, CONTRIBUTING, guide "ajouter une règle" | Reporté |
-| DOC-06 | Basse | Liens absolus `/docs/...` | Non traité |
+| DOC-06 | Basse | Liens absolus `/docs/...` | Reporté |
 | DOC-07 | Moyenne | Limitations connues non documentées | Corrigé |
 | DOC-08 | Moyenne | Sémantique de `exclude` fausse dans la doc | Partiel |
 | DOC-09 | Basse | Descriptions internes incohérentes | Corrigé |
@@ -99,7 +99,7 @@ Aucune mention de ruff, pydoclint, pydocstyle, darglint ou docsig. Un visiteur n
 
 ### DOC-06 - Liens absolus [Déduit] - Basse
 
-**Statut : Non traité.** Le README utilise toujours `/docs/...`.
+**Statut : Reporté.** À traiter avec la publication PyPI (OPS-05). 4 liens concernés (README lignes 175, 180 à 182). Option recommandée : URL complètes vers `blob/main/docs/...` ; la branche par défaut est `develop` [Vérifié], `main` ne reçoit que les releases.
 
 Le README utilise `/docs/configuration.md`. Ces liens fonctionnent sur GitHub mais seront cassés dans la description PyPI, qui reprend le README. Utiliser des URL complètes `https://github.com/bastgau/docstring-linter/blob/main/docs/...` ou des liens relatifs réécrits au build.
 
