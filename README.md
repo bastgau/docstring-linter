@@ -100,6 +100,7 @@ Command-line options always override configuration file values.
 | `0` | No error found. |
 | `1` | Lint errors found. |
 | `2` | Invalid configuration, missing path, or a file that could not be read or parsed. Details are printed on stderr. |
+| `3` | Internal error while linting a file. The file is named on stderr with the traceback, the other files are still linted. |
 
 ## Output formats
 

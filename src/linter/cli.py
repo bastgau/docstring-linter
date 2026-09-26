@@ -8,6 +8,7 @@ import argparse
 import itertools
 import os
 import sys
+import traceback
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -138,23 +139,27 @@ def merge_cli_into_config(config: LinterConfig, args: argparse.Namespace) -> Lin
     return config
 
 
-def _lint_file_safe(filepath: str, config: LinterConfig) -> tuple[list[LintError], str | None]:
-    """Lint a file, turning an unreadable or unparsable file into a failure message.
+def _lint_file_safe(filepath: str, config: LinterConfig) -> tuple[list[LintError], str | None, int]:
+    """Lint a file, turning any failure into a message so the run goes on.
 
     Args:
         filepath (str): Path to the Python file.
         config (LinterConfig): Linter configuration.
 
     Returns:
-        tuple[list[LintError], str | None]: Errors, and the failure message if the file could not be analysed.
+        tuple[list[LintError], str | None, int]: Errors, the failure message if the file could not be
+        analysed, and the exit code it calls for: 0, 2 for an unreadable or unparsable file, 3 for an internal error.
 
     """
     try:
-        return lint_file(filepath, config), None
+        return lint_file(filepath, config), None, 0
     except SyntaxError as e:
-        return [], f"Syntax error in {filepath}: {e}"
+        return [], f"Syntax error in {filepath}: {e}", 2
     except (UnicodeDecodeError, OSError) as e:
-        return [], f"Cannot read {filepath}: {e}"
+        return [], f"Cannot read {filepath}: {e}", 2
+    except Exception as e:  # noqa: BLE001 # pylint: disable=broad-exception-caught
+        # a bug of the linter, or a file Python cannot compile for another reason: name the file, keep the traceback
+        return [], f"Internal error while linting {filepath}: {type(e).__name__}: {e}\n{traceback.format_exc()}", 3
 
 
 # Below this many files, auto mode stays sequential: starting the processes costs more than it saves
@@ -214,7 +219,7 @@ def run(paths: list[str], config: LinterConfig, *, statistics: bool = False, for
         force_exclude (bool): Apply the exclusions to explicitly given files too.
 
     Returns:
-        int: Exit code -- 0 if no errors, 1 on lint errors, 2 if a path is missing or a file could not be analysed.
+        int: Exit code -- 0 if no errors, 1 on lint errors, 2 if a path is missing or a file could not be analysed, 3 on an internal error.
 
     """
     missing = [path for path in paths if not Path(path).exists()]
@@ -236,17 +241,16 @@ def run(paths: list[str], config: LinterConfig, *, statistics: bool = False, for
         with ProcessPoolExecutor(max_workers=workers) as pool:
             results = list(pool.map(_lint_file_safe, files, itertools.repeat(config)))
 
-    failures = [message for _, message in results if message]
-    for message in failures:
-        print(message, file=sys.stderr)
+    for _, message, _ in results:
+        if message:
+            print(message, file=sys.stderr)
 
-    all_errors = [error for errors, _ in results for error in errors]
+    all_errors = [error for errors, _, _ in results for error in errors]
 
     _report(all_errors, len(files), config.output_format, statistics=statistics)
 
-    if failures:
-        return 2
-    return 1 if all_errors else 0
+    # the most serious outcome wins: internal error 3, unreadable file 2, lint errors 1
+    return max([code for _, _, code in results] + [1 if all_errors else 0])
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:

@@ -588,6 +588,7 @@ This file lists the test functions of the `docstring-linter` project, a parametr
 | `test_cli.py` | `test_run_syntax_error_keeps_json_valid` | File with SyntaxError under --format json: stdout stays valid JSON, run returns 2. |
 | `test_cli.py` | `test_run_undecodable_file_returns_two` | File that is not valid UTF-8: reported as unreadable on stderr, run returns 2. |
 | `test_cli.py` | `test_run_failure_wins_over_lint_errors` | One unparsable file and one file with lint errors: run returns 2. |
+| `test_cli.py` | `test_run_internal_error_returns_three` | Unexpected exception on one file: file named with the traceback, other files still linted, run returns 3. |
 | `test_cli.py` | `test_run_missing_path_returns_two` | Path that does not exist: reported on stderr, run returns 2 without linting. |
 | `test_cli.py` | `test_resolve_workers_auto_is_the_default` | Default config: workers is 0, the auto mode. |
 | `test_cli.py` | `test_resolve_workers_auto_sequential_on_small_runs` | Auto mode below 50 files: sequential, the process pool would cost more than it saves. |

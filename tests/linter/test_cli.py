@@ -14,6 +14,8 @@ from linter.config import ALWAYS_ON, RULES_CATEGORIES, RULES_REGISTRY, LinterCon
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from linter.models import LintError
+
 _VALID_SOURCE = '''\
 """Module docstring."""
 
@@ -281,6 +283,31 @@ def test_run_failure_wins_over_lint_errors(tmp_path: Path) -> None:
     (tmp_path / "bad.py").write_text(_SYNTAX_ERROR_SOURCE, encoding="utf-8")
     (tmp_path / "errors.py").write_text('"""Module."""\n\ndef foo() -> int:\n    pass\n', encoding="utf-8")
     assert run([str(tmp_path)], LinterConfig()) == 2
+
+
+def test_run_internal_error_returns_three(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unexpected exception on one file: file named with the traceback, other files still linted, run returns 3."""
+    (tmp_path / "bad.py").write_text(_SYNTAX_ERROR_SOURCE, encoding="utf-8")
+    (tmp_path / "boom.py").write_text("", encoding="utf-8")
+    (tmp_path / "errors.py").write_text('"""Module."""\n\ndef foo() -> int:\n    pass\n', encoding="utf-8")
+    real_lint_file = lint_file
+
+    def failing_lint_file(filepath: str, config: LinterConfig) -> list[LintError]:
+        if filepath.endswith("boom.py"):
+            msg = "unexpected"
+            raise RuntimeError(msg)
+        return real_lint_file(filepath, config)
+
+    monkeypatch.setattr("linter.cli.lint_file", failing_lint_file)
+    config = LinterConfig()
+    config.workers = 1
+    config.output_format = "text"
+
+    assert run([str(tmp_path)], config) == 3
+    captured = capsys.readouterr()
+    assert f"Internal error while linting {tmp_path / 'boom.py'}: RuntimeError: unexpected" in captured.err
+    assert "Traceback (most recent call last):" in captured.err
+    assert "foo" in captured.out
 
 
 def test_run_missing_path_returns_two(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
