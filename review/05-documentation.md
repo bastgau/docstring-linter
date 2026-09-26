@@ -29,7 +29,7 @@ Points forts : la référence des règles est riche, avec des exemples "Bad / Go
 | DOC-06 | Basse | Liens absolus `/docs/...` | Non traité |
 | DOC-07 | Moyenne | Limitations connues non documentées | Non traité |
 | DOC-08 | Moyenne | Sémantique de `exclude` fausse dans la doc | Partiel |
-| DOC-09 | Basse | Descriptions internes incohérentes | Partiel |
+| DOC-09 | Basse | Descriptions internes incohérentes | Corrigé |
 | DOC-10 | Basse | Documentation non générée depuis les registres | Non traité |
 
 ### DOC-01 - README [Vérifié] - Haute
@@ -125,7 +125,7 @@ Tant que ces points ne sont pas corrigés, une section "Known limitations" évit
 
 ### DOC-09 - Descriptions internes [Vérifié] - Basse
 
-**Statut : Partiel.** Description de `section_order` (`acdcf43`) et commentaire sur `--select` (`89c4a28`) corrigés. L'input `format` d'`action.yml` omet toujours `traceback`.
+**Statut : Corrigé.** Description de `section_order` (`acdcf43`), commentaire sur `--select` (`89c4a28`), input `format` d'`action.yml` (`319326e`).
 
 - `RULES_REGISTRY["section_order"]` : "Args, Returns, Yields, Raises, Example(s), Note(s)" ; ordre réel : Attributes, Args, Returns, Yields, Raises, Example(s), Note(s), Todo. Cette chaîne est affichée par `--list-rules`.
 - Commentaire `config.py:138` : mentionne `--select`, flag inexistant.

@@ -42,7 +42,7 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 
 ## Suivi des corrections
 
-État à la révision `89c4a28` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
+État à la révision `319326e` de la branche `claude/project-comprehensive-review-qvro8c`. Le verdict, le tableau de bord et les priorités ci-dessous décrivent la révision `0957240` analysée ; chaque point des rapports 01 à 06 porte maintenant une ligne **Statut**.
 
 | Statut | Signification |
 |---|---|
@@ -57,18 +57,18 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 | 01 - Bugs (BUG) | 23 | 0 | 0 | 0 | 0 | 23 |
 | 02 - Architecture (ARCH) | 1 | 7 | 1 | 0 | 1 | 10 |
 | 03 - Performance (PERF) | 1 | 1 | 0 | 0 | 4 | 6 |
-| 04 - Usage (UX) | 1 | 5 | 1 | 1 | 5 | 13 |
-| 05 - Documentation (DOC) | 3 | 3 | 0 | 0 | 4 | 10 |
-| 06 - Packaging et CI (OPS) | 1 | 2 | 5 | 3 | 2 | 13 |
-| **Total** | **30** | **18** | **7** | **4** | **16** | **75** |
+| 04 - Usage (UX) | 1 | 6 | 1 | 1 | 4 | 13 |
+| 05 - Documentation (DOC) | 4 | 2 | 0 | 0 | 4 | 10 |
+| 06 - Packaging et CI (OPS) | 2 | 2 | 5 | 3 | 1 | 13 |
+| **Total** | **32** | **18** | **7** | **4** | **14** | **75** |
 
-Mesures sur la révision `89c4a28` [Vérifié] :
+Mesures sur la révision `89c4a28`, sans changement de code depuis [Vérifié] :
 
 - Tests : 565 (372 à la revue), couverture branches 96 % (94,39 %).
 - `rich` 15.0.0 : 1 988 erreurs avec les défauts (`strict`), 758 avec `convention = "google"`, contre 2 410 à la revue. Les 100 fichiers restent signalés, notamment parce que 95 modules n'ont pas de docstring.
 - Les fichiers de reproduction de l'annexe du rapport 01 ne produisent plus que les erreurs attendues : avec `convention = "google"` et une ligne vide avant `"""`, il reste `hidden_in_if` (sans docstring) et `Child.run` (surcharge sans `@override`).
 
-Principaux points ouverts : `# noqa` (UX-01, ARCH-06), lot 0 (OPS-01 à OPS-03, matrice de versions), baseline (UX-03), publication PyPI (OPS-05), durcissement de la GitHub Action (UX-11).
+Principaux points ouverts : `# noqa` (UX-01, ARCH-06), lot 0 (OPS-01 à OPS-03, matrice de versions), baseline (UX-03), publication PyPI (OPS-05).
 
 ## Verdict global
 

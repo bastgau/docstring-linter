@@ -38,7 +38,7 @@ Scénario : un projet existant, documenté en Google style "classique", lance l'
 | UX-08 | Moyenne | Pas d'autofix | Non traité |
 | UX-09 | Moyenne | Chemins relatifs au répertoire courant, pas au fichier de config | Non traité |
 | UX-10 | Haute | Hook pre-commit inutilisable sans Python 3.14 par défaut | Partiel |
-| UX-11 | Moyenne | GitHub Action : injection, build à chaque run, Python à fournir | Non traité |
+| UX-11 | Moyenne | GitHub Action : injection, build à chaque run, Python à fournir | Partiel |
 | UX-12 | Basse | Identifiants de politiques affichés comme des règles | Écarté |
 | UX-13 | Basse | Pas de `--version`, pas de `--explain` | Partiel |
 
@@ -187,7 +187,7 @@ Proposition : conserver `config_dir` dans `LinterConfig` et calculer les chemins
 
 ### UX-11 - GitHub Action [Vérifié] - Moyenne
 
-**Statut : Non traité.** `action.yml` interpole toujours les inputs dans le script shell.
+**Statut : Partiel.** `319326e`. Inputs passés par variables d'environnement, une tentative `src/; echo INJECTED` n'exécute plus rien [Vérifié en simulant l'étape] ; description de `format` complétée. Décisions : `pip install` des sources conservé jusqu'à PyPI, pas de `setup-python` intégré (effet de bord sur le job appelant).
 
 `action.yml` :
 

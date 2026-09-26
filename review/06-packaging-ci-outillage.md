@@ -15,7 +15,7 @@
 | OPS-09 | Basse | `pyrightconfig.json` lié au devcontainer | Écarté |
 | OPS-10 | Basse | Résidus de template dans `pyproject.toml` | Partiel |
 | OPS-11 | Moyenne | CI mono-version, mono-OS | Reporté |
-| OPS-12 | Basse | Le workflow `action.yml` teste `@main`, pas le commit courant | Non traité |
+| OPS-12 | Basse | Le workflow `action.yml` teste `@main`, pas le commit courant | Corrigé |
 | OPS-13 | Basse | commitlint interdit corps et trailers | Écarté |
 
 ### OPS-01 - Nom du paquet importable [Vérifié] - Critique
@@ -163,7 +163,7 @@ Une seule version Python (`vars.PYTHON_VERSION`), un seul OS (`ubuntu-latest`). 
 
 ### OPS-12 - Test de l'action [Vérifié] - Basse
 
-**Statut : Non traité.**
+**Statut : Corrigé.** `319326e`. Le workflow utilise `uses: ./` et teste donc le commit courant.
 
 `.github/workflows/action.yml` utilise `bastgau/docstring-linter@main`, donc la version déjà poussée sur `main`, pas le commit testé. `uses: ./` testerait le code de la PR ou du push courant.
 
