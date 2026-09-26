@@ -53,7 +53,7 @@ Mise à jour après le lot 3 [Vérifié] : le parcours unique élagué (`_scan_b
 
 ### PERF-02 - `workers = 1` par défaut [Vérifié] - Basse
 
-**Statut : Non traité.** `workers = 1` reste le défaut.
+**Statut : Corrigé.** `af5ca24`. Défaut `workers = 0` : un processus par CPU utilisable (`os.process_cpu_count()`), séquentiel en dessous de 50 fichiers ; une valeur explicite est gardée telle quelle. Mesures sur 4 CPU [Vérifié] : point d'équilibre entre 20 et 30 fichiers ; avec les nouveaux défauts, 5 fichiers en 0,12 s (inchangé), `rich` en 0,30 s au lieu de 0,46 s, stdlib en 1,8 à 2,0 s au lieu de 5,1 à 5,3 s.
 
 Le mode auto donne 2,4x sur 4 CPU pour la stdlib. Pour pre-commit (quelques fichiers), le séquentiel reste préférable à cause du coût de démarrage des process.
 
