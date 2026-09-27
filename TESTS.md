@@ -176,6 +176,13 @@ This file lists the test functions of the `docstring-linter` project, a parametr
 | `test_end_to_end.py` | `test_one_liners_sections_optional` | Same functions, sections_optional_on_one_liners on: no error. |
 | `test_end_to_end.py` | `test_one_liner_without_annotations_still_checked` | One-line docstring on a function missing an annotation: sections still required. |
 | `test_end_to_end.py` | `test_multi_line_docstring_still_checked` | Docstring with a description but no section: not a one-liner, sections still required. |
+| `test_end_to_end.py` | `test_ignore_comment_named_rules` | Ignore comment naming an always-on rule and a policy: both silenced, the other errors kept. |
+| `test_end_to_end.py` | `test_ignore_comment_without_rules` | Ignore comment without brackets: every error of the entity silenced. |
+| `test_end_to_end.py` | `test_ignore_comment_on_decorated_function` | Decorated function, comment on the def line: errors silenced. |
+| `test_end_to_end.py` | `test_ignore_comment_on_multi_line_signature` | Signature spread over several lines: the comment goes on the def line, not on the closing one. |
+| `test_end_to_end.py` | `test_ignore_comment_on_class` | Class without docstring, comment on the class line: its error silenced, its methods still checked. |
+| `test_end_to_end.py` | `test_ignore_comment_on_module_docstring` | Module docstring without final period, comment on its opening line: error silenced. |
+| `test_end_to_end.py` | `test_ignore_comment_inside_string_not_matched` | Ignore text inside a default value, not at the end of the line: errors kept. |
 
 ---
 
@@ -590,6 +597,7 @@ This file lists the test functions of the `docstring-linter` project, a parametr
 | `test_cli.py` | `test_run_failure_wins_over_lint_errors` | One unparsable file and one file with lint errors: run returns 2. |
 | `test_cli.py` | `test_run_internal_error_returns_three` | Unexpected exception on one file: file named with the traceback, other files still linted, run returns 3. |
 | `test_cli.py` | `test_run_missing_path_returns_two` | Path that does not exist: reported on stderr, run returns 2 without linting. |
+| `test_cli.py` | `test_run_unknown_rule_in_ignore_comment_returns_two` | Ignore comment naming an unknown rule: file and line on stderr, run returns 2. |
 | `test_cli.py` | `test_resolve_workers_auto_is_the_default` | Default config: workers is 0, the auto mode. |
 | `test_cli.py` | `test_resolve_workers_auto_sequential_on_small_runs` | Auto mode below 50 files: sequential, the process pool would cost more than it saves. |
 | `test_cli.py` | `test_resolve_workers_auto_uses_usable_cpus` | Auto mode from 50 files: one worker per CPU usable by the process. |

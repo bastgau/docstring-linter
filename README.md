@@ -102,6 +102,21 @@ Command-line options always override configuration file values.
 | `2` | Invalid configuration, missing path, or a file that could not be read or parsed. Details are printed on stderr. |
 | `3` | Internal error while linting a file. The file is named on stderr with the traceback, the other files are still linted. |
 
+### Suppressing errors
+
+A comment at the end of the `def` or `class` line silences errors of that function, method or class only. For a module, put it at the end of the opening line of the module docstring.
+
+```python
+def legacy_api(x):  # docstring-linter: ignore[args_match, returns_section]
+    ...
+
+
+def generated(x):  # docstring-linter: ignore
+    ...
+```
+
+The brackets take rule and policy names, always-on rules included; without brackets, every error of the entity is silenced. An unknown name is reported on stderr with its file and line, and the run exits with code 2. On a signature spread over several lines, the comment goes on the `def` line. `# noqa` is not recognized.
+
 ## Output formats
 
 Colors are only used when the output is a terminal, and never when the `NO_COLOR` environment variable is set to a non-empty value. The `Config:` line of the `traceback` and `text` formats goes to stderr, so a redirected report only holds the report.
@@ -237,7 +252,7 @@ prek install
 - `exclude_overridden` only recognizes `@override`, not a method overridden through inheritance.
 - Every error points to the `def` or `class` line, not to the docstring line at fault.
 - Google style only. The content of `Warn:` and `Warns:` sections is not checked.
-- No inline suppression (`# noqa`) or baseline yet.
+- No baseline yet.
 
 ## How it compares
 

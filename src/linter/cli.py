@@ -12,7 +12,7 @@ import traceback
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-from linter.ast_parser import parse_file
+from linter.ast_parser import IgnoreCommentError, parse_file
 from linter.config import ALWAYS_ON, CONVENTIONS, OPTIONS_REGISTRY, POLICIES_REGISTRY, RULES_CATEGORIES, RULES_REGISTRY, LinterConfig, load_config, path_matches
 from linter.docstring_parser import GoogleStyleParser
 from linter.models import LintError, NodeType
@@ -110,8 +110,9 @@ def lint_file(filepath: str, config: LinterConfig) -> list[LintError]:
         if entity.docstring:
             parsed_doc = parser.parse(entity.docstring)
 
-        entity_errors = validate_entity(entity, parsed_doc, config)
-        errors.extend(entity_errors)
+        if entity.ignore_all:
+            continue
+        errors.extend(error for error in validate_entity(entity, parsed_doc, config) if error.rule not in entity.ignored_rules)
 
     return errors
 
@@ -155,6 +156,8 @@ def _lint_file_safe(filepath: str, config: LinterConfig) -> tuple[list[LintError
         return lint_file(filepath, config), None, 0
     except SyntaxError as e:
         return [], f"Syntax error in {filepath}: {e}", 2
+    except IgnoreCommentError as e:
+        return [], str(e), 2
     except (UnicodeDecodeError, OSError) as e:
         return [], f"Cannot read {filepath}: {e}", 2
     except Exception as e:  # noqa: BLE001 # pylint: disable=broad-exception-caught

@@ -5,9 +5,11 @@ source files using the standard library ast module.
 """
 
 import ast
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeGuard
 
+from linter.config import POLICIES_REGISTRY, RULES_REGISTRY
 from linter.models import ArgInfo, CodeEntity, NodeType, RaiseInfo
 
 if TYPE_CHECKING:
@@ -18,6 +20,13 @@ _NESTED_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
 
 # Statements whose blocks belong to the enclosing module or class body
 _COMPOUND_STATEMENTS = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.With, ast.AsyncWith, ast.Try, ast.TryStar, ast.Match)
+
+# '# docstring-linter: ignore' or '# docstring-linter: ignore[rule, ...]' closing a def, class or module docstring line
+_IGNORE_COMMENT = re.compile(r"#\s*docstring-linter:\s*ignore(?:\[([^\]]*)\])?\s*$")
+
+
+class IgnoreCommentError(ValueError):
+    """Raised when an ignore comment names a rule that does not exist."""
 
 
 def parse_file(filepath: str) -> list[CodeEntity]:
@@ -49,7 +58,45 @@ def parse_file(filepath: str) -> list[CodeEntity]:
     )
 
     _walk_body(tree.body, filepath, entities, parent=None)
+
+    lines = source.splitlines()
+    # a module carries its comment on the opening line of its docstring, the others on their def or class line
+    module_line = tree.body[0].lineno if module_doc is not None else None
+    for entity in entities:
+        line = module_line if entity.node_type == NodeType.MODULE else entity.line
+        if line is not None:
+            _apply_ignore_comment(entity, lines[line - 1], line)
     return entities
+
+
+def _apply_ignore_comment(entity: CodeEntity, text: str, line: int) -> None:
+    """Record on an entity the rules silenced by the ignore comment of its line.
+
+    Args:
+        entity (CodeEntity): Entity the line belongs to.
+        text (str): Source line of the def, class or module docstring.
+        line (int): Line number, for the error message.
+
+    Returns:
+        None
+
+    Raises:
+        IgnoreCommentError: If the comment names an unknown rule.
+
+    """
+    match = _IGNORE_COMMENT.search(text)
+    if match is None:
+        return
+    if match.group(1) is None:
+        entity.ignore_all = True
+        return
+
+    names = frozenset(name.strip() for name in match.group(1).split(",") if name.strip())
+    unknown = sorted(names - set(RULES_REGISTRY) - set(POLICIES_REGISTRY))
+    if unknown:
+        msg = f"{entity.filepath}:{line}: unknown rule {', '.join(repr(name) for name in unknown)} in ignore comment."
+        raise IgnoreCommentError(msg)
+    entity.ignored_rules = names
 
 
 def _walk_body(

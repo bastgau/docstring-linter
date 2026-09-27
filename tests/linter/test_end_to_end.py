@@ -693,3 +693,75 @@ def test_multi_line_docstring_still_checked(tmp_path: Path) -> None:
     source = _ONE_LINERS.replace('"""Scale a width by a factor."""', '"""Scale a width by a factor.\n\n        Negative widths are rejected.\n\n        """')
     errors = _lint(tmp_path, source, _parse_toml_config({"sections_optional_on_one_liners": True}))
     assert ("scale", "args_section") in errors
+
+
+_CART = '''\
+    """Shopping cart helpers."""
+
+
+    def total(prices: list[float], discount: float = 0.0) -> float:
+        """Compute the total price.
+
+        Args:
+            prices (list[int]): Item prices.
+
+        """
+        if discount < 0:
+            raise ValueError(discount)
+        return sum(prices) * (1 - discount)
+    '''
+
+_CART_ERRORS = {("total", "args_section"), ("total", "args_match"), ("total", "returns_section"), ("total", "raises_section")}
+
+
+def test_ignore_comment_named_rules(tmp_path: Path) -> None:
+    """Ignore comment naming an always-on rule and a policy: both silenced, the other errors kept."""
+    assert set(_lint(tmp_path, _CART)) == _CART_ERRORS
+    source = _CART.replace("-> float:", "-> float:  # docstring-linter: ignore[args_match, returns_section]")
+    assert set(_lint(tmp_path, source)) == {("total", "args_section"), ("total", "raises_section")}
+
+
+def test_ignore_comment_without_rules(tmp_path: Path) -> None:
+    """Ignore comment without brackets: every error of the entity silenced."""
+    assert not _lint(tmp_path, _CART.replace("-> float:", "-> float:  # docstring-linter: ignore"))
+
+
+def test_ignore_comment_on_decorated_function(tmp_path: Path) -> None:
+    """Decorated function, comment on the def line: errors silenced."""
+    source = _CART.replace("    def total", "    @staticmethod\n    def total").replace("-> float:", "-> float:  # docstring-linter: ignore")
+    assert not _lint(tmp_path, source)
+
+
+def test_ignore_comment_on_multi_line_signature(tmp_path: Path) -> None:
+    """Signature spread over several lines: the comment goes on the def line, not on the closing one."""
+    split = _CART.replace("def total(prices", "def total(  # docstring-linter: ignore\n        prices")
+    assert not _lint(tmp_path, split)
+    closing = _CART.replace("def total(prices", "def total(\n        prices").replace("-> float:", "-> float:  # docstring-linter: ignore")
+    assert set(_lint(tmp_path, closing)) == _CART_ERRORS
+
+
+def test_ignore_comment_on_class(tmp_path: Path) -> None:
+    """Class without docstring, comment on the class line: its error silenced, its methods still checked."""
+    source = '''\
+        """Module."""
+
+
+        class Cart:  # docstring-linter: ignore[docstring_exists]
+            def clear(self) -> None:
+                pass
+        '''
+    assert _lint(tmp_path, source) == [("Cart.clear", "docstring_exists")]
+
+
+def test_ignore_comment_on_module_docstring(tmp_path: Path) -> None:
+    """Module docstring without final period, comment on its opening line: error silenced."""
+    source = _CART.replace('"""Shopping cart helpers."""', '"""Shopping cart helpers"""')
+    assert ("sample", "summary_final_period") in _lint(tmp_path, source)
+    ignored = source.replace('"""Shopping cart helpers"""', '"""Shopping cart helpers"""  # docstring-linter: ignore[summary_final_period]')
+    assert set(_lint(tmp_path, ignored)) == _CART_ERRORS
+
+
+def test_ignore_comment_inside_string_not_matched(tmp_path: Path) -> None:
+    """Ignore text inside a default value, not at the end of the line: errors kept."""
+    source = _CART.replace("discount: float = 0.0) -> float:", 'discount: str = "# docstring-linter: ignore") -> float:')
+    assert ("total", "returns_section") in _lint(tmp_path, source)

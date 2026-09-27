@@ -501,3 +501,11 @@ def test_main_statistics_rejected_with_json(tmp_path: Path, capsys: pytest.Captu
 
     assert exc.value.code == 2
     assert "--statistics is not available with the json format." in capsys.readouterr().err
+
+
+def test_run_unknown_rule_in_ignore_comment_returns_two(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Ignore comment naming an unknown rule: file and line on stderr, run returns 2."""
+    f = tmp_path / "typo.py"
+    f.write_text('"""Module."""\n\n\ndef foo() -> None:  # docstring-linter: ignore[args_mach]\n    pass\n', encoding="utf-8")
+    assert run([str(f)], LinterConfig()) == 2
+    assert f"{f}:4: unknown rule 'args_mach' in ignore comment." in capsys.readouterr().err
