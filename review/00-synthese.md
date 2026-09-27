@@ -84,16 +84,18 @@ En revanche, l'outil n'est pas encore prêt pour un usage hors du dépôt lui-m�
 
 ## Tableau de bord
 
-| Axe | Note /5 | Commentaire court |
-|---|---|---|
-| Qualité du code | 4 | Typage strict, lisible, docstrings cohérentes ; dispatcher de règles monolithique. |
-| Justesse des règles | 2 | Bonne logique de fond, mais extraction AST et comparaison de types trop naïves. |
-| Tests | 3,5 | 94 % de couverture, mais entités construites à la main : la couche AST est peu couverte par des cas réels. |
-| Performance | 4 | 0,41 s sur `rich` (2,4x plus rapide que pydoclint, 10x plus lent que ruff). Non bloquant. |
-| Usage / DX | 2 | Config stricte appréciable ; pas de noqa, pas de baseline, défauts très opinionnés, couleurs forcées. |
-| Documentation | 3 | Référence des règles détaillée ; README sans installation, exemple de sortie obsolète, fichiers annexes périmés. |
-| Packaging / CI | 2,5 | CI riche ; nom de paquet, bornes Python, build legacy, flux beta cassé. |
-| Positionnement | 2,5 | Niche réelle (style maison strict Google + mise en page), marché occupé par ruff et pydoclint. |
+Note à la revue : révision `0957240`. Note actuelle : révision `87b2f1d`, appréciation fondée sur les statuts des rapports 01 à 06 et les mesures du suivi.
+
+| Axe | Note à la revue /5 | Note actuelle /5 | Commentaire actuel |
+|---|---|---|---|
+| Qualité du code | 4 | 4,5 | Dispatcher découpé sans `noqa`, registres et documentation vérifiés par des tests, code mort et abstraction multi-style supprimés. |
+| Justesse des règles | 2 | 4 | 23 bugs corrigés ; sur `rich`, 758 erreurs en `google` contre 2 410, surtout de vrais défauts. Restent : fonctions imbriquées non analysées, surcharges sans `@override`, attributs privés exigés. |
+| Tests | 3,5 | 4,5 | 589 tests dont 34 de bout en bout et des tests de cohérence, couverture 96,25 %, seuil CI à 90 %, pytest et linters réellement exécutés sur les PR. Pas de test de corpus (décision). |
+| Performance | 4 | 4,5 | Workers automatiques et dossiers exclus non parcourus : stdlib de 5,1 s à 1,8 s, `rich` de 0,46 s à 0,30 s. |
+| Usage / DX | 2 | 3,5 | Convention `google`, codes de sortie 0 à 3, `--statistics`, `--force-exclude`, chemins relatifs à la config, couleurs maîtrisées. Manquent `# noqa`, baseline, `--fix` et la ligne précise des erreurs. |
+| Documentation | 3 | 4 | README réécrit (installation, sortie réelle, codes de sortie, limites connues, comparatif), pages de configuration à jour et vérifiées par des tests. Manquent CHANGELOG et CONTRIBUTING. |
+| Packaging / CI | 2,5 | 3 | CI durcie (actions épinglées, permissions minimales, empreinte de dotenv-linter, lint réel des PR). Restent le nom de paquet `linter`, le build backend, Python 3.14 seul, l'absence de PyPI et le flux beta. |
+| Positionnement | 2,5 | 3 | La convention `google` rapproche l'outil des usages courants et le README le situe face à ruff, pydoclint et docsig. Freins restants : absent de PyPI, pas de `# noqa` ni de baseline. |
 
 ## Priorités recommandées
 
