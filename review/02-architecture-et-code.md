@@ -45,7 +45,7 @@ cli.main
 | ARCH-03 | Moyenne | Docstring re-parsé par chaque règle de structure, 3 définitions d'un en-tête | Partiel |
 | ARCH-04 | Moyenne | Abstraction multi-style creuse | Corrigé |
 | ARCH-05 | Moyenne | Options énumérées à la main à 5 endroits | Corrigé |
-| ARCH-06 | Haute | Always-on sans échappatoire | Reporté |
+| ARCH-06 | Haute | Always-on sans échappatoire | Corrigé |
 | ARCH-07 | Moyenne | Modèle `CodeEntity` trop pauvre | Partiel |
 | ARCH-08 | Haute | `ValueError` comme fourre-tout au niveau fichier | Corrigé |
 | ARCH-09 | Basse | Code mort ou trompeur | Corrigé |
@@ -204,7 +204,7 @@ OPTIONS: dict[str, Option] = {
 
 ### ARCH-06 - Always-on sans échappatoire [Vérifié] - Haute
 
-**Statut : Reporté.** Lié à UX-01 (`# noqa`), reporté après vérification de l'affichage dans VS Code. Atténué : `raises_extraneous` sorti des règles always-on (`6f95960`), niveaux de `type_matching` (`735d616`).
+**Statut : Corrigé.** Option 1 retenue (`672ee78`, voir UX-01) : les règles always-on restent non désactivables dans la configuration, mais `# docstring-linter: ignore[rule]` les fait taire sur une entité. Atténué aussi : `raises_extraneous` sorti des règles always-on (`6f95960`), niveaux de `type_matching` (`735d616`).
 
 11 règles sont non désactivables (`config.py:142-156`) et `ignore` les refuse explicitement (`config.py:530-533`). Justification donnée : "requiring a section and then tolerating wrong content in it makes no sense" (`docs/always-on-rules.md`).
 

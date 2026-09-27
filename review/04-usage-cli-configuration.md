@@ -28,7 +28,7 @@ Scénario : un projet existant, documenté en Google style "classique", lance l'
 
 | ID | Gravité | Sujet | Statut |
 |---|---|---|---|
-| UX-01 | Critique | Aucune suppression inline | Reporté |
+| UX-01 | Critique | Aucune suppression inline | Corrigé |
 | UX-02 | Haute | Défauts très opinionnés, pas de preset | Corrigé |
 | UX-03 | Haute | Pas de baseline ni de mode "diff" | Reporté |
 | UX-04 | Haute | Portée non réglable (privé, dunder, overload, property, override) | Partiel |
@@ -44,7 +44,7 @@ Scénario : un projet existant, documenté en Google style "classique", lance l'
 
 ### UX-01 - Suppression inline [Vérifié] - Critique
 
-**Statut : Reporté.** Après vérification de l'affichage dans VS Code.
+**Statut : Corrigé.** `672ee78`. `# docstring-linter: ignore[rule, ...]` en fin de ligne `def` ou `class` (ligne d'ouverture du docstring pour un module) fait taire les règles et politiques nommées, always-on comprises ; sans crochets, toutes les erreurs de l'entité. Un nom inconnu donne une erreur avec fichier et ligne sur stderr et le code 2. `# noqa` n'est pas reconnu, pour ne pas s'afficher dans l'autocomplétion de VS Code. Le signalement des suppressions inutiles est reporté.
 
 Aucun mécanisme `# noqa` ou équivalent (`grep` sur `src/` : aucune lecture de commentaire). Combiné aux 11 règles always-on (ARCH-06), tout faux positif est bloquant.
 

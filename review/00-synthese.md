@@ -48,19 +48,19 @@ Gravité : **Critique** (résultat faux ou CI verte à tort), **Haute** (bloque 
 |---|---|
 | Corrigé | Proposition appliquée, revérifiée sur le code actuel. |
 | Partiel | Une partie appliquée ; le reste est détaillé sous le point. |
-| Reporté | Reporté explicitement (lot 0, `# noqa`, gestion de version, baseline, PyPI, ligne des erreurs, autofix, CHANGELOG et CONTRIBUTING, liens du README). |
+| Reporté | Reporté explicitement (lot 0, gestion de version, baseline, PyPI, ligne des erreurs, autofix, CHANGELOG et CONTRIBUTING, liens du README). |
 | Écarté | Décision de ne pas appliquer. |
 | Non traité | Pas encore discuté. |
 
 | Rapport | Corrigé | Partiel | Reporté | Écarté | Non traité | Total |
 |---|---|---|---|---|---|---|
 | 01 - Bugs (BUG) | 23 | 0 | 0 | 0 | 0 | 23 |
-| 02 - Architecture (ARCH) | 7 | 2 | 1 | 0 | 0 | 10 |
+| 02 - Architecture (ARCH) | 8 | 2 | 0 | 0 | 0 | 10 |
 | 03 - Performance (PERF) | 3 | 0 | 0 | 3 | 0 | 6 |
-| 04 - Usage (UX) | 3 | 5 | 4 | 1 | 0 | 13 |
+| 04 - Usage (UX) | 4 | 5 | 3 | 1 | 0 | 13 |
 | 05 - Documentation (DOC) | 7 | 0 | 2 | 1 | 0 | 10 |
 | 06 - Packaging et CI (OPS) | 4 | 0 | 6 | 3 | 0 | 13 |
-| **Total** | **47** | **7** | **13** | **8** | **0** | **75** |
+| **Total** | **49** | **7** | **11** | **8** | **0** | **75** |
 
 Mesures sur la révision `8bb902d` [Vérifié] :
 
@@ -68,7 +68,7 @@ Mesures sur la révision `8bb902d` [Vérifié] :
 - `rich` 15.0.0 : 1 990 erreurs avec les défauts (`strict`), 758 avec `convention = "google"`, contre 2 410 à la revue. Les 2 erreurs de plus depuis `89c4a28` sont deux `raise` nus réels, dans `console.py` et `live.py`. Les 100 fichiers restent signalés, notamment parce que 95 modules n'ont pas de docstring.
 - Les fichiers de reproduction de l'annexe du rapport 01 ne produisent plus que les erreurs attendues : avec `convention = "google"` et une ligne vide avant `"""`, il reste `hidden_in_if` (sans docstring) et `Child.run` (surcharge sans `@override`).
 
-Principaux points ouverts : `# noqa` (UX-01, ARCH-06), lot 0 (OPS-01 à OPS-03, matrice de versions), baseline (UX-03), publication PyPI (OPS-05).
+Principaux points ouverts : lot 0 (OPS-01 à OPS-03, matrice de versions), baseline (UX-03), publication PyPI (OPS-05).
 
 ## Verdict global
 
@@ -90,19 +90,19 @@ Note à la revue : révision `0957240`. Note actuelle : révision `87b2f1d`, app
 |---|---|---|---|
 | Qualité du code | 4 | 4,5 | Dispatcher découpé sans `noqa`, registres et documentation vérifiés par des tests, code mort et abstraction multi-style supprimés. |
 | Justesse des règles | 2 | 4 | 23 bugs corrigés ; sur `rich`, 758 erreurs en `google` contre 2 410, surtout de vrais défauts. Restent : fonctions imbriquées non analysées, surcharges sans `@override`, attributs privés exigés. |
-| Tests | 3,5 | 4,5 | 589 tests dont 34 de bout en bout et des tests de cohérence, couverture 96,25 %, seuil CI à 90 %, pytest et linters réellement exécutés sur les PR. Pas de test de corpus (décision). |
+| Tests | 3,5 | 4,5 | 597 tests dont 41 de bout en bout et des tests de cohérence, couverture 96,31 %, seuil CI à 90 %, pytest et linters réellement exécutés sur les PR. Pas de test de corpus (décision). |
 | Performance | 4 | 4,5 | Workers automatiques et dossiers exclus non parcourus : stdlib de 5,1 s à 1,8 s, `rich` de 0,46 s à 0,30 s. |
-| Usage / DX | 2 | 3,5 | Convention `google`, codes de sortie 0 à 3, `--statistics`, `--force-exclude`, chemins relatifs à la config, couleurs maîtrisées. Manquent `# noqa`, baseline, `--fix` et la ligne précise des erreurs. |
+| Usage / DX | 2 | 4 | Convention `google`, suppression par entité (`# docstring-linter: ignore[...]`), codes de sortie 0 à 3, `--statistics`, `--force-exclude`, chemins relatifs à la config, couleurs maîtrisées. Manquent baseline, `--fix` et la ligne précise des erreurs. |
 | Documentation | 3 | 4 | README réécrit (installation, sortie réelle, codes de sortie, limites connues, comparatif), pages de configuration à jour et vérifiées par des tests. Manquent CHANGELOG et CONTRIBUTING. |
 | Packaging / CI | 2,5 | 3 | CI durcie (actions épinglées, permissions minimales, empreinte de dotenv-linter, lint réel des PR). Restent le nom de paquet `linter`, le build backend, Python 3.14 seul, l'absence de PyPI et le flux beta. |
-| Positionnement | 2,5 | 3 | La convention `google` rapproche l'outil des usages courants et le README le situe face à ruff, pydoclint et docsig. Freins restants : absent de PyPI, pas de `# noqa` ni de baseline. |
+| Positionnement | 2,5 | 3 | La convention `google` rapproche l'outil des usages courants et le README le situe face à ruff, pydoclint et docsig. Freins restants : absent de PyPI, pas de baseline. |
 
 ## Priorités recommandées
 
 | Prio | ID | Action | Effort | Statut |
 |---|---|---|---|---|
 | P0 | BUG-01 à BUG-04 | Codes de sortie non nuls et messages sur stderr pour tout échec d'analyse ou de configuration | S | Corrigé |
-| P0 | UX-01 | Suppression inline `# noqa: rule` (ligne `def`/`class`) | M | Reporté |
+| P0 | UX-01 | Suppression inline `# docstring-linter: ignore[rule]` (ligne `def`/`class`) | M | Corrigé |
 | P0 | BUG-12, BUG-13 | Normaliser les types avant comparaison (`, optional`, guillemets, `Optional[X]`) | M | Corrigé |
 | P0 | BUG-08 à BUG-10, BUG-15, BUG-16 | Corriger l'extraction AST (portées imbriquées, `raise` de variable, noms pointés, blocs `if`/`try`, premier paramètre) | M | Corrigé |
 | P0 | BUG-14 | Corriger ou supprimer la règle `indentation` | S | Corrigé |
