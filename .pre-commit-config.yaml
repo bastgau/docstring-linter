@@ -1,5 +1,5 @@
 repos:
-  # ── Hooks génériques ─────────────────────────────────────────────────────────
+  # ── Generic hooks ────────────────────────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -17,7 +17,7 @@ repos:
       - id: mixed-line-ending
         args: ['--fix=lf']
         stages: [pre-commit]
-        groups: [locals]
+        groups: [local]
       - id: check-json
         stages: [pre-commit]
         groups: [local,github-src]
@@ -61,7 +61,7 @@ repos:
         files: \.env(-example)?$
         groups: [local,github-src]
 
-  # ── Fichiers interdits ───────────────────────────────────────────────────────
+  # ── Forbidden files ──────────────────────────────────────────────────────────
   - repo: local
     hooks:
       - id: forbid-files
@@ -131,6 +131,7 @@ repos:
         language: system
         stages: [pre-commit]
         types: [python]
+        files: ^src/
         groups: [local,github-src]
 
   # ── Docstring linters (src/) ──────────────────────────────────────────────────
@@ -187,7 +188,7 @@ repos:
         files: ^tests/
         groups: [local,github-tests]
 
-  # ── Tests & qualite ──────────────────────────────────────────────────────────
+  # ── Tests & quality ──────────────────────────────────────────────────────────
   - repo: local
     hooks:
       - id: pytest-coverage-all-files
@@ -201,7 +202,7 @@ repos:
 
       - id: vulture-all-files
         name: vulture-all-files
-        entry: uv run vulture tests/ src/ .vulture
+        entry: uv run vulture tests/ src/
         language: system
         stages: [pre-commit]
         pass_filenames: false

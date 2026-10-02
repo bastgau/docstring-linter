@@ -62,19 +62,18 @@ source = ["src"]
 
 [tool.coverage.report]
 omit = ["tests/*", "example/*"]
-fail_under = 85
+fail_under = 90
 
 [tool.ruff]
 target-version = "py314"
 line-length = 200
 src = ["src/linter", "tests"]
-exclude = [".vulture"]
 
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "D203",   # en conflit avec D211 (on garde D211 : blank-line-before-class)
-    "D213",   # en conflit avec D212 (on garde D212 : multi-line-summary-first-line)
+    "D203",   # conflicts with D211 (D211 kept: blank-line-before-class)
+    "D213",   # conflicts with D212 (D212 kept: multi-line-summary-first-line)
     "COM812", # missing-trailing-comma
     "CPY001", # missing copyright notice at top of file
 ]
@@ -143,14 +142,3 @@ github-tests = [
     "ruff==0.16.9",
     "vulture==2.16",
 ]
-
-[tool.sqlfluff.core]
-dialect = "mariadb"
-templater = "jinja"
-sql_file_exts = ".sql,.sql.j2,.dml,.ddl"
-max_line_length = 200
-
-[tool.sqlfluff.indentation]
-indented_joins = false
-indented_using_on = true
-template_blocks_indent = false

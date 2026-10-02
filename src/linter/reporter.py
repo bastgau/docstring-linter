@@ -1,10 +1,13 @@
 """Reporter for the docstring linter.
 
-Format lint results for CLI output with ANSI colors
+Format lint results for CLI output, with ANSI colors on a terminal,
 and JSON export for CI/CD integration.
 """
 
 import json
+import os
+import sys
+from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,8 +18,25 @@ if TYPE_CHECKING:
     from linter.models import LintError
 
 
+# ANSI codes only reach a terminal, and never when NO_COLOR holds a value (https://no-color.org)
+_USE_COLOR = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
+
+def _ansi(code: str) -> str:
+    """Return an ANSI escape sequence, or nothing when colors are off.
+
+    Args:
+        code (str): SGR parameter, such as '91' for red.
+
+    Returns:
+        str: The escape sequence, or an empty string.
+
+    """
+    return f"\033[{code}m" if _USE_COLOR else ""
+
+
 class Colors:
-    """Define ANSI color codes for terminal output.
+    """Define ANSI color codes for terminal output, empty when colors are off.
 
     Attributes:
         RED (str): Red color code.
@@ -31,15 +51,74 @@ class Colors:
 
     """
 
-    RED = "\033[91m"
-    YELLOW = "\033[93m"
-    GREEN = "\033[92m"
-    CYAN = "\033[96m"
-    BLUE = "\033[94m"
-    WHITE = "\033[97m"
-    BOLD = "\033[1m"
-    DIM = "\033[2m"
-    RESET = "\033[0m"
+    RED = _ansi("91")
+    YELLOW = _ansi("93")
+    GREEN = _ansi("92")
+    CYAN = _ansi("96")
+    BLUE = _ansi("94")
+    WHITE = _ansi("97")
+    BOLD = _ansi("1")
+    DIM = _ansi("2")
+    RESET = _ansi("0")
+
+
+def _files(count: int) -> str:
+    """Return a file count with the matching singular or plural noun.
+
+    Args:
+        count (int): Number of files.
+
+    Returns:
+        str: '1 file' or 'N files'.
+
+    """
+    return f"{count} file" if count == 1 else f"{count} files"
+
+
+def _escape_data(text: str) -> str:
+    """Escape the message of a GitHub workflow command, as @actions/core does.
+
+    Args:
+        text (str): Message text.
+
+    Returns:
+        str: Text with %, carriage returns and line feeds percent-encoded.
+
+    """
+    return text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def _escape_property(text: str) -> str:
+    """Escape a property value of a GitHub workflow command, as @actions/core does.
+
+    Args:
+        text (str): Property value, such as a file path.
+
+    Returns:
+        str: Text escaped like a message, plus colons and commas.
+
+    """
+    return _escape_data(text).replace(":", "%3A").replace(",", "%2C")
+
+
+def _print_summary(errors: list[LintError], files_checked: int) -> None:
+    """Print the closing line of a report with errors.
+
+    Args:
+        errors (list[LintError]): Lint errors found, at least one.
+        files_checked (int): Total number of files checked.
+
+    Returns:
+        None
+
+    """
+    file_count = len({e.filepath for e in errors})
+    error_count = len(errors)
+    print(
+        f"{Colors.RED}{Colors.BOLD}✗ {error_count} error{'s' if error_count > 1 else ''}{Colors.RESET} "
+        f"{Colors.DIM}in {file_count} file{'s' if file_count > 1 else ''} "
+        f"({_files(files_checked)} checked).{Colors.RESET}\n"
+    )
 
 
 def report_cli(errors: list[LintError], files_checked: int) -> None:
@@ -54,7 +133,7 @@ def report_cli(errors: list[LintError], files_checked: int) -> None:
 
     """
     if not errors:
-        print(f"{files_checked} files checked, 0 errors.")
+        print(f"{_files(files_checked)} checked, 0 errors.")
         return
 
     by_file: dict[str, list[LintError]] = {}
@@ -68,13 +147,7 @@ def report_cli(errors: list[LintError], files_checked: int) -> None:
             print(f"  {Colors.DIM}L{error.line:<4}{Colors.RESET} {Colors.CYAN}{error.entity_name}{Colors.RESET} {Colors.RED}[{error.rule}]{Colors.RESET} {error.message}")
         print()
 
-    file_count = len(by_file)
-    error_count = len(errors)
-    print(
-        f"{Colors.RED}{Colors.BOLD}✗ {error_count} error{'s' if error_count > 1 else ''}{Colors.RESET} "
-        f"{Colors.DIM}in {file_count} file{'s' if file_count > 1 else ''} "
-        f"({files_checked} files checked).{Colors.RESET}\n"
-    )
+    _print_summary(errors, files_checked)
 
 
 def report_traceback(errors: list[LintError], files_checked: int) -> None:
@@ -92,7 +165,7 @@ def report_traceback(errors: list[LintError], files_checked: int) -> None:
 
     """
     if not errors:
-        print(f"{files_checked} files checked, 0 errors.")
+        print(f"{_files(files_checked)} checked, 0 errors.")
         return
 
     by_entity: dict[tuple[str, int, str], list[LintError]] = {}
@@ -107,13 +180,32 @@ def report_traceback(errors: list[LintError], files_checked: int) -> None:
             print(f"    {Colors.RED}[{error.rule}]{Colors.RESET} {error.message}")
         print()
 
-    file_count = len({e.filepath for e in errors})
-    error_count = len(errors)
-    print(
-        f"{Colors.RED}{Colors.BOLD}✗ {error_count} error{'s' if error_count > 1 else ''}{Colors.RESET} "
-        f"{Colors.DIM}in {file_count} file{'s' if file_count > 1 else ''} "
-        f"({files_checked} files checked).{Colors.RESET}\n"
-    )
+    _print_summary(errors, files_checked)
+
+
+def report_statistics(errors: list[LintError], files_checked: int) -> None:
+    """Print the number of errors per rule, most frequent first.
+
+    Args:
+        errors (list[LintError]): List of lint errors to count.
+        files_checked (int): Total number of files checked.
+
+    Returns:
+        None
+
+    """
+    if not errors:
+        print(f"{_files(files_checked)} checked, 0 errors.")
+        return
+
+    counts = Counter(error.rule for error in errors)
+    width = len(str(max(counts.values())))
+    print()
+    for rule, count in sorted(counts.items(), key=lambda item: (-item[1], item[0])):
+        print(f"  {count:>{width}}  {Colors.RED}{rule}{Colors.RESET}")
+    print()
+
+    _print_summary(errors, files_checked)
 
 
 def report_json(errors: list[LintError], files_checked: int) -> None:
@@ -160,14 +252,14 @@ def report_github_annotations(errors: list[LintError], files_checked: int) -> No
 
     """
     for e in sorted(errors, key=lambda e: (e.filepath, e.line)):
-        print(f"::error file={e.filepath},line={e.line},title={e.rule}::{e.message}")
+        print(f"::error file={_escape_property(e.filepath)},line={e.line},title={_escape_property(e.rule)}::{_escape_data(e.message)}")
 
     error_count = len(errors)
     file_count = len({e.filepath for e in errors})
     if error_count == 0:
-        print(f"{files_checked} files checked, 0 errors.")
+        print(f"{_files(files_checked)} checked, 0 errors.")
     else:
-        print(f"{error_count} error{'s' if error_count > 1 else ''} in {file_count} file{'s' if file_count > 1 else ''} ({files_checked} files checked).")
+        print(f"{error_count} error{'s' if error_count > 1 else ''} in {file_count} file{'s' if file_count > 1 else ''} ({_files(files_checked)} checked).")
 
 
 def report_policies(registry: dict[str, str], values: dict[str, str]) -> None:
@@ -236,17 +328,36 @@ def report_overrides(overrides: list[ConfigOverride], base: dict[str, str]) -> N
         print()
 
 
+def _print_always_on(rules: list[str], registry: dict[str, str]) -> None:
+    """Print the rules that cannot be disabled, after the configurable ones.
+
+    Args:
+        rules (list[str]): Always-on rule identifiers, in category order.
+        registry (dict[str, str]): Rule identifier to description.
+
+    Returns:
+        None
+
+    """
+    if not rules:
+        return
+    print(f"  {Colors.BOLD}{Colors.CYAN}Always on{Colors.RESET}  {Colors.DIM}cannot be disabled{Colors.RESET}")
+    for rule in rules:
+        print(f"    {Colors.GREEN}✔{Colors.RESET} {Colors.BOLD}{rule:<35}{Colors.RESET} {Colors.DIM}{registry[rule]}{Colors.RESET}")
+    print()
+
+
 def report_rules(categories: dict[str, list[str]], registry: dict[str, str], off_by_default: frozenset[str], always_on: frozenset[str], enabled: frozenset[str]) -> None:
     """Print the configurable rules grouped by category, with their enabled status.
 
-    Rules that cannot be disabled are omitted: nothing can be done about them
-    from the configuration file.
+    Rules that cannot be disabled follow in a section of their own, since they
+    show up in the reports as well.
 
     Args:
         categories (dict[str, list[str]]): Category name to rule identifiers.
         registry (dict[str, str]): Rule identifier to description.
-        off_by_default (frozenset[str]): Rules disabled by default.
-        always_on (frozenset[str]): Rules that cannot be disabled, hidden from the listing.
+        off_by_default (frozenset[str]): Rules the active convention disables by default.
+        always_on (frozenset[str]): Rules that cannot be disabled, listed after the categories.
         enabled (frozenset[str]): Rules enabled in the current config.
 
     Returns:
@@ -268,3 +379,5 @@ def report_rules(categories: dict[str, list[str]], registry: dict[str, str], off
             name_style = Colors.BOLD if is_enabled else Colors.DIM
             print(f"    {status} {name_style}{rule:<35}{Colors.RESET} {Colors.DIM}{registry[rule]}{Colors.RESET}{opt_in}")
         print()
+
+    _print_always_on([rule for rules in categories.values() for rule in rules if rule in always_on], registry)

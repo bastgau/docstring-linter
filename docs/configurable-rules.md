@@ -10,7 +10,9 @@ These rules can be enabled or disabled through `select` and `ignore`.   For styl
 
 Every entity (module, class, function, method) must have a docstring.
 
-Subject to the configured scope (`modules`, `classes`, `functions`, `methods`) and the two empty `__init__` exemptions.
+Subject to the configured scope (`modules`, `classes`, `functions`, `methods`) and to the exemption options: `exclude_empty_init_method`, `exclude_empty_init_module`, `exclude_dunder_methods`, `exclude_private`, `exclude_overridden`. An exempted entity that does have a docstring is still checked.
+
+Functions and classes defined inside `if`, `try`, `with`, `for`, `while` or `match` blocks, at module or class level, are checked like the others. Functions nested inside another function are not checked, code under `if __name__ == "__main__":` is skipped, and `@overload` stubs are skipped: only the implementation needs a docstring.
 
 ```python
 # Bad
@@ -75,9 +77,9 @@ def access_db() -> None:
     """Access the database."""
 ```
 
-Words not treated as third-person singular verbs: `process`, `access`, `class`, `status`, `focus`, `alias`, `analysis`, `basis`, etc.
+The first word is reported only when the base form derived from it is a known English verb (`Returns` -> `Return`, `Copies` -> `Copy`, `Does` -> `Do`). Plural nouns and other words ending in `s` pass: `Options`, `Classes`, `Status`, `Canvas`.
 
-Not applied to module docstrings.
+Applied to functions and methods only, not to module and class docstrings.
 
 ---
 
@@ -103,6 +105,32 @@ summary_max_length = 72
 ```
 
 ### Args / Returns / Raises
+
+#### raises_extraneous
+
+Every exception listed in `Raises:` must be raised explicitly in the body. An exception propagated from a called function is invisible to the linter: a project that documents those turns this rule off, which the `google` convention does.
+
+```python
+# Bad: TypeError documented but never raised
+def validate(x: int) -> int:
+    """Validate input.
+
+    Args:
+        x (int): Input.
+
+    Returns:
+        int: Validated input.
+
+    Raises:
+        TypeError: Never actually raised.
+
+    """
+    return x
+```
+
+Only capitalized class names count as raised: `raise ValueError`, `raise errors.ValidationError(...)`, and `raise err` inside `except ValueError as err` or a bare `raise` inside `except ValueError`. A dotted name in the docstring is compared on its last segment.
+
+---
 
 #### args_order
 
@@ -134,17 +162,25 @@ def process(x: int, y: str) -> None:
 
 #### indentation
 
-Docstring indentation must be consistent. Nested indentation beyond a section entry is not allowed.
+The content of a section must sit under its header: every line indented by 4 spaces or more, and the first entry of `Args:`, `Attributes:` and `Raises:` by exactly 4. A description continued on deeper lines is fine. Lines outside sections are not checked, so a description may hold indented code or lists. One error is reported per misindented section.
 
 ```python
-# Bad: inconsistent indentation (3+ levels)
-def process() -> None:
+# Bad: section content indented by 2 spaces
+def process(x: int) -> None:
     """Process data.
 
     Args:
-        x (int): Input.
-            Extra indent.
-                Even more indent.
+      x (int): Input.
+
+    """
+
+# Good: continuation lines may go deeper
+def process(x: int) -> None:
+    """Process data.
+
+    Args:
+        x (int): Input, described on
+            several lines.
 
     """
 
@@ -193,7 +229,29 @@ def process(x: int) -> int:
     """
 ```
 
-Recognized sections: `Args`, `Returns`, `Yields`, `Raises`, `Attributes`, `Example`, `Examples`, `Note`, `Notes`, `Todo`.
+Every recognized section is covered, Napoleon ones included: see the list under [unknown_section](#unknown_section).
+
+---
+
+#### section_alias
+
+A Napoleon alias is accepted and its content checked as the canonical section, but the header must use the canonical spelling.
+
+```python
+# Bad: 'Parameters:' should be written 'Args:'
+def process(x: int) -> int:
+    """Process data.
+
+    Parameters:
+        x (int): Input.
+
+    Returns:
+        int: Result.
+
+    """
+```
+
+Turn it off with `ignore = ["section_alias"]` to accept `Arguments:`, `Parameters:` and the other aliases as they are.
 
 ---
 
@@ -201,7 +259,9 @@ Recognized sections: `Args`, `Returns`, `Yields`, `Raises`, `Attributes`, `Examp
 
 Sections must appear in the expected order.
 
-Expected order: `Attributes` -> `Args` -> `Returns` -> `Yields` -> `Raises` -> `Example`/`Examples` -> `Note`/`Notes` -> `Todo`
+Expected order: `Attributes` -> `Args` -> `Keyword Args` -> `Other Parameters` -> `Returns` -> `Yields` -> `Raises` -> `Examples` -> `Note`/`Notes` -> `Todo`
+
+An alias takes the place of its canonical section (`Parameters` sits where `Args` does). Free-text sections such as `Warning` or `See Also` may appear anywhere.
 
 ```python
 # Bad: Returns before Args
@@ -236,16 +296,28 @@ def process(x: int) -> int:
 
 #### unknown_section
 
-A section name that is not in the recognized list triggers an error. Common mistake: `Arguments:` instead of `Args:`.
+A single capitalized word followed by a colon, alone on its line, that is not a recognized section triggers an error. Common mistake: `Params:` instead of `Args:`.
 
-Recognized sections: `Args`, `Returns`, `Yields`, `Raises`, `Attributes`, `Example`, `Examples`, `Note`, `Notes`, `Todo`.
+Recognized sections, the Napoleon ones included:
+
+| Kind | Sections |
+|---|---|
+| Checked content | `Args`, `Keyword Args`, `Other Parameters`, `Returns`, `Yields`, `Raises`, `Attributes` |
+| Free text | `Examples`, `Note`, `Notes`, `Todo`, `Attention`, `Caution`, `Danger`, `Error`, `Hint`, `Important`, `Methods`, `Receive`, `Receives`, `References`, `See Also`, `Tip`, `Warn`, `Warning`, `Warnings`, `Warns` |
+| Aliases, read as their canonical section and reported by `section_alias` | `Example` (`Examples`), `Arguments`, `Parameters` (`Args`), `Keyword Arguments` (`Keyword Args`), `Return` (`Returns`), `Yield` (`Yields`), `Raise` (`Raises`) |
+
+`Note` and `Notes` are two distinct sections: Napoleon renders `Note` as an admonition box and `Notes` as a plain section.
+
+In Napoleon, `Warn` and `Warns` list the warnings a function issues, the way `Raises` lists exceptions. They are accepted here, but their entries are not checked yet.
+
+`Other Parameters` entries are checked like `Args` entries. `Keyword Args` documents the keys of `**kwargs`: its presence counts as documenting the `**kwargs` parameter, and its entries are not compared with the signature, only their description is required.
 
 ```python
 # Bad
 def process(x: int) -> int:
     """Process data.
 
-    Arguments:
+    Params:
         x (int): Input.
 
     Returns:

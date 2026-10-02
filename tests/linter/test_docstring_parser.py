@@ -1,8 +1,6 @@
 """Tests for docstring_parser module."""
 
-import pytest
-from linter.config import DocstringStyle
-from linter.docstring_parser import GoogleStyleParser, get_parser
+from linter.docstring_parser import GoogleStyleParser
 
 PARSER = GoogleStyleParser()
 
@@ -124,6 +122,30 @@ def test_parse_returns_bare_description() -> None:
     assert result.returns.description == "The user name."
 
 
+def test_parse_returns_prose_with_colon() -> None:
+    """Returns line whose text before the colon is prose: the whole line is the description."""
+    result = PARSER.parse("Do something.\n\nReturns:\n    The mapping: key to value.\n")
+    assert result.returns is not None
+    assert result.returns.type_annotation is None
+    assert result.returns.description == "The mapping: key to value."
+
+
+def test_parse_returns_continuation_lines() -> None:
+    """Returns description spread over several lines: the lines are joined."""
+    result = PARSER.parse("Do something.\n\nReturns:\n    dict[str, int]: Mapping of\n        names to counts.\n")
+    assert result.returns is not None
+    assert result.returns.type_annotation == "dict[str, int]"
+    assert result.returns.description == "Mapping of names to counts."
+
+
+def test_parse_returns_single_word_prose() -> None:
+    """Returns section holding a single word that is not a type: read as the description."""
+    result = PARSER.parse("Do something.\n\nReturns:\n    Nothing.\n")
+    assert result.returns is not None
+    assert result.returns.type_annotation is None
+    assert result.returns.description == "Nothing."
+
+
 def test_parse_no_returns_section() -> None:
     """Docstring without Returns section: returns field is None."""
     result = PARSER.parse("Do something.")
@@ -196,16 +218,11 @@ def test_parse_attributes_multiple() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_parse_example_section() -> None:
-    """Docstring with Example section: examples list is populated."""
-    result = PARSER.parse("Do something.\n\nExample:\n    >>> f(1)\n    1\n")
-    assert len(result.examples) == 1
-
-
-def test_parse_examples_section() -> None:
-    """Docstring with Examples section (plural): examples list is populated."""
-    result = PARSER.parse("Do something.\n\nExamples:\n    >>> f(1)\n    1\n")
-    assert len(result.examples) == 1
+def test_parse_examples_section_kept_apart() -> None:
+    """Examples section: its content leaks into neither the description nor the args."""
+    result = PARSER.parse("Do something.\n\nExamples:\n    x: 1\n    >>> f(1)\n")
+    assert result.description is None
+    assert not result.args
 
 
 def test_parse_unknown_section_ignored() -> None:
@@ -222,42 +239,15 @@ def test_parse_lowercase_section_not_recognized() -> None:
 
 
 # ---------------------------------------------------------------------------
-# style property
-# ---------------------------------------------------------------------------
-
-
-def test_parser_style_property() -> None:
-    """Style property: returns DocstringStyle.GOOGLE."""
-    assert PARSER.style == DocstringStyle.GOOGLE
-
-
-# ---------------------------------------------------------------------------
-# get_parser
-# ---------------------------------------------------------------------------
-
-
-def test_get_parser_google() -> None:
-    """get_parser(GOOGLE): returns a GoogleStyleParser instance."""
-    parser = get_parser(DocstringStyle.GOOGLE)
-    assert isinstance(parser, GoogleStyleParser)
-
-
-def test_get_parser_unsupported() -> None:
-    """get_parser with unsupported style: raises ValueError with style name."""
-    with pytest.raises(ValueError, match="numpy"):
-        get_parser(DocstringStyle.NUMPY)
-
-
-# ---------------------------------------------------------------------------
 # unknown sections
 # ---------------------------------------------------------------------------
 
 
 def test_unknown_section_detected() -> None:
     """Section name not in known list: captured in unknown_sections."""
-    doc = "Do something.\n\nArguments:\n    x (int): Input.\n"
+    doc = "Do something.\n\nParams:\n    x (int): Input.\n"
     result = PARSER.parse(doc)
-    assert result.unknown_sections == ["Arguments"]
+    assert result.unknown_sections == ["Params"]
     assert result.args == []
 
 
@@ -270,6 +260,51 @@ def test_unknown_section_known_not_flagged() -> None:
 
 def test_unknown_section_multiple() -> None:
     """Multiple unknown sections: all captured."""
-    doc = "Do something.\n\nArguments:\n    x (int): Input.\n\nParams:\n    y (int): Other.\n\n"
+    doc = "Do something.\n\nUsage:\n    x (int): Input.\n\nParams:\n    y (int): Other.\n\n"
     result = PARSER.parse(doc)
-    assert set(result.unknown_sections) == {"Arguments", "Params"}
+    assert set(result.unknown_sections) == {"Usage", "Params"}
+
+
+# ---------------------------------------------------------------------------
+# Napoleon sections
+# ---------------------------------------------------------------------------
+
+
+def test_parse_alias_read_as_canonical() -> None:
+    """Parameters: alias of Args, its entries are parsed as args and it is not unknown."""
+    result = PARSER.parse("Do something.\n\nParameters:\n    x (int): Input.\n")
+    assert [a.name for a in result.args] == ["x"]
+    assert not result.unknown_sections
+
+
+def test_parse_args_and_other_parameters_joined() -> None:
+    """Args and Other Parameters sections: entries of both end up in args."""
+    result = PARSER.parse("Do something.\n\nArgs:\n    x (int): Input.\n\nOther Parameters:\n    y (int): Rare.\n")
+    assert [a.name for a in result.args] == ["x", "y"]
+
+
+def test_parse_keyword_args() -> None:
+    """Keyword Arguments: entries parsed into keyword_args, not into args."""
+    result = PARSER.parse("Do something.\n\nKeyword Arguments:\n    width (int): Width.\n")
+    assert [a.name for a in result.keyword_args] == ["width"]
+    assert result.args == []
+
+
+def test_parse_free_text_sections() -> None:
+    """Warning and See Also: known sections, neither unknown nor merged into the description."""
+    result = PARSER.parse("Do something.\n\nMore details.\n\nWarning:\n    Experimental.\n\nSee Also:\n    other().\n")
+    assert not result.unknown_sections
+    assert result.description == "More details."
+
+
+def test_parse_note_and_notes_distinct() -> None:
+    """Note and Notes: two known sections, neither is an alias nor unknown."""
+    result = PARSER.parse("Do something.\n\nNote:\n    One.\n\nNotes:\n    Two.\n")
+    assert not result.unknown_sections
+
+
+def test_parse_exceptions_is_unknown() -> None:
+    """Exceptions: not a Napoleon section, reported as unknown and not read as Raises."""
+    result = PARSER.parse("Do something.\n\nExceptions:\n    ValueError: Bad.\n")
+    assert result.unknown_sections == ["Exceptions"]
+    assert not result.raises

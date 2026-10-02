@@ -8,7 +8,7 @@ inputs:
     required: false
     default: src/
   format:
-    description: Output format (text, json, github-annotations).
+    description: Output format (traceback, text, json, github-annotations).
     required: false
     default: github-annotations
   extra-args:
@@ -25,4 +25,11 @@ runs:
 
     - name: Run docstring-linter
       shell: bash
-      run: docstring-linter ${{ inputs.paths }} --format ${{ inputs.format }} ${{ inputs.extra-args }}
+      env:
+        PATHS: ${{ inputs.paths }}
+        FORMAT: ${{ inputs.format }}
+        EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: |
+        # Word splitting on PATHS and EXTRA_ARGS is intended: several paths or arguments
+        # shellcheck disable=SC2086
+        docstring-linter $PATHS --format "$FORMAT" $EXTRA_ARGS

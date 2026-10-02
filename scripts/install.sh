@@ -40,12 +40,15 @@ install_uv() {
 }
 
 install_dotenv_linter() {
+  # Installer pinned to the commit of the v4.0.0 tag, same binary version as the CI
+  local installer="https://raw.githubusercontent.com/dotenv-linter/dotenv-linter/f9076b02daed89f54ed0bd23951a4cfa5ccceac4/install.sh"
+  local version="v4.0.0"
   print_rule "dotenv-linter"
   printf '\n'
   if ! have_cmd dotenv-linter; then
-    printf '%sCommand : $ curl -sSfL https://raw.githubusercontent.com/dotenv-linter/dotenv-linter/master/install.sh | sudo sh%s\n' "${GRAY}" "${NC}"
+    printf '%sCommand : $ curl -sSfL %s | sudo sh -s -- -b /usr/local/bin %s%s\n' "${GRAY}" "$installer" "$version" "${NC}"
     printf '\n'
-    if curl -sSfL https://raw.githubusercontent.com/dotenv-linter/dotenv-linter/master/install.sh | sudo sh -s -- -b /usr/local/bin; then
+    if curl -sSfL "$installer" | sudo sh -s -- -b /usr/local/bin "$version"; then
       printf '\n'
       print_success "dotenv-linter" "Installation successful"
     else

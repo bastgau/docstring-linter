@@ -4,6 +4,9 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   GROUP: "github-src"
 
@@ -12,16 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     name: Lint
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: Git Checkout
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         name: Install Python ${{ vars.PYTHON_VERSION }}
         with:
           python-version: ${{ vars.PYTHON_VERSION }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
 
@@ -29,16 +32,16 @@ jobs:
         run: uv sync --no-dev --group ${{ env.GROUP }}
 
       - name: Install dotenv-linter
-        run: curl -sSfL https://raw.githubusercontent.com/dotenv-linter/dotenv-linter/master/install.sh | sudo sh -s -- -b /usr/local/bin v4.0.0
+        env:
+          DOTENV_LINTER_VERSION: v4.0.0
+          DOTENV_LINTER_SHA256: 9e2f1f6eb88a71ac15ef209f78f5a68644db82f132d2677112b4f80ec2bd2127
+        run: |
+          archive="$RUNNER_TEMP/dotenv-linter.tar.gz"
+          curl -sSfL -o "$archive" "https://github.com/dotenv-linter/dotenv-linter/releases/download/${DOTENV_LINTER_VERSION}/dotenv-linter-linux-x86_64.tar.gz"
+          echo "${DOTENV_LINTER_SHA256}  $archive" | sha256sum -c -
+          sudo tar -xzf "$archive" -C /usr/local/bin dotenv-linter
 
-      - uses: j178/prek-action@v3.0.0
-        name: Execute Prek on push
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        name: Execute Prek
         with:
-          extra-args: --group ${{ env.GROUP }} --all-files
-
-      - uses: j178/prek-action@v3.0.0
-        name: Execute Prek on pull_request
-        if: github.event_name == 'pull_request'
-        with:
-          extra-args: --group ${{ env.GROUP }} --files origin/${{ github.base_ref }}..HEAD
+          extra-args: --verbose --group ${{ env.GROUP }} --all-files

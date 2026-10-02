@@ -1,13 +1,11 @@
 """Docstring parser for the linter.
 
-Parse raw docstrings into structured data. Extensible via abstract
-base class for multiple styles (Google, NumPy, Sphinx, PEP 257).
+Parse raw Google style docstrings into structured data.
 """
 
+import ast
 import re
-from abc import ABC, abstractmethod
 
-from linter.config import DocstringStyle
 from linter.models import (
     DocstringArg,
     DocstringAttribute,
@@ -15,39 +13,14 @@ from linter.models import (
     DocstringReturn,
     ParsedDocstring,
 )
+from linter.sections import canonical_section, section_header
 
 
-class BaseDocstringParser(ABC):
-    """Define abstract interface for docstring parsers."""
-
-    @abstractmethod
-    def parse(self, docstring: str) -> ParsedDocstring:
-        """Parse a raw docstring into structured data.
-
-        Args:
-            docstring (str): Raw docstring text.
-
-        Returns:
-            ParsedDocstring: Parsed docstring structure.
-
-        """
-
-    @property
-    @abstractmethod
-    def style(self) -> DocstringStyle:
-        """Return the style this parser handles.
-
-        Returns:
-            DocstringStyle: Parser style identifier.
-
-        """
-
-
-class GoogleStyleParser(BaseDocstringParser):
+class GoogleStyleParser:
     """Parse Google style docstrings.
 
     Attributes:
-        SECTION_PATTERN (re.Pattern): Regex for section headers.
+        CANDIDATE_SECTION_PATTERN (re.Pattern): Regex for single-word headers of unknown sections.
         ARG_PATTERN (re.Pattern): Regex for typed arg lines.
         ARG_NO_TYPE_PATTERN (re.Pattern): Regex for untyped arg lines.
         ARG_NO_COLON_PATTERN (re.Pattern): Regex for typed arg lines missing their colon.
@@ -56,26 +29,12 @@ class GoogleStyleParser(BaseDocstringParser):
 
     """
 
-    SECTION_PATTERN = re.compile(
-        r"^(Args|Returns|Raises|Attributes|Example|Examples|Note|Notes|Todo|Yields):\s*$",
-        re.MULTILINE,
-    )
     CANDIDATE_SECTION_PATTERN = re.compile(r"^([A-Z][A-Za-z]*):\s*$")
     ARG_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*\(([^)]+)\)\s*:\s*(.*)$")
     ARG_NO_TYPE_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*:\s*(.*)$")
     ARG_NO_COLON_PATTERN = re.compile(r"^\s{4}(\*{0,2}\w+)\s*\(([^)]+)\)\s*$")
     RETURN_PATTERN = re.compile(r"^\s{4}([^:]+?)\s*:\s*(.*)$")
-    RAISE_PATTERN = re.compile(r"^\s{4}(\w+)\s*:\s*(.*)$")
-
-    @property
-    def style(self) -> DocstringStyle:
-        """Return Google style identifier.
-
-        Returns:
-            DocstringStyle: GOOGLE enum value.
-
-        """
-        return DocstringStyle.GOOGLE
+    RAISE_PATTERN = re.compile(r"^\s{4}([\w.]+)\s*:\s*(.*)$")
 
     def parse(self, docstring: str) -> ParsedDocstring:
         """Parse a Google style docstring into structured data.
@@ -96,29 +55,23 @@ class GoogleStyleParser(BaseDocstringParser):
         result.summary = sections.get("_summary")
         result.description = sections.get("_description")
 
-        if "Args" in sections:
-            result.args = self._parse_args(sections["Args"])
-        if "Returns" in sections:
-            result.returns = self._parse_returns(sections["Returns"])
-        if "Yields" in sections:
-            result.yields = self._parse_returns(sections["Yields"])
-        if "Raises" in sections:
-            result.raises = self._parse_raises(sections["Raises"])
-        if "Attributes" in sections:
-            result.attributes = self._parse_attributes(sections["Attributes"])
-        if "Example" in sections:
-            result.examples = [sections["Example"]]
-        if "Examples" in sections:
-            result.examples = [sections["Examples"]]
+        # each parser returns an empty result on an absent section
+        result.args = self._parse_args(sections.get("Args", "")) + self._parse_args(sections.get("Other Parameters", ""))
+        result.keyword_args = self._parse_args(sections.get("Keyword Args", ""))
+        result.returns = self._parse_returns(sections.get("Returns", ""))
+        result.yields = self._parse_returns(sections.get("Yields", ""))
+        result.raises = self._parse_raises(sections.get("Raises", ""))
+        result.attributes = self._parse_attributes(sections.get("Attributes", ""))
 
-        raw = sections.get("_unknown_sections", "")
-        if raw:
-            result.unknown_sections = raw.split(",")
+        result.unknown_sections = [name for name in sections.get("_unknown_sections", "").split(",") if name]
 
         return result
 
     def _split_sections(self, docstring: str) -> dict[str, str]:  # noqa: C901 # pylint: disable=R0912:too-many-branches,too-many-locals
         """Split docstring into named sections.
+
+        Napoleon aliases are stored under their canonical name, and two headers
+        resolving to the same section have their contents joined.
 
         Args:
             docstring (str): Raw docstring text.
@@ -140,12 +93,12 @@ class GoogleStyleParser(BaseDocstringParser):
         for line in lines:
             stripped = line.strip()
 
-            section_match = self.SECTION_PATTERN.match(stripped)
+            header = section_header(line)
 
-            if section_match:
+            if header:
                 if current_section:
-                    sections[current_section] = "\n".join(section_lines)
-                current_section = section_match.group(1)
+                    _store_section(sections, current_section, section_lines)
+                current_section = canonical_section(header)
                 section_lines = []
                 in_summary = False
                 continue
@@ -154,7 +107,7 @@ class GoogleStyleParser(BaseDocstringParser):
             if candidate_match and not in_summary:
                 name = candidate_match.group(1)
                 if current_section:
-                    sections[current_section] = "\n".join(section_lines)
+                    _store_section(sections, current_section, section_lines)
                 current_section = f"_unknown_{name}"
                 unknown.append(name)
                 section_lines = []
@@ -170,7 +123,7 @@ class GoogleStyleParser(BaseDocstringParser):
                 desc_lines.append(stripped)
 
         if current_section:
-            sections[current_section] = "\n".join(section_lines)
+            _store_section(sections, current_section, section_lines)
 
         sections["_unknown_sections"] = ",".join(unknown)
 
@@ -234,6 +187,10 @@ class GoogleStyleParser(BaseDocstringParser):
     def _parse_returns(self, text: str) -> DocstringReturn | None:
         """Parse Returns section into DocstringReturn.
 
+        The text before the first colon is the type only when it reads as a
+        Python expression, so that 'The mapping: key to value' stays prose.
+        Continuation lines extend the description.
+
         Args:
             text (str): Raw text content of the Returns section.
 
@@ -241,26 +198,29 @@ class GoogleStyleParser(BaseDocstringParser):
             DocstringReturn | None: Parsed return entry, or None.
 
         """
+        result: DocstringReturn | None = None
+
         for line in text.split("\n"):
-            match = self.RETURN_PATTERN.match(line)
-            if match:
-                return DocstringReturn(
-                    type_annotation=match.group(1).strip(),
-                    description=match.group(2).strip() or None,
-                )
             stripped = line.strip()
             if not stripped:
                 continue
 
-            if stripped.lower() == "none":
-                return DocstringReturn(type_annotation="None", description=None)
+            if result is not None:
+                result.description = f"{result.description or ''} {stripped}".strip()
+                continue
 
-            # degraded form, no colon: a single token is a type, anything else is prose
-            if " " in stripped:
-                return DocstringReturn(type_annotation=None, description=stripped)
-            return DocstringReturn(type_annotation=stripped, description=None)
+            match = self.RETURN_PATTERN.match(line)
+            if match and _is_expression(match.group(1).strip()):
+                result = DocstringReturn(type_annotation=match.group(1).strip(), description=match.group(2).strip() or None)
+            elif stripped.lower() == "none":
+                result = DocstringReturn(type_annotation="None", description=None)
+            elif " " not in stripped and _is_expression(stripped):
+                # degraded form, no colon: a bare type
+                result = DocstringReturn(type_annotation=stripped, description=None)
+            else:
+                result = DocstringReturn(type_annotation=None, description=stripped)
 
-        return None
+        return result
 
     def _parse_raises(self, text: str) -> list[DocstringRaise]:
         """Parse Raises section into list of DocstringRaise.
@@ -342,26 +302,34 @@ class GoogleStyleParser(BaseDocstringParser):
         return attrs
 
 
-PARSERS = {
-    DocstringStyle.GOOGLE: GoogleStyleParser,
-}
-
-
-def get_parser(style: DocstringStyle) -> BaseDocstringParser:
-    """Get the appropriate parser for the given style.
+def _store_section(sections: dict[str, str], name: str, lines: list[str]) -> None:
+    """Store the content of a section after any content already stored under its name.
 
     Args:
-        style (DocstringStyle): Docstring style to use.
+        sections (dict[str, str]): Section name to content, updated in place.
+        name (str): Canonical section name.
+        lines (list[str]): Content lines of the section.
 
     Returns:
-        BaseDocstringParser: Parser instance for the requested style.
-
-    Raises:
-        ValueError: If the style is not supported.
+        None
 
     """
-    parser_cls = PARSERS.get(style)
-    if parser_cls is None:
-        msg = f"Unsupported docstring style: {style.value}"
-        raise ValueError(msg)
-    return parser_cls()
+    text = "\n".join(lines)
+    sections[name] = f"{sections[name]}\n{text}" if name in sections else text
+
+
+def _is_expression(text: str) -> bool:
+    """Check whether a text parses as a Python expression, the form a type takes.
+
+    Args:
+        text (str): Candidate type.
+
+    Returns:
+        bool: True if the text is a valid expression.
+
+    """
+    try:
+        ast.parse(text, mode="eval")
+    except SyntaxError:
+        return False
+    return True
