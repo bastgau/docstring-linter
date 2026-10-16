@@ -248,7 +248,7 @@ def test_unknown_section_detected() -> None:
     doc = "Do something.\n\nParams:\n    x (int): Input.\n"
     result = PARSER.parse(doc)
     assert result.unknown_sections == ["Params"]
-    assert result.args == []
+    assert not result.args
 
 
 def test_unknown_section_known_not_flagged() -> None:
@@ -287,7 +287,7 @@ def test_parse_keyword_args() -> None:
     """Keyword Arguments: entries parsed into keyword_args, not into args."""
     result = PARSER.parse("Do something.\n\nKeyword Arguments:\n    width (int): Width.\n")
     assert [a.name for a in result.keyword_args] == ["width"]
-    assert result.args == []
+    assert not result.args
 
 
 def test_parse_free_text_sections() -> None:
