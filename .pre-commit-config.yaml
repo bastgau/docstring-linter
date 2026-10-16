@@ -72,6 +72,18 @@ repos:
         files: (^|/)\.env$|\.local$|\.pem$|\.key$|(^|/)\.vscode/settings\.json$|(^|/)local\.settings\.json$|(^|/)local\.config/
         groups: [local,github-src]
 
+  # ── uv lock ──────────────────────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: uv-lock-check
+        name: uv-lock-check
+        entry: uv lock --check
+        language: system
+        stages: [pre-commit]
+        files: ^(pyproject\.toml|uv\.lock)$
+        pass_filenames: false
+        groups: [local,github-src,github-tests]
+
   # ── ShellCheck ───────────────────────────────────────────────────────────────
   - repo: local
     hooks:

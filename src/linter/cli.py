@@ -257,7 +257,6 @@ def main() -> None:
             print(f"Config: {config_file}")
         else:
             print("Config: defaults (no config file found)")
-        print()
 
     sys.exit(run(args.paths, config))
 

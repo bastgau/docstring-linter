@@ -8,7 +8,7 @@ from linter.models import ArgInfo, CodeEntity, NodeType, ParsedDocstring, RaiseI
 CONFIG = LinterConfig()
 
 
-def _func(  # noqa: PLR0913 # pylint: disable=too-many-arguments, too-many-positional-arguments # pyright: ignore[reportUnusedFunction]
+def _func(  # noqa: PLR0913,PLR0917 # pylint: disable=too-many-arguments, too-many-positional-arguments # pyright: ignore[reportUnusedFunction]
     name: str = "my_func",
     docstring: str | None = "Do something.",
     raw_docstring: str | None = "Do something.",
