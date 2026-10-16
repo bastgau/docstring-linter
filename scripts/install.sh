@@ -8,7 +8,7 @@ source "$SCRIPT_DIR/common.sh"
 
 print_header() {
   printf '\n'
-  printf '%sDescription: Installs uv, dotenv-linter, dev dependencies and pre-commit hooks%s\n' "${YELLOW}" "${NC}"
+  printf '%sDescription: Installs uv, dotenv-linter, commitlint, dev dependencies and pre-commit hooks%s\n' "${YELLOW}" "${NC}"
 }
 
 print_rule() {
@@ -56,6 +56,25 @@ install_dotenv_linter() {
   fi
 }
 
+install_commitlint() {
+  print_rule "commitlint"
+  printf '\n'
+  if ! have_cmd commitlint; then
+    printf '%sCommand : $ sudo apt-get install -y nodejs npm%s\n' "${GRAY}" "${NC}"
+    printf '%sCommand : $ sudo npm install -g --prefix /usr @commitlint/cli @commitlint/config-conventional%s\n' "${GRAY}" "${NC}"
+    printf '\n'
+    if { have_cmd npm || { sudo apt-get update && sudo apt-get install -y nodejs npm; }; } \
+      && sudo npm install -g --prefix /usr @commitlint/cli @commitlint/config-conventional; then
+      printf '\n'
+      print_success "commitlint" "Installation successful"
+    else
+      print_error "commitlint" "Installation failed"; exit 1
+    fi
+  else
+    print_info "commitlint" "Nothing to do (commitlint already installed)"
+  fi
+}
+
 install_dev_deps() {
   print_rule "dev dependencies"
   printf '\n'
@@ -86,6 +105,7 @@ print_header
 
 install_uv
 install_dotenv_linter
+install_commitlint
 
 ACTIVATE_LINE="source ${UV_PROJECT_ENVIRONMENT}/bin/activate"
 grep -qxF "$ACTIVATE_LINE" "$HOME/.bashrc" || echo "$ACTIVATE_LINE" >> "$HOME/.bashrc"

@@ -258,7 +258,7 @@ def test_unknown_section_detected() -> None:
     doc = "Do something.\n\nArguments:\n    x (int): Input.\n"
     result = PARSER.parse(doc)
     assert result.unknown_sections == ["Arguments"]
-    assert result.args == []
+    assert not result.args
 
 
 def test_unknown_section_known_not_flagged() -> None:
