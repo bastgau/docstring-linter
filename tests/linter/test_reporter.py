@@ -1,15 +1,18 @@
 """Tests for reporter module."""
 
+import importlib
+import io
 import json
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import pytest
 from linter.config import ConfigOverride, Policy
 from linter.models import LintError, NodeType
-from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_traceback
+from linter.reporter import report_cli, report_github_annotations, report_json, report_options, report_overrides, report_policies, report_rules, report_statistics, report_traceback
 
-if TYPE_CHECKING:
-    import pytest
+from linter import reporter
 
 
 def _error(rule: str = "args_match", line: int = 10, filepath: str = "src/foo.py") -> LintError:
@@ -99,6 +102,26 @@ def test_report_cli_multiple_files(capsys: pytest.CaptureFixture[str]) -> None:
     out = capsys.readouterr().out
     assert "src/a.py" in out
     assert "src/b.py" in out
+
+
+# ---------------------------------------------------------------------------
+# report_statistics
+# ---------------------------------------------------------------------------
+
+
+def test_report_statistics_no_errors(capsys: pytest.CaptureFixture[str]) -> None:
+    """No errors: prints summary with 0 errors."""
+    report_statistics([], files_checked=3)
+    assert "3 files checked, 0 errors." in capsys.readouterr().out
+
+
+def test_report_statistics_sorted_by_count_then_rule(capsys: pytest.CaptureFixture[str]) -> None:
+    """Most frequent rule first, ties in alphabetical order, counts right-aligned."""
+    rules = ["raises_match"] + ["args_match"] * 10 + ["returns_match", "blank_lines"]
+    report_statistics([_error(rule) for rule in rules], files_checked=2)
+    lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
+    assert lines[:4] == ["  10  args_match", "   1  blank_lines", "   1  raises_match", "   1  returns_match"]
+    assert "13 errors in 1 file (2 files checked)." in lines[4]
 
 
 # ---------------------------------------------------------------------------
@@ -237,12 +260,16 @@ def test_report_rules_disabled_rule_shows_cross(capsys: pytest.CaptureFixture[st
     assert "✘" in matching[0]
 
 
-def test_report_rules_always_on_hidden(capsys: pytest.CaptureFixture[str]) -> None:
-    """Rule in always_on is not listed and is not counted in the header."""
+def test_report_rules_always_on_listed_separately(capsys: pytest.CaptureFixture[str]) -> None:
+    """Rule in always_on: listed after the categories, not counted as configurable."""
     report_rules(_CATEGORIES, _REGISTRY, _OFF_BY_DEFAULT, _ALWAYS_ON, frozenset())
-    out = capsys.readouterr().out
-    assert "rule_c" not in out
-    assert "2 configurable rules" in out
+    lines = capsys.readouterr().out.splitlines()
+    assert "2 configurable rules" in lines[1]
+    header = next(i for i, line in enumerate(lines) if "Always on" in line)
+    assert "cannot be disabled" in lines[header]
+    assert "rule_c" in lines[header + 1]
+    assert "✔" in lines[header + 1]
+    assert all("rule_c" not in line for line in lines[:header])
 
 
 def test_report_rules_off_by_default_label(capsys: pytest.CaptureFixture[str]) -> None:
@@ -330,3 +357,49 @@ def test_report_overrides_shows_paths_and_delta(capsys: pytest.CaptureFixture[st
     assert "imperative_mood" in out
     assert "optional" in out
     assert "(base: required)" in out
+
+
+# ---------------------------------------------------------------------------
+# output details: plural, GitHub escaping, colors
+# ---------------------------------------------------------------------------
+
+
+def test_report_single_file_singular(capsys: pytest.CaptureFixture[str]) -> None:
+    """One file checked: the summary says '1 file checked'."""
+    report_cli([], 1)
+    assert capsys.readouterr().out.strip() == "1 file checked, 0 errors."
+
+
+def test_report_github_annotations_escaped(capsys: pytest.CaptureFixture[str]) -> None:
+    """Message and properties escaped as @actions/core does: %, line breaks, and in properties ':' and ','."""
+    error = LintError(filepath="src/a,b:c.py", line=3, entity_name="f", node_type=NodeType.FUNCTION, rule="summary_final_period", message="Got: '100%'\nnext")
+    report_github_annotations([error], 1)
+    first = capsys.readouterr().out.splitlines()[0]
+    assert first == "::error file=src/a%2Cb%3Ac.py,line=3,title=summary_final_period::Got: '100%25'%0Anext"
+
+
+def test_report_no_color_when_not_a_terminal(capsys: pytest.CaptureFixture[str]) -> None:
+    """Output captured, not a terminal: no ANSI escape sequence at all."""
+    report_cli([_error()], 1)
+    assert "\033[" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(("isatty", "no_color", "colored"), [(True, None, True), (True, "1", False), (True, "", True), (False, None, False)])
+def test_colors_follow_terminal_and_no_color(monkeypatch: pytest.MonkeyPatch, isatty: bool, no_color: str | None, colored: bool) -> None:  # noqa: FBT001
+    """Colors on a terminal only, and off when NO_COLOR holds a non-empty value."""
+
+    class _Stream(io.StringIO):
+        def isatty(self) -> bool:
+            return isatty
+
+    monkeypatch.setattr(sys, "stdout", _Stream())
+    if no_color is None:
+        monkeypatch.delenv("NO_COLOR", raising=False)
+    else:
+        monkeypatch.setenv("NO_COLOR", no_color)
+    try:
+        importlib.reload(reporter)
+        assert (reporter.Colors.RED == "\033[91m") is colored
+    finally:
+        monkeypatch.undo()
+        importlib.reload(reporter)

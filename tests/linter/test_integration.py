@@ -98,7 +98,7 @@ def test_collect_python_files_finds_all_py(tmp_path: Path) -> None:
     sub = tmp_path / "sub"
     sub.mkdir()
     (sub / "c.py").write_text("", encoding="utf-8")
-    files = collect_python_files([str(tmp_path)], [])
+    files = collect_python_files([str(tmp_path)], [], tmp_path)
     names = {Path(f).name for f in files}
     assert names == {"a.py", "b.py", "c.py"}
 
@@ -107,7 +107,7 @@ def test_collect_python_files_exclude_pattern(tmp_path: Path) -> None:
     """Directory with exclusion pattern: matching files are not collected."""
     (tmp_path / "main.py").write_text("", encoding="utf-8")
     (tmp_path / "test_main.py").write_text("", encoding="utf-8")
-    files = collect_python_files([str(tmp_path)], ["test_*"])
+    files = collect_python_files([str(tmp_path)], ["test_*"], tmp_path)
     names = {Path(f).name for f in files}
     assert "main.py" in names
     assert "test_main.py" not in names
@@ -180,7 +180,7 @@ def test_cli_invalid_file_exit_one(tmp_path: Path) -> None:
 
 
 def test_cli_syntax_error_no_crash(tmp_path: Path) -> None:
-    """CLI on file with SyntaxError: does not crash, prints error message, exits 0."""
+    """CLI on file with SyntaxError: does not crash, prints error message on stderr, exits 2."""
     f = tmp_path / "bad.py"
     f.write_text(_SYNTAX_ERROR_SOURCE, encoding="utf-8")
     result = subprocess.run(  # noqa: S603
@@ -191,8 +191,8 @@ def test_cli_syntax_error_no_crash(tmp_path: Path) -> None:
         env=_ENV,
         cwd=tmp_path,
     )
-    assert result.returncode == 0
-    assert "Syntax error" in result.stdout or "Syntax error" in result.stderr
+    assert result.returncode == 2
+    assert "Syntax error" in result.stderr
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +257,7 @@ def test_cli_github_annotations_valid_file(tmp_path: Path) -> None:
         cwd=tmp_path,
     )
     assert result.returncode == 0
-    assert "1 files checked, 0 errors." in result.stdout
+    assert "1 file checked, 0 errors." in result.stdout
 
 
 def test_cli_github_annotations_invalid_file(tmp_path: Path) -> None:

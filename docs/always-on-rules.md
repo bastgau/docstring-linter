@@ -2,7 +2,7 @@
 
 ## Always-On Rule Reference
 
-These rules are always enabled, cannot be added to `ignore` and are therefore not listed by `docstring-linter --list-rules`.
+These rules are always enabled and cannot be added to `ignore`. `docstring-linter --list-rules` shows them in an "Always on" section, after the configurable rules. They can still be silenced on one function, class or module with a [`# docstring-linter: ignore[...]`](/README.md#suppressing-errors) comment.
 
 ### Content
 
@@ -10,7 +10,7 @@ These rules are always on because requiring a section and then tolerating wrong 
 
 #### args_match
 
-Checks what the `Args:` section declares: phantom parameters, type `(type)` according to the `documented_types` policy, and presence of a description. A parameter of the signature that is not documented at all is reported by the `args_section` policy, not here.
+Checks what the `Args:` section declares: phantom parameters, type `(type)` according to the `documented_types` policy and compared with the signature as set by [`type_matching`](/docs/configuration.md#type-matching), and presence of a description. A parameter of the signature that is not documented at all is reported by the `args_section` policy, not here.
 
 ```python
 # Bad: type mismatch (int vs float)
@@ -129,10 +129,10 @@ class User:
 
 #### raises_match
 
-Checks what the `Raises:` section declares: an exception documented but never raised in the code, and an exception documented without a description. An exception raised but not documented is reported by the `raises_section` policy, not here.
+Every exception listed in `Raises:` must carry a description. An exception raised but not documented is reported by the `raises_section` policy, an exception documented but never raised by the configurable [`raises_extraneous`](/docs/configurable-rules.md#raises_extraneous) rule.
 
 ```python
-# Bad: TypeError documented but never raised
+# Bad: no description
 def validate(x: int) -> int:
     """Validate input.
 
@@ -143,9 +143,11 @@ def validate(x: int) -> int:
         int: Validated input.
 
     Raises:
-        TypeError: Never actually raised.
+        ValueError:
 
     """
+    if x < 0:
+        raise ValueError("negative")
     return x
 
 # Good
@@ -167,13 +169,12 @@ def validate(x: int) -> int:
     return x
 ```
 
-Note: bare `raise` (re-raise), dynamic raises, or raises from internal calls are ignored.
 
 ---
 
 #### returns_match
 
-When a `Returns:` section exists, its type must match the signature, and the type must not be missing. This rule never reports a missing section (that is `returns_section`).
+When a `Returns:` section exists, its type must match the signature as set by [`type_matching`](/docs/configuration.md#type-matching), and its presence follows the `documented_types` policy. The text before the colon counts as a type only when it reads as a Python expression: `The mapping: key to value.` is a description. This rule never reports a missing section (that is `returns_section`).
 
 A documented type that contradicts the signature is wrong, not stylistic, so this rule ignores `select` and `ignore` and always reports.
 
@@ -188,7 +189,7 @@ def get_name() -> str:
     """
     return "Alice"
 
-# Bad: type missing in Returns
+# Bad under documented_types = "required" (default): type missing in Returns
 def get_name() -> str:
     """Get the user name.
 
@@ -388,7 +389,7 @@ def process(x: int, y: int) -> int:
     """
 ```
 
-`Example`/`Examples` sections are exempt (code examples often contain blank lines).
+`Examples` sections (and their `Example` alias) are exempt (code examples often contain blank lines).
 
 ### Syntax / Structure
 

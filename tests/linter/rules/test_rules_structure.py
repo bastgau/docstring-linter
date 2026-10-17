@@ -1,5 +1,6 @@
 """Tests for rules/structure.py -- indentation, section layout, closing quotes, blank lines."""
 
+import pytest
 from linter.config import Policy
 from linter.models import CodeEntity, NodeType, ParsedDocstring
 
@@ -12,12 +13,34 @@ from .conftest import _cfg, _func, _neutral, _policy_only, _rule_only  # pyright
 # ---------------------------------------------------------------------------
 
 
-def test_indentation_inconsistent() -> None:
-    """More than 2 indent levels in docstring: returns indentation error."""
-    raw = "Summary.\n\nArgs:\n    x: Value.\n        continuation.\n            deep.\n"
+def test_indentation_under_indented_section_line() -> None:
+    """Line of a section indented by 2 spaces: returns one indentation error for the section."""
+    raw = "Summary.\n\nReturns:\n  int: Value.\n  More.\n"
     entity = _func(docstring=raw, raw_docstring=raw)
     errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("indentation"))
-    assert any(e.rule == "indentation" for e in errors)
+    assert [e.message for e in errors if e.rule == "indentation"] == ["Line 'int: Value.' in 'Returns:' is indented by 2 spaces, expected at least 4."]
+
+
+def test_indentation_first_entry_not_at_four() -> None:
+    """First Args entry indented by 8 spaces: returns indentation error."""
+    raw = "Summary.\n\nArgs:\n        x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("indentation"))
+    assert [e.message for e in errors if e.rule == "indentation"] == ["First entry of 'Args:' is indented by 8 spaces, expected 4."]
+
+
+def test_indentation_multiline_entry() -> None:
+    """Entry description continued on deeper lines: no indentation error."""
+    raw = "Summary.\n\nArgs:\n    x (int): A long description\n        that wraps\n            and wraps again.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    assert not [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("indentation")) if e.rule == "indentation"]
+
+
+def test_indentation_description_block_ignored() -> None:
+    """Indented code block in the description, outside any section: no indentation error."""
+    raw = "Summary.\n\nUsage:\n\n  >>> run()\n\nArgs:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    assert not [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("indentation")) if e.rule == "indentation"]
 
 
 def test_indentation_consistent() -> None:
@@ -56,6 +79,35 @@ def test_section_capitalization_correct() -> None:
     assert not any(e.rule == "section_capitalization" for e in errors)
 
 
+def test_section_capitalization_multi_word() -> None:
+    """Multi-word Napoleon header 'See also:': returns section_capitalization error expecting 'See Also:'."""
+    raw = "Summary.\n\nSee also:\n    other().\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_capitalization"))
+    assert [e.message for e in errors if e.rule == "section_capitalization"] == ["Section 'See also:' should be 'See Also:'."]
+
+
+# ---------------------------------------------------------------------------
+# Rule => section_alias
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("alias", "canonical"), [("Parameters", "Args"), ("Arguments", "Args"), ("Return", "Returns"), ("Keyword Arguments", "Keyword Args"), ("Example", "Examples")])
+def test_section_alias_reported(alias: str, canonical: str) -> None:
+    """Napoleon alias used as a header: returns section_alias error naming the canonical spelling."""
+    raw = f"Summary.\n\n{alias}:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_alias"))
+    assert [e.message for e in errors if e.rule == "section_alias"] == [f"Section '{alias}:' should be written '{canonical}:'."]
+
+
+def test_section_alias_disabled() -> None:
+    """Alias used, rule off: no section_alias error."""
+    raw = "Summary.\n\nParameters:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    assert not [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _neutral()) if e.rule == "section_alias"]
+
+
 # ---------------------------------------------------------------------------
 # Rule => section_order
 # ---------------------------------------------------------------------------
@@ -91,6 +143,37 @@ def test_section_order_single_section_ok() -> None:
     entity = _func(docstring=raw, raw_docstring=raw)
     errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_order"))
     assert not any(e.rule == "section_order" for e in errors)
+
+
+def test_section_order_alias_and_free_text() -> None:
+    """Parameters placed like Args, Warning anywhere: no section_order error."""
+    raw = "Summary.\n\nWarning:\n    Slow.\n\nParameters:\n    x (int): Value.\n\nReturns:\n    int: Result.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    assert not [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_order")) if e.rule == "section_order"]
+
+
+def test_section_order_alias_out_of_place() -> None:
+    """Return before Parameters: section_order error listing canonical names."""
+    raw = "Summary.\n\nReturn:\n    int: Result.\n\nParameters:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = [e for e in validate_entity(entity, ParsedDocstring(summary="Summary."), _rule_only("section_order")) if e.rule == "section_order"]
+    assert [e.message for e in errors] == ["Section 'Parameters:' must come before 'Return:'. Expected order: Args, Returns."]
+
+
+def test_empty_free_text_section() -> None:
+    """Empty See Also section: returns empty_section error, free-text sections are known sections."""
+    raw = "Summary.\n\nSee Also:\n\nArgs:\n    x (int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _neutral())
+    assert "Section 'See Also:' is empty." in [e.message for e in errors]
+
+
+def test_entry_spacing_in_alias_section() -> None:
+    """Badly spaced entry under Parameters: entry_spacing applies to aliases of Args."""
+    raw = "Summary.\n\nParameters:\n    x(int): Value.\n"
+    entity = _func(docstring=raw, raw_docstring=raw)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _neutral())
+    assert [e.rule for e in errors if e.rule == "entry_spacing"] == ["entry_spacing"]
 
 
 # ---------------------------------------------------------------------------
@@ -246,6 +329,15 @@ def test_blank_lines_before_closing_quotes_zero() -> None:
     cfg = _neutral(enabled_rules=["blank_lines"], blank_lines_before_closing_quotes=0)
     errors = validate_entity(entity, ParsedDocstring(summary="Summary."), cfg)
     assert not errors
+
+
+@pytest.mark.parametrize("expected", [0, 1])
+def test_closing_quotes_on_text_line(expected: int) -> None:
+    """Multi-line docstring closed on the line of its last text: one error saying so, whatever the configured count."""
+    entity = _func(docstring="Summary.\n\nDetails.", raw_docstring="Summary.\n\n    Details.")
+    cfg = _neutral(blank_lines_before_closing_quotes=expected)
+    errors = validate_entity(entity, ParsedDocstring(summary="Summary."), cfg)
+    assert [e.message for e in errors] == ['Closing """ must be on its own line.']
 
 
 def test_no_blank_line_in_section_cannot_be_disabled() -> None:
@@ -430,11 +522,11 @@ def _with_section(header: str) -> str:
 
 
 def test_examples_section_required_missing() -> None:
-    """Policy required, no Example section: returns examples_section error."""
+    """Policy required, no Examples section: returns examples_section error."""
     raw = "Summary.\n\n"
     entity = _func(docstring=raw, raw_docstring=raw)
     errors = validate_entity(entity, ParsedDocstring(summary="Summary."), _policy_only("examples_section", Policy.REQUIRED))
-    assert any(e.rule == "examples_section" and "Missing 'Example:'" in e.message for e in errors)
+    assert any(e.rule == "examples_section" and "Missing 'Examples:'" in e.message for e in errors)
 
 
 def test_examples_section_required_present_plural() -> None:

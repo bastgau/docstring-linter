@@ -1,7 +1,8 @@
 """Tests for rules/docstring.py -- docstring presence and summary rules."""
 
+import pytest
 from linter.config import Policy
-from linter.models import ParsedDocstring
+from linter.models import NodeType, ParsedDocstring
 
 from linter.rules import validate_entity
 
@@ -207,6 +208,32 @@ def test_imperative_mood_es_after_consonant() -> None:
     entity = _func(docstring="Compresses the data.", raw_docstring="Compresses the data.")
     errors = validate_entity(entity, ParsedDocstring(summary="Compresses the data."), _rule_only("imperative_mood"))
     assert any(e.rule == "imperative_mood" for e in errors)
+
+
+@pytest.mark.parametrize(
+    ("word", "expected"),
+    [("Does", "Do"), ("Goes", "Go"), ("Initializes", "Initialize"), ("Accesses", "Access"), ("Copies", "Copy"), ("Yields", "Yield")],
+)
+def test_imperative_mood_suggestion(word: str, expected: str) -> None:
+    """Third-person verb, irregular or not: the suggested base form is a real verb."""
+    summary = f"{word} the value."
+    entity = _func(docstring=summary, raw_docstring=summary)
+    errors = validate_entity(entity, ParsedDocstring(summary=summary), _rule_only("imperative_mood"))
+    assert [e.message for e in errors] == [f"Summary should start with imperative mood. '{word}' -> '{expected}'."]
+
+
+@pytest.mark.parametrize("word", ["Options", "Classes", "Canvas", "Settings", "Status", "Always", ":raises", "MIME-types", "Has", "Is"])
+def test_imperative_mood_not_a_verb(word: str) -> None:
+    """Plural noun, word ending in s, or token that is not a word: no imperative_mood error."""
+    summary = f"{word} of the value."
+    entity = _func(docstring=summary, raw_docstring=summary)
+    assert not validate_entity(entity, ParsedDocstring(summary=summary), _rule_only("imperative_mood"))
+
+
+def test_imperative_mood_skips_classes() -> None:
+    """Class docstring starting with a third-person verb: not checked, the rule targets functions and methods."""
+    entity = _func(name="Store", docstring="Represents a store.", raw_docstring="Represents a store.", node_type=NodeType.CLASS)
+    assert not validate_entity(entity, ParsedDocstring(summary="Represents a store."), _rule_only("imperative_mood"))
 
 
 # ---------------------------------------------------------------------------

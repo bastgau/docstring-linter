@@ -25,6 +25,8 @@ Section presence policies, one per documentable section:
 | `raises_section` | `"required"` | `Raises:` |
 | `attributes_section` | `"required"` | `Attributes:` |
 
+With `sections_optional_on_one_liners = true`, a one-line docstring on a fully annotated function or method needs none of these sections: the Google guide omits them when the name and signature say it all. A docstring of more than one line still needs every required section.
+
 When present, the content of these sections is also validated by the corresponding content rules. The policy controls whether the section must exist; the corresponding content rule validates what it contains (`args_match`, `returns_match`, `yields_match`, `raises_match`, and `attributes_match`).
 
 Four more sections carry no content rule, only a presence policy. They default to `"optional"`, nothing changes unless you set them:
@@ -32,7 +34,7 @@ Four more sections carry no content rule, only a presence policy. They default t
 | Policy | Default | Applies to |
 |---|---|---|
 | `description_section` | `"optional"` | Description paragraph below the summary |
-| `examples_section` | `"optional"` | `Example:` or `Examples:` |
+| `examples_section` | `"optional"` | `Examples:` (`Example:` accepted as an alias) |
 | `notes_section` | `"optional"` | `Note:` or `Notes:` |
 | `todo_section` | `"optional"` | `Todo:` |
 
@@ -40,8 +42,9 @@ One more policy governs what an entry declares:
 
 | Policy | Default | Applies to |
 |---|---|---|
-| `documented_types` | `"required"` | Type between parentheses in `Args:` and `Attributes:` entries |
+| `documented_types` | `"required"` | Type in `Args:` and `Attributes:` entries and on the `Returns:` and `Yields:` lines |
 | `returns_descriptions` | `"required"` | Description on the `Returns:` and `Yields:` lines |
+| `documented_stars` | `"required"` | Stars of `*args` and `**kwargs` in their `Args:` entries |
 
 The two halves are independent. The policy answers "must this be documented", the rule answers "is what is documented correct". Under `"optional"`, nothing forces you to document, but everything you do document is still checked. Under `"forbidden"`, the section is rejected and the content rule is not run, to avoid reporting the same block twice.
 
@@ -55,7 +58,7 @@ Governs the `Returns: None` section on every function or method whose signature 
 
 Not applied at all when `returns_section = "forbidden"`: that value drops the `Returns:` section from the whole docstring, `-> None` functions included.
 
-A one-liner docstring cannot contain a `Returns:` section, so under `"required"` a one-liner on a `-> None` function is an error.
+A one-liner docstring cannot contain a `Returns:` section, so under `"required"` a one-liner on a `-> None` function is an error, unless `sections_optional_on_one_liners` applies.
 
 ```toml
 [tool.docstring-linter]
@@ -190,6 +193,8 @@ def process() -> None:
 
 Every parameter of the signature must be documented in the `Args:` section.
 
+The first parameter of a method (`self`, `cls`, `mcs`, whatever its name) is not documented, except on a `@staticmethod`. The parameters of `__init__` may be documented in the class docstring instead, see [`init_args_location`](/docs/configuration.md#__init__-parameters). On a plain function, every parameter counts, including one named `self` or `cls`.
+
 ```toml
 [tool.docstring-linter]
 args_section = "required"
@@ -283,7 +288,7 @@ def read_lines(path: str) -> Iterator[str]:
 
 ### raises_section
 
-Every exception explicitly raised in the body must be documented in the `Raises:` section. Bare, dynamic and indirect raises are never collected, see [Automatic Exemptions](#automatic-exemptions).
+Every exception explicitly raised in the body must be documented in the `Raises:` section. Dynamic and indirect raises are never collected, see [Automatic Exemptions](#automatic-exemptions).
 
 ```toml
 [tool.docstring-linter]
@@ -385,7 +390,7 @@ Setting it to `"required"` makes every one-liner docstring invalid, including on
 
 ### examples_section, notes_section, todo_section
 
-Same three values, applied to the corresponding section header. Both spellings are accepted where they exist: `Example:` and `Examples:`, `Note:` and `Notes:`.
+Same three values, applied to the corresponding section header. `Example:` counts as `Examples:`, and is reported by `section_alias`. `Note:` and `Notes:` are two distinct sections, either one satisfies `notes_section`.
 
 ```toml
 [tool.docstring-linter]
@@ -418,9 +423,9 @@ def process(x: int) -> int:
 
 ### documented_types
 
-Governs the type declared between parentheses in `Args:` and `Attributes:` entries. The signature already carries the type, so a project may consider the docstring copy redundant.
+Governs the type declared between parentheses in `Args:` and `Attributes:` entries, and before the colon on the `Returns:` and `Yields:` lines. The signature already carries the type, so a project may consider the docstring copy redundant.
 
-Does not apply to `Returns:` and `Yields:`, where the type is the payload of the line: removing it would leave prose with nothing to identify. Their types stay mandatory, checked by `returns_match` and `yields_match`.
+A `Returns: None` line is exempt: `None` is the whole content of the line, it is accepted whatever the policy. How closely a type that is present must match the signature is set by [`type_matching`](/docs/configuration.md#type-matching).
 
 ```toml
 [tool.docstring-linter]
@@ -448,15 +453,40 @@ def create_user(name: str) -> dict:
         name: User name.
 
     Returns:
-        dict: User record.
+        User record.
 
     """
 
 # optional: both forms accepted, and a type that is present is still
-# compared with the signature by args_match
+# compared with the signature by args_match and returns_match
 ```
 
 The description of an entry is never optional: an `Args:`, `Attributes:`, `Raises:` or `Yields:` entry without a description is always reported. A name alone carries no information the signature does not already give.
+
+---
+
+### documented_stars
+
+Governs the stars of `*args` and `**kwargs` in their `Args:` entries. A plain parameter documented with a star is reported whatever the value.
+
+```toml
+[tool.docstring-linter]
+documented_stars = "required"
+```
+
+```python
+def group(*renderables: str, fit: bool = True) -> None:
+    """Group renderables.
+
+    Args:
+        *renderables (str): Items to group.   # required (default)
+        renderables (str): Items to group.    # forbidden
+        fit (bool): Fit the width.
+
+    """
+```
+
+Under `"optional"` both spellings are accepted. Whatever the value, an entry written with the wrong spelling is reported once, as `Arg 'renderables' must be written '*renderables'.`, and still counts as documenting the parameter.
 
 ---
 
@@ -503,11 +533,19 @@ def get_name() -> str:
 |------|----------|
 | Empty `__init__` method (`pass` only, no parameters) | Docstring not required if `exclude_empty_init_method = true` (default) |
 | Empty `__init__.py` file (empty or comments only) | Docstring not required if `exclude_empty_init_module = true` (default) |
-| `self`, `cls` | Ignored in parameters |
-| `*args`, `**kwargs` | Documented with their stars, `*args (str): ...` |
-| Bare / dynamic / indirect `raise` | Ignored by `raises_match` |
+| Magic method other than `__init__` | Docstring not required if `exclude_dunder_methods = true` |
+| Private name, or member of a private class | Docstring not required if `exclude_private = true` |
+| Method decorated with `@override` | Docstring not required if `exclude_overridden = true` |
+| Property getter (`@property`, `@cached_property`) | No `Returns:` section required and no `imperative_mood` if `properties_as_attributes = true` |
+| Property setter or deleter | Not checked at all if `properties_as_attributes = true` |
+| First parameter of a method (`self`, `cls`, `mcs`, ...) | Ignored in parameters, except on a `@staticmethod` |
+| `*args`, `**kwargs` | Documented with or without their stars according to `documented_stars` |
+| `raise variable`, `raise make_error()`, bare `raise` outside a typed `except` | Not collected: only capitalized class names count (`raise ValueError`, `raise errors.ValidationError(...)`) |
+| `raise err` inside `except (A, B) as err`, bare `raise` inside `except (A, B)` | Collected as the caught types `A` and `B` |
+| Code under `if __name__ == "__main__":` | Not scanned, its `else` branch is |
+| `@overload` stubs | Not scanned, the implementation is |
 | Files excluded by pattern | Not scanned |
-| Module docstrings | `imperative_mood` not applied |
+| Module and class docstrings | `imperative_mood` not applied |
 
 ### exclude_empty_init_method
 
@@ -560,29 +598,4 @@ from .core import main
 exclude_empty_init_module = false   # check empty __init__.py files too
 ```
 
-This option only covers the empty case. To skip every `__init__.py` regardless of its content, use `exclude = ["__init__.py"]`.
-
-## Exclusion Patterns
-
-### Default Exclusion Patterns
-
-The following patterns are excluded by default when scanning directories:
-
-| Pattern | Type | Excludes |
-|---------|------|----------|
-| `.git` | literal | git metadata directory |
-| `.mypy_cache` | literal | mypy cache directory |
-| `.pytest_cache` | literal | pytest cache directory |
-| `.ruff_cache` | literal | ruff cache directory |
-| `.tox` | literal | tox test environments |
-| `.venv` | literal | virtual environment directory |
-| `__pycache__` | literal | Python bytecode cache |
-
-Literal patterns match any directory component in the path (e.g. `.venv` excludes `src/.venv/foo.py`). Test files are linted like any other file; exclude them explicitly with `exclude = ["test_*", "*_test.py"]` if desired.
-
-Override defaults in `pyproject.toml`:
-
-```toml
-[tool.docstring-linter]
-exclude = [".venv", "__pycache__", "migrations/"]
-```
+This option only covers the empty case. To skip every `__init__.py` regardless of its content, add `"__init__.py"` to `exclude` (see [Exclusion patterns](/docs/configuration.md#exclusion-patterns)).

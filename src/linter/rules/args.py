@@ -5,9 +5,23 @@ from typing import TYPE_CHECKING
 from linter.config import Policy
 
 from ._base import make_error
+from ._types import types_match
 
 if TYPE_CHECKING:
     from linter.models import CodeEntity, LintError, ParsedDocstring
+
+
+def _bare(name: str) -> str:
+    """Return a parameter name without the stars of *args or **kwargs.
+
+    Args:
+        name (str): Parameter name as written.
+
+    Returns:
+        str: Name without leading stars.
+
+    """
+    return name.lstrip("*")
 
 
 def check_return_type_annotation(entity: CodeEntity) -> list[LintError]:
@@ -48,11 +62,15 @@ def check_args_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None, p
     if policy is Policy.OPTIONAL:
         return []
 
-    documented = {a.name for a in parsed_doc.args}
-    return [make_error(entity, "args_section", f"Arg '{arg.name}' in signature but not documented.") for arg in entity.args if arg.name not in documented]
+    # stars are compared by args_match, a starless entry still documents *args
+    documented = {_bare(a.name) for a in parsed_doc.args}
+    # a Keyword Args section documents the keys of **kwargs
+    if parsed_doc.keyword_args:
+        documented |= {_bare(arg.name) for arg in entity.args if arg.name.startswith("**")}
+    return [make_error(entity, "args_section", f"Arg '{arg.name}' in signature but not documented.") for arg in entity.args if _bare(arg.name) not in documented]
 
 
-def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, types: Policy) -> list[LintError]:
+def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, types: Policy, type_matching: str, stars: Policy) -> list[LintError]:  # noqa: C901 # pylint: disable=too-many-branches
     """Check documented args against the signature.
 
     Only covers what the docstring declares. Undocumented args are
@@ -62,23 +80,37 @@ def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, typ
         entity (CodeEntity): Entity to check.
         parsed_doc (ParsedDocstring | None): Parsed docstring.
         types (Policy): Policy for the type between parentheses.
+        type_matching (str): How closely a documented type must match the annotation.
+        stars (Policy): Policy for the stars of *args and **kwargs entries.
 
     Returns:
-        list[LintError]: Errors for phantom, mistyped, or undescribed args.
+        list[LintError]: Errors for phantom, mistyped, misspelled or undescribed args.
 
     """
-    if parsed_doc is None or not parsed_doc.args:
+    if parsed_doc is None:
         return []
 
-    errors: list[LintError] = []
-    sig_args = {a.name: a for a in entity.args}
+    # keys of **kwargs are not in the signature, only their description is checked
+    errors = [make_error(entity, "args_match", f"Keyword arg '{kwarg.name}' missing description.") for kwarg in parsed_doc.keyword_args if not kwarg.description]
+    sig_args = {_bare(a.name): a for a in entity.args}
 
     for doc_arg in parsed_doc.args:
-        sig_arg = sig_args.get(doc_arg.name)
+        sig_arg = sig_args.get(_bare(doc_arg.name))
 
         if sig_arg is None:
             errors.append(make_error(entity, "args_match", f"Arg '{doc_arg.name}' documented but not in signature."))
             continue
+
+        # stars only belong to *args and **kwargs, where the policy decides whether to write them
+        starless = _bare(sig_arg.name)
+        if sig_arg.name == starless or stars is Policy.REQUIRED:
+            expected = sig_arg.name
+        elif stars is Policy.FORBIDDEN:
+            expected = starless
+        else:
+            expected = doc_arg.name
+        if doc_arg.name != expected:
+            errors.append(make_error(entity, "args_match", f"Arg '{doc_arg.name}' must be written '{expected}'."))
 
         if types is Policy.REQUIRED and doc_arg.type_annotation is None:
             errors.append(make_error(entity, "args_match", f"Arg '{doc_arg.name}' missing type. Expected '({sig_arg.type_annotation})'."))
@@ -86,7 +118,7 @@ def check_args_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, typ
         if types is Policy.FORBIDDEN and doc_arg.type_annotation is not None:
             errors.append(make_error(entity, "args_match", f"Arg '{doc_arg.name}' must not declare a type."))
 
-        if doc_arg.type_annotation and sig_arg.type_annotation and doc_arg.type_annotation != sig_arg.type_annotation:
+        if doc_arg.type_annotation and sig_arg.type_annotation and not types_match(doc_arg.type_annotation, sig_arg.type_annotation, type_matching):
             errors.append(make_error(entity, "args_match", f"Arg '{doc_arg.name}' type mismatch: signature='{sig_arg.type_annotation}', docstring='{doc_arg.type_annotation}'."))
 
         if not doc_arg.description:
@@ -201,16 +233,18 @@ def check_init_returns_none(entity: CodeEntity, parsed_doc: ParsedDocstring | No
     return []
 
 
-def check_returns_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, descriptions: Policy) -> list[LintError]:
+def check_returns_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, descriptions: Policy, types: Policy, type_matching: str) -> list[LintError]:
     """Check that an existing Returns section matches the signature and is described.
 
-    A documented type of None is exempt from the description policy: the type
-    is the whole content of the line.
+    A documented type of None is exempt from the description and type policies:
+    the type is the whole content of the line.
 
     Args:
         entity (CodeEntity): Entity to check.
         parsed_doc (ParsedDocstring | None): Parsed docstring.
         descriptions (Policy): Policy for the description of an entry.
+        types (Policy): Policy for the type on the Returns line.
+        type_matching (str): How closely a documented type must match the annotation.
 
     Returns:
         list[LintError]: Errors if the Returns type or description is wrong.
@@ -223,14 +257,17 @@ def check_returns_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, 
 
     declared = parsed_doc.returns.type_annotation
 
-    if declared and declared != entity.return_type:
+    if declared and not types_match(declared, entity.return_type, type_matching):
         errors.append(make_error(entity, "returns_match", f"Return type mismatch: signature='{entity.return_type}', docstring='{declared}'."))
 
-    if not declared:
+    if not declared and types is Policy.REQUIRED:
         errors.append(make_error(entity, "returns_match", f"Missing type in 'Returns:'. Expected '{entity.return_type}'."))
 
     if declared == "None":
         return errors
+
+    if declared and types is Policy.FORBIDDEN:
+        errors.append(make_error(entity, "returns_match", "'Returns:' must not declare a type."))
 
     if descriptions is Policy.REQUIRED and not parsed_doc.returns.description:
         errors.append(make_error(entity, "returns_match", "Missing description in 'Returns:'."))
@@ -263,13 +300,14 @@ def check_yields_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None,
     return []
 
 
-def check_yields_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, descriptions: Policy) -> list[LintError]:
-    """Check that an existing Yields section declares a type and a description.
+def check_yields_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, descriptions: Policy, types: Policy) -> list[LintError]:
+    """Check the type and description of an existing Yields section.
 
     Args:
         entity (CodeEntity): Entity to check.
         parsed_doc (ParsedDocstring | None): Parsed docstring.
         descriptions (Policy): Policy for the description of an entry.
+        types (Policy): Policy for the type on the Yields line.
 
     Returns:
         list[LintError]: Errors if the Yields type or description is missing.
@@ -280,8 +318,11 @@ def check_yields_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None, d
 
     errors: list[LintError] = []
 
-    if not parsed_doc.yields.type_annotation:
+    if types is Policy.REQUIRED and not parsed_doc.yields.type_annotation:
         errors.append(make_error(entity, "yields_match", "Missing type in 'Yields:'."))
+
+    if types is Policy.FORBIDDEN and parsed_doc.yields.type_annotation:
+        errors.append(make_error(entity, "yields_match", "'Yields:' must not declare a type."))
 
     if descriptions is Policy.REQUIRED and not parsed_doc.yields.description:
         errors.append(make_error(entity, "yields_match", "Missing description in 'Yields:'."))
@@ -307,11 +348,12 @@ def check_args_order(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> 
         return []
 
     sig_names = [a.name for a in entity.args]
-    doc_names = [a.name for a in parsed_doc.args if a.name in sig_names]
+    bare_sig_names = [_bare(name) for name in sig_names]
+    documented = [a.name for a in parsed_doc.args if _bare(a.name) in bare_sig_names]
 
-    if doc_names != sig_names[: len(doc_names)]:
+    if [_bare(name) for name in documented] != bare_sig_names[: len(documented)]:
         expected = ", ".join(sig_names)
-        got = ", ".join(doc_names)
+        got = ", ".join(documented)
         return [make_error(entity, "args_order", f"Args order in docstring differs from signature. Expected: {expected}. Got: {got}.")]
     return []
 
@@ -333,9 +375,9 @@ def check_duplicate_arg(entity: CodeEntity, parsed_doc: ParsedDocstring | None) 
     seen: set[str] = set()
     errors: list[LintError] = []
     for arg in parsed_doc.args:
-        if arg.name in seen:
+        if _bare(arg.name) in seen:
             errors.append(make_error(entity, "duplicate_arg", f"Arg '{arg.name}' documented more than once in 'Args:'."))
-        seen.add(arg.name)
+        seen.add(_bare(arg.name))
     return errors
 
 
@@ -362,28 +404,43 @@ def check_raises_section(entity: CodeEntity, parsed_doc: ParsedDocstring | None,
     if policy is Policy.OPTIONAL:
         return []
 
-    documented = {r.exception_type for r in parsed_doc.raises}
+    # the code side already holds the last segment of a dotted name
+    documented = {r.exception_type.rsplit(".", 1)[-1] for r in parsed_doc.raises}
     return [make_error(entity, "raises_section", f"'{exc}' raised in code but not documented in 'Raises:'.") for exc in sorted({r.exception_type for r in entity.raises} - documented)]
 
 
 def check_raises_match(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> list[LintError]:
-    """Check documented exceptions against the raise statements in the code.
-
-    Only covers what the docstring declares. Undocumented raises are
-    reported by the raises_section policy.
+    """Check that every documented exception carries a description.
 
     Args:
         entity (CodeEntity): Entity to check.
         parsed_doc (ParsedDocstring | None): Parsed docstring.
 
     Returns:
-        list[LintError]: Errors for exceptions never raised or left undescribed.
+        list[LintError]: Errors for exceptions left undescribed.
 
     """
-    if parsed_doc is None or not parsed_doc.raises:
+    if parsed_doc is None:
         return []
+    return [make_error(entity, "raises_match", f"'{doc_raise.exception_type}' missing description in 'Raises:'.") for doc_raise in parsed_doc.raises if not doc_raise.description]
 
+
+def check_raises_extraneous(entity: CodeEntity, parsed_doc: ParsedDocstring | None) -> list[LintError]:
+    """Check that every documented exception is raised explicitly in the body.
+
+    An exception propagated from a called function is invisible to the
+    linter, so a project documenting those turns this rule off.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+        parsed_doc (ParsedDocstring | None): Parsed docstring.
+
+    Returns:
+        list[LintError]: Errors for exceptions documented but never raised.
+
+    """
+    if parsed_doc is None:
+        return []
     code_raises = {r.exception_type for r in entity.raises}
-    errors = [make_error(entity, "raises_match", f"'{exc}' documented in 'Raises:' but not raised in code.") for exc in sorted({r.exception_type for r in parsed_doc.raises} - code_raises)]
-    errors.extend(make_error(entity, "raises_match", f"'{doc_raise.exception_type}' missing description in 'Raises:'.") for doc_raise in parsed_doc.raises if not doc_raise.description)
-    return errors
+    never_raised = sorted({r.exception_type for r in parsed_doc.raises if r.exception_type.rsplit(".", 1)[-1] not in code_raises})
+    return [make_error(entity, "raises_extraneous", f"'{exc}' documented in 'Raises:' but not raised in code.") for exc in never_raised]

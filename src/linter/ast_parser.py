@@ -5,10 +5,28 @@ source files using the standard library ast module.
 """
 
 import ast
+import re
 from pathlib import Path
-from typing import TypeGuard
+from typing import TYPE_CHECKING, TypeGuard
 
+from linter.config import POLICIES_REGISTRY, RULES_REGISTRY
 from linter.models import ArgInfo, CodeEntity, NodeType, RaiseInfo
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+# Nodes whose body does not run when the enclosing function runs
+_NESTED_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
+
+# Statements whose blocks belong to the enclosing module or class body
+_COMPOUND_STATEMENTS = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.With, ast.AsyncWith, ast.Try, ast.TryStar, ast.Match)
+
+# '# docstring-linter: ignore' or '# docstring-linter: ignore[rule, ...]' closing a def, class or module docstring line
+_IGNORE_COMMENT = re.compile(r"#\s*docstring-linter:\s*ignore(?:\[([^\]]*)\])?\s*$")
+
+
+class IgnoreCommentError(ValueError):
+    """Raised when an ignore comment names a rule that does not exist."""
 
 
 def parse_file(filepath: str) -> list[CodeEntity]:
@@ -39,15 +57,53 @@ def parse_file(filepath: str) -> list[CodeEntity]:
         )
     )
 
-    _walk_body(tree.body, filepath, entities, parent_class=None)
+    _walk_body(tree.body, filepath, entities, parent=None)
+
+    lines = source.splitlines()
+    # a module carries its comment on the opening line of its docstring, the others on their def or class line
+    module_line = tree.body[0].lineno if module_doc is not None else None
+    for entity in entities:
+        line = module_line if entity.node_type == NodeType.MODULE else entity.line
+        if line is not None:
+            _apply_ignore_comment(entity, lines[line - 1], line)
     return entities
+
+
+def _apply_ignore_comment(entity: CodeEntity, text: str, line: int) -> None:
+    """Record on an entity the rules silenced by the ignore comment of its line.
+
+    Args:
+        entity (CodeEntity): Entity the line belongs to.
+        text (str): Source line of the def, class or module docstring.
+        line (int): Line number, for the error message.
+
+    Returns:
+        None
+
+    Raises:
+        IgnoreCommentError: If the comment names an unknown rule.
+
+    """
+    match = _IGNORE_COMMENT.search(text)
+    if match is None:
+        return
+    if match.group(1) is None:
+        entity.ignore_all = True
+        return
+
+    names = frozenset(name.strip() for name in match.group(1).split(",") if name.strip())
+    unknown = sorted(names - set(RULES_REGISTRY) - set(POLICIES_REGISTRY))
+    if unknown:
+        msg = f"{entity.filepath}:{line}: unknown rule {', '.join(repr(name) for name in unknown)} in ignore comment."
+        raise IgnoreCommentError(msg)
+    entity.ignored_rules = names
 
 
 def _walk_body(
     body: list[ast.stmt],
     filepath: str,
     entities: list[CodeEntity],
-    parent_class: str | None,
+    parent: CodeEntity | None,
 ) -> None:
     """Walk AST body recursively to extract classes and functions.
 
@@ -55,7 +111,7 @@ def _walk_body(
         body (list[ast.stmt]): AST body node list.
         filepath (str): Source file path.
         entities (list[CodeEntity]): Accumulator for extracted entities.
-        parent_class (str | None): Parent class name, or None for top-level.
+        parent (CodeEntity | None): Enclosing class entity, or None for top-level.
 
     Returns:
         None
@@ -63,11 +119,92 @@ def _walk_body(
     """
     for node in body:
         if isinstance(node, ast.ClassDef):
-            entities.append(_parse_class(node, filepath))
-            _walk_body(node.body, filepath, entities, parent_class=node.name)
+            entity = _parse_class(node, filepath)
+            entities.append(entity)
+            _walk_body(node.body, filepath, entities, parent=entity)
 
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            entities.append(_parse_function(node, filepath, parent_class))
+            if "overload" not in _decorator_names(node):
+                entities.append(_parse_function(node, filepath, parent))
+
+        elif isinstance(node, _COMPOUND_STATEMENTS):
+            # the body of a main guard only runs as a script, its else branch runs on import
+            blocks = [node.orelse] if _is_main_guard(node) else _statement_blocks(node)
+            for block in blocks:
+                _walk_body(block, filepath, entities, parent)
+
+
+def _is_main_guard(node: ast.stmt) -> TypeGuard[ast.If]:
+    """Check whether a statement is an 'if __name__ == "__main__":' guard.
+
+    Args:
+        node (ast.stmt): Statement to inspect.
+
+    Returns:
+        TypeGuard[ast.If]: True for the guard, whichever side of == __name__ is on.
+
+    """
+    if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
+        return False
+    test = node.test
+    if len(test.ops) != 1 or not isinstance(test.ops[0], ast.Eq):
+        return False
+    return {ast.unparse(test.left), ast.unparse(test.comparators[0])} == {"__name__", "'__main__'"}
+
+
+def _statement_blocks(node: ast.stmt) -> list[list[ast.stmt]]:
+    """Return the statement blocks nested in a compound statement.
+
+    Args:
+        node (ast.stmt): If, loop, with, try or match statement.
+
+    Returns:
+        list[list[ast.stmt]]: Every block of the statement, handlers and cases included.
+
+    """
+    blocks: list[list[ast.stmt]] = [getattr(node, name, []) for name in ("body", "orelse", "finalbody")]
+    blocks.extend(handler.body for handler in getattr(node, "handlers", []))
+    blocks.extend(case.body for case in getattr(node, "cases", []))
+    return blocks
+
+
+def _decorator_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    """Return the last name segment of each decorator of a function.
+
+    Args:
+        node (ast.FunctionDef | ast.AsyncFunctionDef): Function node.
+
+    Returns:
+        set[str]: Names such as 'overload' for both @overload and @typing.overload.
+
+    """
+    names: set[str] = set()
+    for decorator in node.decorator_list:
+        target = decorator.func if isinstance(decorator, ast.Call) else decorator
+        if isinstance(target, ast.Name):
+            names.add(target.id)
+        elif isinstance(target, ast.Attribute):
+            names.add(target.attr)
+    return names
+
+
+def _walk_scope(node: ast.AST) -> Iterator[ast.AST]:
+    """Yield the descendants of a node in source order, skipping nested functions.
+
+    Args:
+        node (ast.AST): Node whose descendants are visited.
+
+    Yields:
+        ast.AST: Each descendant that runs as part of the node itself.
+
+    """
+    stack = list(reversed(list(ast.iter_child_nodes(node))))
+    while stack:
+        child = stack.pop()
+        if isinstance(child, _NESTED_SCOPES):
+            continue
+        yield child
+        stack.extend(reversed(list(ast.iter_child_nodes(child))))
 
 
 def _parse_class(node: ast.ClassDef, filepath: str) -> CodeEntity:
@@ -81,6 +218,7 @@ def _parse_class(node: ast.ClassDef, filepath: str) -> CodeEntity:
         CodeEntity: Parsed class entity.
 
     """
+    init = next((stmt for stmt in node.body if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and stmt.name == "__init__"), None)
     return CodeEntity(
         name=node.name,
         node_type=NodeType.CLASS,
@@ -89,6 +227,7 @@ def _parse_class(node: ast.ClassDef, filepath: str) -> CodeEntity:
         docstring=ast.get_docstring(node),
         raw_docstring=ast.get_docstring(node, clean=False),
         class_attributes=_extract_class_attributes(node),
+        init_args=_extract_args(init.args, skip_first=True) if init else None,
     )
 
 
@@ -117,8 +256,9 @@ def _extract_class_attributes(node: ast.ClassDef) -> list[str]:  # noqa: C901
             add(stmt.target.id)
         elif isinstance(stmt, ast.Assign):
             for target in stmt.targets:
-                if isinstance(target, ast.Name):
-                    add(target.id)
+                for leaf in _unpack_target(target):
+                    if isinstance(leaf, ast.Name):
+                        add(leaf.id)
 
     for stmt in node.body:
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and stmt.name == "__init__":
@@ -139,12 +279,31 @@ def _self_attr_names(func: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
 
     """
     names: list[str] = []
-    for child in ast.walk(func):
+    for child in _walk_scope(func):
         if isinstance(child, ast.AnnAssign) and _is_self_attr(child.target):
             names.append(child.target.attr)
         elif isinstance(child, ast.Assign):
-            names.extend(t.attr for t in child.targets if _is_self_attr(t))
+            names.extend(leaf.attr for target in child.targets for leaf in _unpack_target(target) if _is_self_attr(leaf))
     return names
+
+
+def _unpack_target(target: ast.expr) -> list[ast.expr]:
+    """Flatten a tuple or list assignment target into its elements.
+
+    'self.a, *self.b = ...' gives self.a and self.b.
+
+    Args:
+        target (ast.expr): Assignment target.
+
+    Returns:
+        list[ast.expr]: The target itself, or the elements of a tuple or list target.
+
+    """
+    if isinstance(target, (ast.Tuple, ast.List)):
+        return [leaf for element in target.elts for leaf in _unpack_target(element)]
+    if isinstance(target, ast.Starred):
+        return _unpack_target(target.value)
+    return [target]
 
 
 def _is_self_attr(target: ast.expr) -> TypeGuard[ast.Attribute]:
@@ -163,32 +322,30 @@ def _is_self_attr(target: ast.expr) -> TypeGuard[ast.Attribute]:
 def _parse_function(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     filepath: str,
-    parent_class: str | None,
+    parent: CodeEntity | None,
 ) -> CodeEntity:
     """Extract function or method information from AST node.
 
     Args:
         node (ast.FunctionDef | ast.AsyncFunctionDef): AST function node.
         filepath (str): Source file path.
-        parent_class (str | None): Parent class name, or None for functions.
+        parent (CodeEntity | None): Enclosing class entity, or None for functions.
 
     Returns:
         CodeEntity: Parsed function or method entity.
 
     """
-    is_method = parent_class is not None
+    is_method = parent is not None
     node_type = NodeType.METHOD if is_method else NodeType.FUNCTION
-    name = f"{parent_class}.{node.name}" if parent_class else node.name
+    name = f"{parent.name}.{node.name}" if parent else node.name
 
-    args = _extract_args(node.args)
+    args = _extract_args(node.args, skip_first=is_method and "staticmethod" not in _decorator_names(node))
     return_type = ast.unparse(node.returns) if node.returns else None
-    raises = _extract_raises(node)
+    raises, is_generator = _scan_body(node)
 
     is_empty_init = False
     if node.name == "__init__":
         is_empty_init = _is_empty_init(node)
-
-    is_generator = any(isinstance(child, (ast.Yield, ast.YieldFrom)) for child in ast.walk(node))
 
     return CodeEntity(
         name=name,
@@ -202,20 +359,22 @@ def _parse_function(
         raises=raises,
         is_empty_init=is_empty_init,
         is_generator=is_generator,
+        decorators=sorted(_decorator_names(node)),
+        class_docstring=parent.docstring if parent and node.name == "__init__" else None,
     )
 
 
-def _extract_args(arguments: ast.arguments) -> list[ArgInfo]:
+def _extract_args(arguments: ast.arguments, *, skip_first: bool) -> list[ArgInfo]:
     """Extract argument info from AST arguments node.
 
     Args:
         arguments (ast.arguments): AST arguments structure.
+        skip_first (bool): Whether to drop the first positional parameter, the self or cls of a method.
 
     Returns:
         list[ArgInfo]: List of parsed argument info objects.
 
     """
-    skip = {"self", "cls"}
     result: list[ArgInfo] = []
 
     all_args = arguments.posonlyargs + arguments.args
@@ -223,7 +382,7 @@ def _extract_args(arguments: ast.arguments) -> list[ArgInfo]:
     num_no_default = len(all_args) - len(defaults)
 
     for i, arg in enumerate(all_args):
-        if arg.arg in skip:
+        if skip_first and i == 0:
             continue
 
         annotation = ast.unparse(arg.annotation) if arg.annotation else None
@@ -244,9 +403,6 @@ def _extract_args(arguments: ast.arguments) -> list[ArgInfo]:
 
     kw_defaults = arguments.kw_defaults
     for i, arg in enumerate(arguments.kwonlyargs):
-        if arg.arg in skip:
-            continue
-
         annotation = ast.unparse(arg.annotation) if arg.annotation else None
         kw_default = kw_defaults[i]
         default = ast.unparse(kw_default) if kw_default is not None else None
@@ -288,39 +444,99 @@ def _star_arg(arg: ast.arg, prefix: str) -> ArgInfo:
     )
 
 
-def _extract_raises(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-) -> list[RaiseInfo]:
-    """Extract explicit raise statements from function body.
+def _exception_name(node: ast.expr) -> str | None:
+    """Return the class name designated by a raise or except expression.
+
+    A dotted name keeps its last segment. Only capitalized names count as
+    exception classes, so that errors.ValidationError gives ValidationError
+    while a variable such as exc or self.error is ignored.
+
+    Args:
+        node (ast.expr): Expression following raise, or an except clause type.
+
+    Returns:
+        str | None: Exception name, or None when it cannot be told statically.
+
+    """
+    if isinstance(node, ast.Call):
+        return _exception_name(node.func)
+    if isinstance(node, ast.Name):
+        name = node.id
+    elif isinstance(node, ast.Attribute):
+        name = node.attr
+    else:
+        return None
+    return name if name[:1].isupper() else None
+
+
+def _scan_body(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[list[RaiseInfo], bool]:
+    """Collect the raise statements and detect yields in one pass over a function body.
+
+    Nested functions and lambdas are skipped: their raises and yields belong to them.
+    Raising a name bound by 'except ... as name', or a bare raise inside the handler,
+    reports the caught exception types; raising any other variable is ignored.
 
     Args:
         node (ast.FunctionDef | ast.AsyncFunctionDef): AST function node.
 
     Returns:
-        list[RaiseInfo]: List of unique raise statements found.
+        tuple[list[RaiseInfo], bool]: Unique raises in source order, and whether the function yields.
 
     """
     raises: list[RaiseInfo] = []
     seen: set[str] = set()
-    queue: list[ast.AST] = list(ast.iter_child_nodes(node))
+    is_generator = False
+    caught: dict[str, list[str]] = {}
+    reraised: dict[ast.Raise, list[str]] = {}
 
-    while queue:
-        child = queue.pop()
-        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+    for child in _walk_scope(node):
+        if isinstance(child, (ast.Yield, ast.YieldFrom)):
+            is_generator = True
+        elif isinstance(child, ast.ExceptHandler) and child.type is not None:
+            types = child.type.elts if isinstance(child.type, ast.Tuple) else [child.type]
+            names = [name for name in map(_exception_name, types) if name]
+            if child.name:
+                caught[child.name] = names
+            reraised.update(dict.fromkeys(_bare_raises(child), names))
+        elif isinstance(child, ast.Raise):
+            if child.exc is None:
+                names = reraised.get(child, [])
+            elif isinstance(child.exc, ast.Name) and child.exc.id in caught:
+                names = caught[child.exc.id]
+            else:
+                exc_name = _exception_name(child.exc)
+                names = [exc_name] if exc_name else []
+            for name in names:
+                if name not in seen:
+                    seen.add(name)
+                    raises.append(RaiseInfo(exception_type=name, line=child.lineno))
+
+    return raises, is_generator
+
+
+def _bare_raises(handler: ast.ExceptHandler) -> list[ast.Raise]:
+    """Collect the bare raise statements that re-raise the exception of a handler.
+
+    Nested functions and nested handlers are skipped: a bare raise inside a
+    nested handler re-raises the exception that handler caught.
+
+    Args:
+        handler (ast.ExceptHandler): Except clause.
+
+    Returns:
+        list[ast.Raise]: Bare raise statements of the handler body.
+
+    """
+    found: list[ast.Raise] = []
+    stack: list[ast.AST] = list(handler.body)
+    while stack:
+        child = stack.pop()
+        if isinstance(child, (*_NESTED_SCOPES, ast.ExceptHandler)):
             continue
-        if isinstance(child, ast.Raise) and child.exc is not None:
-            exc_name = None
-            if isinstance(child.exc, ast.Call) and isinstance(child.exc.func, ast.Name):
-                exc_name = child.exc.func.id
-            elif isinstance(child.exc, ast.Name):
-                exc_name = child.exc.id
-            if exc_name and exc_name not in seen:
-                seen.add(exc_name)
-                raises.append(RaiseInfo(exception_type=exc_name, line=child.lineno))
-        else:
-            queue.extend(ast.iter_child_nodes(child))
-
-    return raises
+        if isinstance(child, ast.Raise) and child.exc is None:
+            found.append(child)
+        stack.extend(ast.iter_child_nodes(child))
+    return found
 
 
 def _is_empty_init(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
@@ -336,8 +552,8 @@ def _is_empty_init(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
         bool: True if the __init__ is empty.
 
     """
-    real_args = [a for a in node.args.args if a.arg != "self"]
-    if real_args or node.args.kwonlyargs:
+    real_args = (node.args.posonlyargs + node.args.args)[1:]
+    if real_args or node.args.kwonlyargs or node.args.vararg or node.args.kwarg:
         return False
 
     for stmt in node.body:

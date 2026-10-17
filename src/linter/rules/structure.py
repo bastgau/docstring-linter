@@ -4,9 +4,10 @@ import re
 
 from linter.config import Policy
 from linter.models import CodeEntity, LintError, NodeType
-from linter.rules._base import GOOGLE_SECTION_ORDER, GOOGLE_SECTIONS, SECTION_HEADER_RE, extract_section_headers, make_error
+from linter.rules._base import extract_section_headers, make_error
+from linter.sections import ENTRY_SECTIONS, KNOWN_SECTIONS, SECTION_ALIASES, SECTION_HEADER_RE, SECTION_ORDER, canonical_section, section_header
 
-_SECTION_WITH_ENTRIES = frozenset({"Args", "Attributes", "Raises"})
+_SECTION_INDENT = 4
 
 _ENTRY_LAX = re.compile(r"^\s{4}(\*{0,2}\w+)\s*(\([^)]*\))?\s*:\s*(.*)$")
 _ENTRY_LAX_NO_COLON = re.compile(r"^\s{4}(\*{0,2}\w+)\s*(\([^)]+\))\s*$")
@@ -14,33 +15,48 @@ _ENTRY_STRICT = re.compile(r"^ {4}\*{0,2}\w+(?: \([^)]*\))?:(?: \S.*)?$")
 
 
 def check_indentation(entity: CodeEntity) -> list[LintError]:
-    """Check docstring indentation consistency.
+    """Check that the content of each section is indented under its header.
+
+    Inside a section, every line is indented by 4 spaces or more, and the first
+    entry of Args, Attributes and Raises by exactly 4. Lines outside sections are
+    not checked: a description may hold indented code or lists.
 
     Args:
         entity (CodeEntity): Entity to check.
 
     Returns:
-        list[LintError]: Errors if indentation is inconsistent.
+        list[LintError]: One error per section whose content is misindented.
 
     """
     if not entity.docstring:
         return []
 
-    lines = entity.docstring.split("\n")
-    if len(lines) <= 1:
-        return []
+    errors: list[LintError] = []
+    section: str | None = None
+    first_line = False
+    reported = False
 
-    indents: set[int] = set()
-    for line in lines[1:]:
-        if not line.strip():
+    for line in entity.docstring.split("\n")[1:]:
+        stripped = line.strip()
+        if not stripped:
             continue
-        leading = len(line) - len(line.lstrip())
-        indents.add(leading)
 
-    quantity = 2
-    if len(indents) > quantity:
-        return [make_error(entity, "indentation", "Inconsistent indentation in docstring.")]
-    return []
+        indent = len(line) - len(line.lstrip())
+        header = section_header(line)
+        if indent == 0 and header:
+            section, first_line, reported = header, True, False
+            continue
+
+        if section and not reported:
+            if 0 < indent < _SECTION_INDENT:
+                errors.append(make_error(entity, "indentation", f"Line '{stripped[:30]}' in '{section}:' is indented by {indent} spaces, expected at least {_SECTION_INDENT}."))
+                reported = True
+            elif first_line and _is_entry_section(section) and indent != _SECTION_INDENT:
+                errors.append(make_error(entity, "indentation", f"First entry of '{section}:' is indented by {indent} spaces, expected {_SECTION_INDENT}."))
+                reported = True
+        first_line = False
+
+    return errors
 
 
 def check_section_capitalization(entity: CodeEntity) -> list[LintError]:
@@ -57,7 +73,7 @@ def check_section_capitalization(entity: CodeEntity) -> list[LintError]:
         return []
 
     errors: list[LintError] = []
-    lowercase_sections = {s.lower(): s for s in GOOGLE_SECTIONS}
+    lowercase_sections = {s.lower(): s for s in KNOWN_SECTIONS}
 
     for line in entity.docstring.split("\n"):
         match = SECTION_HEADER_RE.match(line.strip())
@@ -72,6 +88,21 @@ def check_section_capitalization(entity: CodeEntity) -> list[LintError]:
             errors.append(make_error(entity, "section_capitalization", f"Section '{section_name}:' should be '{expected}:'."))
 
     return errors
+
+
+def check_section_alias(entity: CodeEntity) -> list[LintError]:
+    """Check that sections use their canonical name rather than a Napoleon alias.
+
+    Args:
+        entity (CodeEntity): Entity to check.
+
+    Returns:
+        list[LintError]: Errors for every section written with an alias.
+
+    """
+    if not entity.docstring:
+        return []
+    return [make_error(entity, "section_alias", f"Section '{name}:' should be written '{SECTION_ALIASES[name]}:'.") for name in extract_section_headers(entity.docstring) if name in SECTION_ALIASES]
 
 
 def check_section_order(entity: CodeEntity) -> list[LintError]:
@@ -91,12 +122,14 @@ def check_section_order(entity: CodeEntity) -> list[LintError]:
     if len(found_sections) <= 1:
         return []
 
-    order_map = {name: idx for idx, name in enumerate(GOOGLE_SECTION_ORDER)}
+    order_map = {name: idx for idx, name in enumerate(SECTION_ORDER)}
+    canonical_found = {canonical_section(name) for name in found_sections}
 
     prev_idx = -1
     prev_name = ""
     for section in found_sections:
-        idx = order_map.get(section, -1)
+        # free-text sections have no position
+        idx = order_map.get(canonical_section(section), -1)
         if idx == -1:
             continue
         if idx < prev_idx:
@@ -104,7 +137,7 @@ def check_section_order(entity: CodeEntity) -> list[LintError]:
                 make_error(
                     entity,
                     "section_order",
-                    f"Section '{section}:' must come before '{prev_name}:'. Expected order: {', '.join(s for s in GOOGLE_SECTION_ORDER if s in found_sections)}.",
+                    f"Section '{section}:' must come before '{prev_name}:'. Expected order: {', '.join(s for s in SECTION_ORDER if s in canonical_found)}.",
                 )
             ]
         prev_idx = idx
@@ -130,20 +163,15 @@ def check_empty_section(entity: CodeEntity) -> list[LintError]:
     lines = entity.docstring.split("\n")
 
     for i, line in enumerate(lines):
-        match = SECTION_HEADER_RE.match(line.strip())
-        if not match or match.group(1) not in GOOGLE_SECTIONS:
+        section_name = section_header(line)
+        if section_name is None:
             continue
 
-        section_name = match.group(1)
         has_content = False
         for next_line in lines[i + 1 :]:
-            stripped = next_line.strip()
-            if not stripped:
+            if not next_line.strip():
                 continue
-            next_match = SECTION_HEADER_RE.match(stripped)
-            if next_match and next_match.group(1) in GOOGLE_SECTIONS:
-                break
-            has_content = True
+            has_content = section_header(next_line) is None
             break
 
         if not has_content:
@@ -190,8 +218,20 @@ def _is_section_header(line: str) -> bool:
         bool: True if the line is a Google section header.
 
     """
-    match = SECTION_HEADER_RE.match(line.strip())
-    return match is not None and match.group(1) in GOOGLE_SECTIONS
+    return section_header(line) is not None
+
+
+def _is_entry_section(name: str | None) -> bool:
+    """Check whether a section is made of 'name (type): description' entries.
+
+    Args:
+        name (str | None): Section name as written, None outside any section.
+
+    Returns:
+        bool: True for Args, Attributes, Raises and their aliases.
+
+    """
+    return name is not None and canonical_section(name) in ENTRY_SECTIONS
 
 
 def _check_after_summary(entity: CodeEntity) -> list[LintError]:
@@ -250,8 +290,8 @@ def _check_before_sections(entity: CodeEntity, expected: int) -> list[LintError]
     lines = entity.docstring.split("\n")
 
     for i, line in enumerate(lines):
-        match = SECTION_HEADER_RE.match(line.strip())
-        if not match or match.group(1) not in GOOGLE_SECTIONS or i == 0:
+        header = section_header(line)
+        if header is None or i == 0:
             continue
 
         found = 0
@@ -259,7 +299,7 @@ def _check_before_sections(entity: CodeEntity, expected: int) -> list[LintError]
             found += 1
 
         if found != expected:
-            errors.append(make_error(entity, "blank_lines", f"Expected {expected} {_plural(expected)} before '{match.group(1)}:' section, found {found}."))
+            errors.append(make_error(entity, "blank_lines", f"Expected {expected} {_plural(expected)} before '{header}:' section, found {found}."))
 
     return errors
 
@@ -281,6 +321,8 @@ def _check_before_closing_quotes(entity: CodeEntity, expected: int) -> list[Lint
     stripped = entity.raw_docstring.rstrip(" \t")
     found = len(stripped) - len(stripped.rstrip("\n")) - 1
 
+    if found < 0:
+        return [make_error(entity, "blank_lines", 'Closing """ must be on its own line.')]
     if found != expected:
         return [make_error(entity, "blank_lines", f'Expected {expected} {_plural(expected)} before closing """, found {found}.')]
     return []
@@ -331,12 +373,12 @@ def check_entry_spacing(entity: CodeEntity) -> list[LintError]:
     current_section: str | None = None
 
     for line in entity.docstring.split("\n"):
-        match = SECTION_HEADER_RE.match(line.strip())
-        if match and match.group(1) in GOOGLE_SECTIONS:
-            current_section = match.group(1)
+        header = section_header(line)
+        if header:
+            current_section = header
             continue
 
-        if current_section not in _SECTION_WITH_ENTRIES:
+        if not _is_entry_section(current_section):
             continue
 
         entry = _ENTRY_LAX.match(line) or _ENTRY_LAX_NO_COLON.match(line)
@@ -371,14 +413,14 @@ def check_no_blank_line_in_section(entity: CodeEntity) -> list[LintError]:
     for line in lines:
         stripped = line.strip()
 
-        match = SECTION_HEADER_RE.match(stripped)
-        if match and match.group(1) in GOOGLE_SECTIONS:
-            current_section = match.group(1)
+        header = section_header(line)
+        if header:
+            current_section = header
             in_section_content = False
             pending_blank = False
             continue
 
-        if current_section not in _SECTION_WITH_ENTRIES:
+        if not _is_entry_section(current_section):
             pending_blank = False
             continue
 

@@ -1,15 +1,14 @@
 """Tests for config module."""
 
 import os
+import re
 from pathlib import Path
 
 import pytest
 from linter.config import (
     ALWAYS_ON,
-    OFF_BY_DEFAULT,
     OPTIONS_REGISTRY,
     RULES_REGISTRY,
-    DocstringStyle,
     LinterConfig,
     Policy,
     _parse_toml_config,  # pyright: ignore[reportPrivateUsage]
@@ -21,24 +20,9 @@ from linter.config import (
 # ---------------------------------------------------------------------------
 
 
-def test_default_config_style() -> None:
-    """Default config: style is GOOGLE."""
-    assert LinterConfig().style == DocstringStyle.GOOGLE
-
-
-def test_default_config_rules_exclude_off_by_default() -> None:
-    """Default config: OFF_BY_DEFAULT rules are not in enabled_rules."""
-    config = LinterConfig()
-    for rule in OFF_BY_DEFAULT:
-        assert rule not in config.enabled_rules
-
-
-def test_default_config_all_other_rules_enabled() -> None:
-    """Default config: all rules except OFF_BY_DEFAULT are enabled."""
-    config = LinterConfig()
-    for rule in RULES_REGISTRY:
-        if rule not in OFF_BY_DEFAULT:
-            assert rule in config.enabled_rules
+def test_default_config_all_rules_enabled() -> None:
+    """Default config, strict convention: every rule is enabled."""
+    assert LinterConfig().enabled_rules == list(RULES_REGISTRY)
 
 
 def test_default_config_exclude_patterns_include_common_dirs() -> None:
@@ -103,16 +87,10 @@ def test_parse_no_select_no_ignore() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_parse_style_google() -> None:
-    """Style = 'google': config.style is DocstringStyle.GOOGLE."""
-    config = _parse_toml_config({"style": "google"})
-    assert config.style == DocstringStyle.GOOGLE
-
-
-def test_parse_style_unknown() -> None:
-    """Style = 'unknown': raises ValueError listing the accepted styles."""
-    with pytest.raises(ValueError, match="'style': invalid value 'unknown', expected one of google, numpy, sphinx, pep257"):
-        _parse_toml_config({"style": "unknown"})
+def test_parse_style_key_removed() -> None:
+    """Style key, removed since Google is the only style: rejected as an unknown key."""
+    with pytest.raises(ValueError, match="unknown configuration key 'style'"):
+        _parse_toml_config({"style": "google"})
 
 
 # ---------------------------------------------------------------------------
@@ -231,7 +209,6 @@ def test_option_values_reflect_config() -> None:
     assert values["exclude_empty_init_method"] == "false"
     assert values["summary_max_length"] == "72"
     assert values["scope.modules"] == "false"
-    assert values["style"] == "google"
 
 
 def test_always_on_rule_stays_enabled_when_not_selected() -> None:
@@ -240,6 +217,175 @@ def test_always_on_rule_stays_enabled_when_not_selected() -> None:
     for rule in ALWAYS_ON:
         assert rule not in config.enabled_rules
         assert config.is_rule_enabled(rule)
+
+
+# ---------------------------------------------------------------------------
+# convention
+# ---------------------------------------------------------------------------
+
+
+def test_convention_defaults_to_strict() -> None:
+    """No convention key: strict convention, same settings as the built-in defaults."""
+    config = _parse_toml_config({})
+    assert config.convention == "strict"
+    assert config.policy_values() == LinterConfig().policy_values()
+    assert config.enabled_rules == LinterConfig().enabled_rules
+
+
+def test_convention_google_sets_defaults() -> None:
+    """Convention = 'google': relaxed policies, no blank line before the closing quotes, two rules off."""
+    config = _parse_toml_config({"convention": "google"})
+    assert config.returns_none is Policy.OPTIONAL
+    assert config.init_returns_none is Policy.OPTIONAL
+    assert config.documented_types is Policy.OPTIONAL
+    assert config.raises_section is Policy.OPTIONAL
+    assert config.attributes_section is Policy.OPTIONAL
+    assert config.blank_lines_before_closing_quotes == 0
+    assert config.type_matching == "lenient"
+    assert config.exclude_dunder_methods is True
+    assert config.exclude_private is True
+    assert config.exclude_overridden is True
+    assert config.properties_as_attributes is True
+    assert config.init_args_location == "either"
+    assert config.documented_stars is Policy.REQUIRED
+    assert config.sections_optional_on_one_liners is True
+    assert "imperative_mood" not in config.enabled_rules
+    assert "return_type_annotation" not in config.enabled_rules
+    assert "raises_extraneous" not in config.enabled_rules
+    assert "args_order" in config.enabled_rules
+
+
+def test_convention_explicit_keys_win() -> None:
+    """Convention = 'google' with explicit keys: the keys of the file override the convention."""
+    config = _parse_toml_config({"convention": "google", "documented_types": "required", "blank_lines_before_closing_quotes": 1})
+    assert config.documented_types is Policy.REQUIRED
+    assert config.blank_lines_before_closing_quotes == 1
+    assert config.returns_none is Policy.OPTIONAL
+
+
+def test_convention_ignore_applies_on_top() -> None:
+    """Convention = 'google' with ignore: rules removed from the convention set, disabled ones stay off."""
+    enabled = _parse_toml_config({"convention": "google", "ignore": ["args_order"]}).enabled_rules
+    assert "args_order" not in enabled
+    assert "imperative_mood" not in enabled
+
+
+def test_convention_select_all_enables_everything() -> None:
+    """Convention = 'google' with select = ['ALL']: every rule is enabled, the explicit key wins."""
+    config = _parse_toml_config({"convention": "google", "select": ["ALL"]})
+    assert config.enabled_rules == sorted(RULES_REGISTRY)
+
+
+def test_convention_unknown() -> None:
+    """Convention = 'numpy': raises ValueError listing the accepted conventions."""
+    with pytest.raises(ValueError, match=re.escape("'convention': invalid value 'numpy', expected one of strict, google.")):
+        _parse_toml_config({"convention": "numpy"})
+
+
+def test_convention_rejected_in_override() -> None:
+    """Convention in an override: rejected, it sets the defaults of the whole run."""
+    with pytest.raises(ValueError, match="'convention' cannot be set per path"):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "convention": "google"}]})
+
+
+def test_convention_listed_in_option_values() -> None:
+    """option_values: reports the active convention."""
+    assert _parse_toml_config({"convention": "google"}).option_values()["convention"] == "google"
+
+
+# ---------------------------------------------------------------------------
+# docstring exemptions
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("option", ["exclude_dunder_methods", "exclude_private", "exclude_overridden", "properties_as_attributes", "sections_optional_on_one_liners"])
+def test_exemption_options(option: str) -> None:
+    """Exemption option: off by default, set from the file, allowed in an override."""
+    assert getattr(_parse_toml_config({}), option) is False
+    assert getattr(_parse_toml_config({option: True}), option) is True
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], option: True}]})
+    assert getattr(config.for_path("tests/test_foo.py"), option) is True
+
+
+def test_init_args_location() -> None:
+    """init_args_location: 'init' by default, accepts class and either, rejects other values."""
+    assert _parse_toml_config({}).init_args_location == "init"
+    assert _parse_toml_config({"init_args_location": "class"}).init_args_location == "class"
+    with pytest.raises(ValueError, match=re.escape("'init_args_location': invalid value 'both', expected one of init, class, either.")):
+        _parse_toml_config({"init_args_location": "both"})
+
+
+# ---------------------------------------------------------------------------
+# type_matching
+# ---------------------------------------------------------------------------
+
+
+def test_type_matching_default_strict() -> None:
+    """No type_matching key: strict comparison."""
+    assert _parse_toml_config({}).type_matching == "strict"
+
+
+def test_type_matching_set() -> None:
+    """type_matching = 'equivalent': stored as is and reported by option_values."""
+    config = _parse_toml_config({"type_matching": "equivalent"})
+    assert config.type_matching == "equivalent"
+    assert config.option_values()["type_matching"] == "equivalent"
+
+
+def test_type_matching_invalid() -> None:
+    """type_matching = 'loose': raises ValueError listing the accepted levels."""
+    with pytest.raises(ValueError, match=re.escape("'type_matching': invalid value 'loose', expected one of strict, equivalent, lenient.")):
+        _parse_toml_config({"type_matching": "loose"})
+
+
+def test_type_matching_in_override() -> None:
+    """type_matching in an override: applied to the matching files only."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "type_matching": "lenient"}]})
+    assert config.for_path("tests/test_foo.py").type_matching == "lenient"
+    assert config.for_path("src/foo.py").type_matching == "strict"
+
+
+# ---------------------------------------------------------------------------
+# value types
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        ({"workers": "4"}, "'workers': expected an integer, got '4'"),
+        ({"summary_max_length": True}, "'summary_max_length': expected an integer, got True"),
+        ({"exclude_empty_init_method": "no"}, "'exclude_empty_init_method': expected true or false, got 'no'"),
+        ({"exclude": "src"}, "'exclude': expected a list of strings, got 'src'"),
+        ({"select": "ALL"}, "'select': expected a list of strings, got 'ALL'"),
+        ({"ignore": ["imperative_mood", 3]}, "'ignore': expected a list of strings"),
+        ({"scope": "all"}, "'scope': expected a table, got 'all'"),
+        ({"scope": {"modules": "yes"}}, "'scope.modules': expected true or false, got 'yes'"),
+        ({"overrides": ["tests/**"]}, "'overrides': expected an array of tables"),
+    ],
+)
+def test_parse_rejects_wrong_value_type(data: dict[str, object], message: str) -> None:
+    """Value of the wrong TOML type: raises ValueError naming the key and the value."""
+    with pytest.raises(ValueError, match=re.escape(message)):
+        _parse_toml_config(data)
+
+
+def test_parse_override_rejects_wrong_value_type() -> None:
+    """Option of the wrong type in an override: raises ValueError naming the override."""
+    with pytest.raises(ValueError, match=re.escape("override ['tests/**']: 'summary_max_length': expected an integer, got 'x'")):
+        _parse_toml_config({"overrides": [{"paths": ["tests/**"], "summary_max_length": "x"}]})
+
+
+def test_parse_override_rejects_string_paths() -> None:
+    """Paths given as a string in an override: raises ValueError."""
+    with pytest.raises(ValueError, match=re.escape("override: 'paths': expected a list of strings")):
+        _parse_toml_config({"overrides": [{"paths": "tests/**"}]})
+
+
+def test_parse_override_option_clamped() -> None:
+    """summary_max_length = -5 in an override: clamped to 1, like at the top level."""
+    config = _parse_toml_config({"overrides": [{"paths": ["tests/**"], "summary_max_length": -5}]})
+    assert config.for_path("tests/test_foo.py").summary_max_length == 1
 
 
 # ---------------------------------------------------------------------------
@@ -397,26 +543,60 @@ def test_for_path_select_replaces_inherited_rules() -> None:
     assert config.for_path("tests/test_foo.py").enabled_rules == ["docstring_exists"]
 
 
+def test_for_path_override_select_all() -> None:
+    """Select = ['ALL'] in an override: every rule is enabled on the matching files."""
+    config = _parse_toml_config({"ignore": ["imperative_mood"], "overrides": [{"paths": ["tests/**"], "select": ["ALL"]}]})
+    assert config.for_path("tests/test_foo.py").enabled_rules == sorted(RULES_REGISTRY)
+
+
+def test_for_path_patterns_relative_to_base_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run from a subdirectory: the override pattern is matched relative to base_dir, not to the current directory."""
+    (tmp_path / "src").mkdir()
+    monkeypatch.chdir(tmp_path / "src")
+    config = _parse_toml_config({"overrides": [{"paths": ["src/**"], "args_section": "optional"}]})
+    config.base_dir = tmp_path
+    assert config.for_path("foo.py").args_section is Policy.OPTIONAL
+
+
+def test_for_path_file_outside_base_dir(tmp_path: Path) -> None:
+    """File outside base_dir: no override applies, even with a catch-all pattern."""
+    config = _parse_toml_config({"overrides": [{"paths": ["**"], "args_section": "optional"}]})
+    config.base_dir = tmp_path / "project"
+    assert config.for_path(str(tmp_path / "other" / "foo.py")) is config
+
+
 # ---------------------------------------------------------------------------
 # load_config
 # ---------------------------------------------------------------------------
 
 
-def test_load_config_no_file_returns_default(tmp_path: Path) -> None:
-    """Explicit path that does not exist: returns default LinterConfig."""
-    config, config_file = load_config(str(tmp_path / "nonexistent.toml"))
-    assert config.style == DocstringStyle.GOOGLE
-    assert config.enabled_rules == LinterConfig().enabled_rules
-    assert config_file is None
+def test_load_config_missing_explicit_file(tmp_path: Path) -> None:
+    """Explicit path that does not exist: raises ValueError naming the path."""
+    with pytest.raises(ValueError, match=r"config file not found: .*nonexistent\.toml"):
+        load_config(str(tmp_path / "nonexistent.toml"))
 
 
-def test_load_config_toml_without_section_returns_default(tmp_path: Path) -> None:
-    """pyproject.toml with no [tool.docstring-linter] section: returns default config."""
+def test_load_config_explicit_directory(tmp_path: Path) -> None:
+    """Explicit path that is a directory: raises ValueError."""
+    with pytest.raises(ValueError, match="config file not found"):
+        load_config(str(tmp_path))
+
+
+def test_load_config_base_dir_is_config_directory(tmp_path: Path) -> None:
+    """Explicit config file: base_dir is the resolved directory holding it."""
+    (tmp_path / "tools").mkdir()
+    f = tmp_path / "tools" / "linter.toml"
+    f.write_text("", encoding="utf-8")
+    config, _ = load_config(str(tmp_path / "tools" / ".." / "tools" / "linter.toml"))
+    assert config.base_dir == (tmp_path / "tools").resolve()
+
+
+def test_load_config_toml_without_section(tmp_path: Path) -> None:
+    """Explicit pyproject.toml with no [tool.docstring-linter] section: raises ValueError."""
     f = tmp_path / "pyproject.toml"
     f.write_text("[tool.ruff]\nline-length = 100\n", encoding="utf-8")
-    config, config_file = load_config(str(f))
-    assert config.style == DocstringStyle.GOOGLE
-    assert config_file is None
+    with pytest.raises(ValueError, match=r"no \[tool.docstring-linter\] section"):
+        load_config(str(f))
 
 
 def test_load_config_auto_discover(tmp_path: Path) -> None:

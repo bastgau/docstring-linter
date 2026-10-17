@@ -1,5 +1,6 @@
 """Tests for rules/args.py -- return type, args match, returns section, raises match."""
 
+import pytest
 from linter.config import Policy
 from linter.models import ArgInfo, DocstringArg, DocstringRaise, DocstringReturn, NodeType, ParsedDocstring, RaiseInfo
 
@@ -236,12 +237,131 @@ def test_returns_match_mismatch() -> None:
     assert any(e.rule == "returns_match" and "mismatch" in e.message for e in errors)
 
 
-def test_returns_match_missing_type() -> None:
-    """Returns section present but no type declared: returns returns_match error."""
-    entity = _func(return_type="int")
-    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation=None))
+def test_args_section_kwargs_documented_by_keyword_args() -> None:
+    """**kwargs in the signature and a Keyword Args section: **kwargs counts as documented."""
+    entity = _func(args=[ArgInfo(name="**options", type_annotation="int")])
+    doc = ParsedDocstring(summary="Do something.", keyword_args=[DocstringArg(name="width", description="Width.")])
+    assert not validate_entity(entity, doc, _policy_only("args_section", Policy.REQUIRED))
+
+
+def test_args_match_keyword_arg_missing_description() -> None:
+    """Keyword Args entry without a description: returns args_match error, its name is not compared with the signature."""
+    entity = _func(args=[ArgInfo(name="**options")])
+    doc = ParsedDocstring(summary="Do something.", keyword_args=[DocstringArg(name="width", description="")])
     errors = validate_entity(entity, doc, _neutral())
+    assert [e.message for e in errors] == ["Keyword arg 'width' missing description."]
+
+
+def _star_errors(documented: str, stars: Policy, signature: str = "*items") -> list[str]:
+    """Validate one Args entry against one starred or plain parameter and return the messages."""
+    entity = _func(args=[ArgInfo(name=signature, type_annotation="int")])
+    doc = ParsedDocstring(summary="Do something.", args=[DocstringArg(name=documented, type_annotation="int", description="Items.")])
+    cfg = _neutral(args_section=Policy.REQUIRED, documented_stars=stars, enabled_rules=["args_order", "duplicate_arg"])
+    return [e.message for e in validate_entity(entity, doc, cfg)]
+
+
+@pytest.mark.parametrize(
+    ("documented", "stars", "expected"),
+    [
+        ("*items", Policy.REQUIRED, []),
+        ("items", Policy.REQUIRED, ["Arg 'items' must be written '*items'."]),
+        ("items", Policy.FORBIDDEN, []),
+        ("*items", Policy.FORBIDDEN, ["Arg '*items' must be written 'items'."]),
+        ("items", Policy.OPTIONAL, []),
+        ("*items", Policy.OPTIONAL, []),
+    ],
+)
+def test_documented_stars_policy(documented: str, stars: Policy, expected: list[str]) -> None:
+    """Starred parameter documented with or without stars: one explicit error when the policy is not met, nothing else."""
+    assert _star_errors(documented, stars) == expected
+
+
+@pytest.mark.parametrize("stars", [Policy.REQUIRED, Policy.FORBIDDEN, Policy.OPTIONAL])
+def test_documented_stars_on_plain_parameter(stars: Policy) -> None:
+    """Plain parameter documented with a star: reported whatever the policy."""
+    assert _star_errors("*items", stars, signature="items") == ["Arg '*items' must be written 'items'."]
+
+
+def test_documented_stars_order_uses_bare_names() -> None:
+    """Starless entry in signature order: no args_order error."""
+    entity = _func(args=[ArgInfo(name="*items", type_annotation="int"), ArgInfo(name="size", type_annotation="int")])
+    doc = ParsedDocstring(
+        summary="Do something.",
+        args=[DocstringArg(name="items", type_annotation="int", description="Items."), DocstringArg(name="size", type_annotation="int", description="Size.")],
+    )
+    assert not validate_entity(entity, doc, _neutral(documented_stars=Policy.OPTIONAL, enabled_rules=["args_order"]))
+
+
+def test_documented_stars_duplicate() -> None:
+    """'items' then '*items' in the same section: reported as a duplicate."""
+    entity = _func(args=[ArgInfo(name="*items", type_annotation="int")])
+    doc = ParsedDocstring(
+        summary="Do something.",
+        args=[DocstringArg(name="items", type_annotation="int", description="Items."), DocstringArg(name="*items", type_annotation="int", description="Again.")],
+    )
+    errors = validate_entity(entity, doc, _neutral(documented_stars=Policy.OPTIONAL))
+    assert [(e.rule, e.message) for e in errors] == [("duplicate_arg", "Arg '*items' documented more than once in 'Args:'.")]
+
+
+def test_returns_match_missing_type() -> None:
+    """documented_types = required, Returns section without a type: returns returns_match error."""
+    entity = _func(return_type="int")
+    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation=None, description="The value."))
+    errors = validate_entity(entity, doc, _neutral(documented_types=Policy.REQUIRED))
     assert any(e.rule == "returns_match" and "Missing type" in e.message for e in errors)
+
+
+def test_returns_match_type_optional() -> None:
+    """documented_types = optional, Returns section without a type: no returns_match error."""
+    entity = _func(return_type="int")
+    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation=None, description="The value."))
+    assert not [e for e in validate_entity(entity, doc, _neutral()) if e.rule == "returns_match"]
+
+
+def test_returns_match_type_forbidden() -> None:
+    """documented_types = forbidden, Returns line carrying a type: returns returns_match error."""
+    entity = _func(return_type="int")
+    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="int", description="The value."))
+    errors = validate_entity(entity, doc, _neutral(documented_types=Policy.FORBIDDEN))
+    assert any(e.rule == "returns_match" and "must not declare a type" in e.message for e in errors)
+
+
+def test_returns_match_type_forbidden_allows_none() -> None:
+    """documented_types = forbidden, 'Returns: None': None is the whole line, no error."""
+    entity = _func(return_type="None")
+    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="None"))
+    errors = validate_entity(entity, doc, _neutral(documented_types=Policy.FORBIDDEN))
+    assert not [e for e in errors if e.rule == "returns_match"]
+
+
+@pytest.mark.parametrize(
+    ("level", "reported"),
+    [("strict", True), ("equivalent", False), ("lenient", False)],
+)
+def test_returns_match_type_matching_levels(level: str, reported: bool) -> None:  # noqa: FBT001
+    """Signature Optional[str], docstring 'str | None': a mismatch only at the strict level."""
+    entity = _func(return_type="Optional[str]")
+    doc = ParsedDocstring(summary="Do something.", returns=DocstringReturn(type_annotation="str | None", description="The value."))
+    errors = validate_entity(entity, doc, _neutral(type_matching=level))
+    assert any("type mismatch" in e.message for e in errors) is reported
+
+
+@pytest.mark.parametrize(
+    ("documented", "level", "reported"),
+    [
+        ("int | None, optional", "strict", False),
+        ("Optional[int]", "strict", True),
+        ("Optional[int]", "equivalent", False),
+        ("int", "equivalent", True),
+        ("int", "lenient", False),
+    ],
+)
+def test_args_match_type_matching_levels(documented: str, level: str, reported: bool) -> None:  # noqa: FBT001
+    """Signature 'int | None': each level accepts what the previous ones accept, and more."""
+    entity = _func(args=[ArgInfo(name="limit", type_annotation="int | None", default="None")])
+    doc = ParsedDocstring(summary="Do something.", args=[DocstringArg(name="limit", type_annotation=documented, description="Limit.")])
+    errors = validate_entity(entity, doc, _neutral(type_matching=level))
+    assert any("type mismatch" in e.message for e in errors) is reported
 
 
 def test_returns_match_no_section_no_error() -> None:
@@ -436,12 +556,12 @@ def test_raises_section_optional_undocumented() -> None:
 
 
 def test_raises_section_optional_still_checks_documented() -> None:
-    """Policy optional, an exception documented but never raised: raises_match still reports it."""
+    """Policy optional, an exception documented but never raised: raises_extraneous still reports it."""
     entity = _func(raises=[])
     doc = ParsedDocstring(summary="Do something.", raises=[DocstringRaise(exception_type="TypeError", description="Never.")])
-    cfg = _neutral(enabled_rules=["raises_match"], raises_section=Policy.OPTIONAL)
+    cfg = _neutral(enabled_rules=["raises_extraneous"], raises_section=Policy.OPTIONAL)
     errors = validate_entity(entity, doc, cfg)
-    assert any(e.rule == "raises_match" and "TypeError" in e.message for e in errors)
+    assert any(e.rule == "raises_extraneous" and "TypeError" in e.message for e in errors)
 
 
 def test_raises_section_forbidden_present() -> None:
@@ -452,12 +572,19 @@ def test_raises_section_forbidden_present() -> None:
     assert any(e.rule == "raises_section" and "not allowed" in e.message for e in errors)
 
 
-def test_raises_match_phantom_documented() -> None:
-    """Raise in docstring but not in code: returns raises_match error."""
+def test_raises_extraneous_documented_not_raised() -> None:
+    """Raise in docstring but not in code: returns raises_extraneous error."""
     entity = _func(raises=[])
     doc = ParsedDocstring(summary="Do something.", raises=[DocstringRaise(exception_type="ValueError", description="If invalid.")])
-    errors = validate_entity(entity, doc, _rule_only("raises_match"))
-    assert any("ValueError" in e.message and "not raised" in e.message for e in errors)
+    errors = validate_entity(entity, doc, _rule_only("raises_extraneous"))
+    assert any(e.rule == "raises_extraneous" and "ValueError" in e.message and "not raised" in e.message for e in errors)
+
+
+def test_raises_extraneous_disabled() -> None:
+    """Rule off, exception documented but propagated from a callee: no error."""
+    entity = _func(raises=[])
+    doc = ParsedDocstring(summary="Do something.", raises=[DocstringRaise(exception_type="ValueError", description="From int().")])
+    assert not validate_entity(entity, doc, _neutral())
 
 
 def test_raises_match_missing_description() -> None:
@@ -504,12 +631,27 @@ def test_yields_section_forbidden_present() -> None:
 
 
 def test_yields_match_missing_type() -> None:
-    """Yields section without a type: returns yields_match error."""
+    """documented_types = required, Yields section without a type: returns yields_match error."""
     entity = _func(is_generator=True)
     doc = ParsedDocstring(summary="Do something.", yields=DocstringReturn(type_annotation=None))
-    cfg = _neutral(yields_section=Policy.OPTIONAL)
+    cfg = _neutral(yields_section=Policy.OPTIONAL, documented_types=Policy.REQUIRED)
     errors = validate_entity(entity, doc, cfg)
     assert any(e.rule == "yields_match" and "Missing type" in e.message for e in errors)
+
+
+def test_yields_match_type_optional() -> None:
+    """documented_types = optional, Yields section without a type: no yields_match type error."""
+    entity = _func(is_generator=True)
+    doc = ParsedDocstring(summary="Do something.", yields=DocstringReturn(type_annotation=None, description="Each value."))
+    assert not [e for e in validate_entity(entity, doc, _neutral()) if e.rule == "yields_match"]
+
+
+def test_yields_match_type_forbidden() -> None:
+    """documented_types = forbidden, Yields line carrying a type: returns yields_match error."""
+    entity = _func(is_generator=True)
+    doc = ParsedDocstring(summary="Do something.", yields=DocstringReturn(type_annotation="int", description="Each value."))
+    errors = validate_entity(entity, doc, _neutral(documented_types=Policy.FORBIDDEN))
+    assert any(e.rule == "yields_match" and "must not declare a type" in e.message for e in errors)
 
 
 def test_yields_match_missing_description() -> None:
